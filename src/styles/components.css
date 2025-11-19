@@ -25,3 +25,108 @@
   color: #ffffff;
   cursor: pointer;
 }
+
+/* ===== Cards genéricas ===== */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-soft);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--color-text);
+}
+
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+  margin-bottom: 10px;
+}
+
+/* ===== KPI Grid ===== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.kpi-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-label {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.kpi-value {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ===== Dashboard grid ===== */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.2fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+
+/* Lista de acciones rápidas */
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.quick-actions__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.quick-actions__item:last-child {
+  border-bottom: none;
+}
+
+.quick-actions__label {
+  color: var(--color-text);
+}
+
+.quick-actions__hint {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+/* tabla pequeña dentro de card */
+.table--compact {
+  font-size: 0.85rem;
+}
+
+.table--compact th,
+.table--compact td {
+  padding: 8px 10px;
+}
+
+/* Responsive dashboard */
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
