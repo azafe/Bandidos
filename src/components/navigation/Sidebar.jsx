@@ -1,23 +1,24 @@
 // src/components/navigation/Sidebar.jsx
 import { NavLink } from "react-router-dom";
-import logo from "/src/assets/bandidos-logo.jpg";
-
-
+import logo from "../../assets/bandidos-logo.jpg";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const handleNavigate = () => {
     if (onNavigate) onNavigate();
   };
 
+  const makeClassName = (isActive) =>
+    "sidebar__nav-link" + (isActive ? " sidebar__nav-link--active" : "");
+
   return (
     <aside className={`sidebar ${isOpen ? "sidebar--open" : ""}`}>
       <div className="sidebar__brand">
         <div className="sidebar__logo-circle">
-            <img
+          <img
             src={logo}
             alt="Bandidos Logo"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          /> 
+            className="sidebar__logo-img"
+          />
         </div>
         <div className="sidebar__brand-text">
           <span className="sidebar__brand-title">Bandidos</span>
@@ -29,10 +30,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         <NavLink
           to="/"
           end
-          className={({ isActive }) =>
-            "sidebar__nav-link" +
-            (isActive ? " sidebar__nav-link--active" : "")
-          }
+          className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
           Dashboard
@@ -40,10 +38,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
 
         <NavLink
           to="/services"
-          className={({ isActive }) =>
-            "sidebar__nav-link" +
-            (isActive ? " sidebar__nav-link--active" : "")
-          }
+          className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
           Servicios
@@ -51,10 +46,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
 
         <NavLink
           to="/expenses/daily"
-          className={({ isActive }) =>
-            "sidebar__nav-link" +
-            (isActive ? " sidebar__nav-link--active" : "")
-          }
+          className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
           Gastos diarios
@@ -62,10 +54,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
 
         <NavLink
           to="/expenses/fixed"
-          className={({ isActive }) =>
-            "sidebar__nav-link" +
-            (isActive ? " sidebar__nav-link--active" : "")
-          }
+          className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
           Gastos fijos
@@ -73,10 +62,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
 
         <NavLink
           to="/employees"
-          className={({ isActive }) =>
-            "sidebar__nav-link" +
-            (isActive ? " sidebar__nav-link--active" : "")
-          }
+          className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
           Empleados
@@ -84,10 +70,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
 
         <NavLink
           to="/suppliers"
-          className={({ isActive }) =>
-            "sidebar__nav-link" +
-            (isActive ? " sidebar__nav-link--active" : "")
-          }
+          className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
           Proveedores
