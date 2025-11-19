@@ -1,13 +1,23 @@
 // src/components/navigation/Sidebar.jsx
 import { NavLink } from "react-router-dom";
+import logo from "/src/assets/bandidos-logo.jpg";
 
-export default function Sidebar() {
+
+
+export default function Sidebar({ isOpen = true, onNavigate }) {
+  const handleNavigate = () => {
+    if (onNavigate) onNavigate();
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? "sidebar--open" : ""}`}>
       <div className="sidebar__brand">
         <div className="sidebar__logo-circle">
-          {/* Si todavía no tenés el logo en /assets, podés borrar el <img> y dejar solo el círculo */}
-         
+            <img
+            src={logo}
+            alt="Bandidos Logo"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          /> 
         </div>
         <div className="sidebar__brand-text">
           <span className="sidebar__brand-title">Bandidos</span>
@@ -23,6 +33,7 @@ export default function Sidebar() {
             "sidebar__nav-link" +
             (isActive ? " sidebar__nav-link--active" : "")
           }
+          onClick={handleNavigate}
         >
           Dashboard
         </NavLink>
@@ -33,6 +44,7 @@ export default function Sidebar() {
             "sidebar__nav-link" +
             (isActive ? " sidebar__nav-link--active" : "")
           }
+          onClick={handleNavigate}
         >
           Servicios
         </NavLink>
@@ -43,6 +55,7 @@ export default function Sidebar() {
             "sidebar__nav-link" +
             (isActive ? " sidebar__nav-link--active" : "")
           }
+          onClick={handleNavigate}
         >
           Gastos diarios
         </NavLink>
@@ -53,6 +66,7 @@ export default function Sidebar() {
             "sidebar__nav-link" +
             (isActive ? " sidebar__nav-link--active" : "")
           }
+          onClick={handleNavigate}
         >
           Gastos fijos
         </NavLink>
@@ -63,6 +77,7 @@ export default function Sidebar() {
             "sidebar__nav-link" +
             (isActive ? " sidebar__nav-link--active" : "")
           }
+          onClick={handleNavigate}
         >
           Empleados
         </NavLink>
@@ -73,6 +88,7 @@ export default function Sidebar() {
             "sidebar__nav-link" +
             (isActive ? " sidebar__nav-link--active" : "")
           }
+          onClick={handleNavigate}
         >
           Proveedores
         </NavLink>

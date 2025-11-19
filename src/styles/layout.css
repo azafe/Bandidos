@@ -1,7 +1,19 @@
-/* ===== Layout ===== */
+/* ===== Shell general ===== */
+.app-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header solo se muestra en móvil */
+.mobile-header {
+  display: none;
+}
+
+/* Layout principal */
 .app-container {
   display: flex;
-  height: 100vh;
+  height: 100%;
   width: 100%;
   color: #fff;
 }
@@ -38,16 +50,81 @@
   gap: 16px;
 }
 
+/* Backdrop del sidebar en móvil */
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
-  .app-container {
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #111217;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 1002;
+  }
+
+  .mobile-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-header__logo-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    background: #ffffff;
+  }
+
+  .mobile-header__brand-text {
+    display: flex;
     flex-direction: column;
   }
+
+  .mobile-header__brand-title {
+    font-family: "Fredoka", system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .mobile-header__brand-subtitle {
+    font-size: 0.7rem;
+    color: var(--color-text-soft);
+  }
+
+  .mobile-header__menu-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  .app-container {
+    height: calc(100vh - 56px);
+  }
+
   .app-main {
     padding: 16px;
   }
+
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1000;
   }
 }
