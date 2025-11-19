@@ -137,3 +137,10 @@
   font-size: 0.9rem;
   color: var(--color-text-soft);
 }
+
+/* Resumen de totales en formularios (gastos diarios / fijos) */
+.expenses-total {
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}

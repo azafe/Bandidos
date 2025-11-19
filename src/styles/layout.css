@@ -1,29 +1,100 @@
-/* ===== Shell general ===== */
+/* ===== Layout general ===== */
+
+/* Contenedor raíz del panel */
 .app-shell {
-  height: 100vh;
   display: flex;
-  flex-direction: column;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #262938, #111217 55%);
 }
 
-/* Header solo se muestra en móvil */
-.mobile-header {
+/* Contenedor que envuelve al componente Sidebar */
+.app-sidebar {
+  background: #111218;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+/* Overlay (solo se usa en mobile) */
+.app-overlay {
   display: none;
 }
 
-/* Layout principal */
-.app-container {
-  display: flex;
-  height: 100%;
-  width: 100%;
-  color: #fff;
-}
-
+/* Zona principal (a la derecha del sidebar) */
 .app-main {
   flex: 1;
-  background: radial-gradient(circle at top, #262938, #111217 55%);
-  padding: 24px 32px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
+
+/* Contenido de las páginas */
+.app-main-content {
+  flex: 1;
+  padding: 24px 32px;
+}
+
+/* ===== Header (solo mobile) ===== */
+
+/* Por defecto, el header NO se muestra (desktop) */
+.app-header {
+  display: none;
+}
+
+/* Elementos internos del header */
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-header__logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.app-header__logo img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.app-header__brand-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.app-header__brand-subtitle {
+  font-size: 0.75rem;
+  color: #d3d3d3;
+}
+
+.app-header__menu-button {
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.app-header__menu-button span {
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+/* ===== Estilos de cabecera de página (Dashboard, etc.) ===== */
 
 .page-header {
   display: flex;
@@ -50,81 +121,74 @@
   gap: 16px;
 }
 
-/* Backdrop del sidebar en móvil */
-.sidebar-backdrop {
-  display: none;
-}
+/* ===== MOBILE (hasta 899px) ===== */
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-  .mobile-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background: #111217;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    z-index: 1002;
+@media (max-width: 899px) {
+  .app-shell {
+    position: relative;
   }
 
-  .mobile-header__brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  /* Sidebar como drawer lateral */
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease-out;
+    z-index: 40;
   }
 
-  .mobile-header__logo-circle {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 2px solid var(--color-primary);
-    background: #ffffff;
+  .app-sidebar.app-sidebar--open {
+    transform: translateX(0);
   }
 
-  .mobile-header__brand-text {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mobile-header__brand-title {
-    font-family: "Fredoka", system-ui, sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #ffffff;
-  }
-
-  .mobile-header__brand-subtitle {
-    font-size: 0.7rem;
-    color: var(--color-text-soft);
-  }
-
-  .mobile-header__menu-btn {
-    background: transparent;
-    border: none;
-    color: #ffffff;
-    font-size: 1.5rem;
-    cursor: pointer;
-  }
-
-  .app-container {
-    height: calc(100vh - 56px);
-  }
-
-  .app-main {
-    padding: 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .sidebar-backdrop {
+  /* Overlay clickeable */
+  .app-overlay {
     display: block;
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.45);
-    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease-out;
+    z-index: 30;
+  }
+
+  .app-overlay--visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Header visible SOLO en mobile */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #05060a;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .app-main-content {
+    padding: 16px 16px 24px;
+  }
+}
+
+/* ===== DESKTOP (desde 900px) ===== */
+
+@media (min-width: 900px) {
+  /* En desktop, aseguramos que el header esté oculto */
+  .app-header {
+    display: none;
+    height: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .app-main-content {
+    padding: 24px 32px;
   }
 }

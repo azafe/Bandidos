@@ -1,6 +1,7 @@
 // src/layouts/MainLayout.jsx
 import { useState } from "react";
 import Sidebar from "../components/navigation/Sidebar";
+import logo from "../assets/bandidos-logo.jpg";
 
 export default function MainLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -10,39 +11,51 @@ export default function MainLayout({ children }) {
 
   return (
     <div className="app-shell">
-      {/* Header solo visible en móvil */}
-      <header className="mobile-header">
-        <div className="mobile-header__brand">
-          <div className="mobile-header__logo-circle" />
-          <div className="mobile-header__brand-text">
-            <span className="mobile-header__brand-title">Bandidos</span>
-            <span className="mobile-header__brand-subtitle">
-              Peluquería Canina
-            </span>
+      {/* SIDEBAR */}
+      <aside
+        className={`app-sidebar ${
+          isSidebarOpen ? "app-sidebar--open" : ""
+        }`}
+      >
+        <Sidebar />
+      </aside>
+
+      {/* OVERLAY para mobile */}
+      <div
+        className={`app-overlay ${
+          isSidebarOpen ? "app-overlay--visible" : ""
+        }`}
+        onClick={closeSidebar}
+      />
+
+      {/* CONTENIDO PRINCIPAL */}
+      <div className="app-main">
+        {/* HEADER: solo visible en mobile (lo controlamos por CSS) */}
+        <header className="app-header">
+          <div className="app-header__brand">
+            <div className="app-header__logo">
+              <img src={logo} alt="Logo Bandidos" />
+            </div>
+            <div className="app-header__brand-text">
+              <span className="app-header__brand-title">Bandidos</span>
+              <span className="app-header__brand-subtitle">
+                Peluquería Canina
+              </span>
+            </div>
           </div>
-        </div>
 
-        <button
-          type="button"
-          className="mobile-header__menu-btn"
-          onClick={toggleSidebar}
-        >
-          ☰
-        </button>
-      </header>
+          <button
+            type="button"
+            className="app-header__menu-button"
+            onClick={toggleSidebar}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </header>
 
-      {/* Backdrop oscuro cuando el menú está abierto en móvil */}
-      {isSidebarOpen && (
-        <div
-          className="sidebar-backdrop"
-          onClick={closeSidebar}
-          aria-hidden="true"
-        />
-      )}
-
-      <div className="app-container">
-        <Sidebar isOpen={isSidebarOpen} onNavigate={closeSidebar} />
-        <main className="app-main">{children}</main>
+        <main className="app-main-content">{children}</main>
       </div>
     </div>
   );
