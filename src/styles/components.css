@@ -130,3 +130,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ===== Gastos diarios ===== */
+.expenses-total {
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}

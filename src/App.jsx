@@ -5,18 +5,26 @@ import MainLayout from "./layouts/MainLayout";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ServicesListPage from "./pages/services/ServicesListPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
+import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
+import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
 import LoginPage from "./pages/auth/LoginPage";
+
+import { ServicesProvider } from "./context/ServicesContext";
 
 function App() {
   return (
-    <MainLayout>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/services" element={<ServicesListPage />} />
-        <Route path="/services/new" element={<ServiceFormPage />} />
-        <Route path="/login" element={<LoginPage />} />
-      </Routes>
-    </MainLayout>
+    <ServicesProvider>
+      <MainLayout>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/services" element={<ServicesListPage />} />
+          <Route path="/services/new" element={<ServiceFormPage />} />
+          <Route path="/expenses/daily" element={<DailyExpensesPage />} />
+          <Route path="/expenses/fixed" element={<FixedExpensesPage />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </MainLayout>
+    </ServicesProvider>
   );
 }
 
