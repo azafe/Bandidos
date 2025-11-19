@@ -1,4 +1,6 @@
 // src/pages/services/ServicesListPage.jsx
+import { Link } from "react-router-dom";
+
 export default function ServicesListPage() {
   const mockServices = [
     {
@@ -21,7 +23,9 @@ export default function ServicesListPage() {
             Registro de baños, cortes y servicios realizados.
           </p>
         </div>
-        <button className="btn-primary">+ Nuevo servicio</button>
+        <Link to="/services/new">
+          <button className="btn-primary">+ Nuevo servicio</button>
+        </Link>
       </header>
 
       <table className="table">

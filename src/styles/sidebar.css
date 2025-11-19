@@ -1,0 +1,66 @@
+/* ===== Sidebar ===== */
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #1b1d23 0%, #15161c 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar__logo-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sidebar__brand-title {
+  font-family: "Fredoka", system-ui;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.sidebar__brand-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar__nav-link {
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  color: #eaeaea;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+
+.sidebar__nav-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
+}
+
+.sidebar__nav-link--active {
+  background: var(--color-primary);
+  color: #ffffff;
+}

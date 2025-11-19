@@ -4,10 +4,8 @@ import MainLayout from "./layouts/MainLayout";
 
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ServicesListPage from "./pages/services/ServicesListPage";
-import LoginPage from "./pages/auth/LoginPage"; // por ahora no lo usamos en el layout
-// futuras páginas
-// import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
-// etc.
+import ServiceFormPage from "./pages/services/ServiceFormPage";
+import LoginPage from "./pages/auth/LoginPage";
 
 function App() {
   return (
@@ -15,8 +13,8 @@ function App() {
       <Routes>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/services" element={<ServicesListPage />} />
+        <Route path="/services/new" element={<ServiceFormPage />} />
         <Route path="/login" element={<LoginPage />} />
-        {/* Después agregamos las demás rutas */}
       </Routes>
     </MainLayout>
   );

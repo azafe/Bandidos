@@ -1,0 +1,49 @@
+/* ===== Formularios ===== */
+.form-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-soft);
+  max-width: 720px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.form-field label {
+  font-weight: 500;
+  color: var(--color-text-soft);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(192, 24, 121, 0.15);
+}
+
+.form-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+}
