@@ -27,6 +27,12 @@
   overflow: hidden;
 }
 
+/* 👉 Esta clase es la que organiza el título y subtítulo en columna */
+.sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
 .sidebar__brand-title {
   font-family: "Fredoka", system-ui;
   font-size: 1.2rem;
@@ -63,4 +69,12 @@
 .sidebar__nav-link--active {
   background: var(--color-primary);
   color: #ffffff;
+}
+
+/* Ajuste leve para móvil */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    padding: 16px 18px;
+  }
 }
