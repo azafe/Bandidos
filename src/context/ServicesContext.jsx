@@ -1,79 +1,85 @@
 // src/context/ServicesContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
-import { fetchServiciosFromSheet } from "../services/googleSheetsService";
+import {
+  fetchServiciosFromSheet,
+  createServiceOnSheet,
+} from "../services/googleSheetsService";
 
 const ServicesContext = createContext();
 
-function parseDateDMY(value) {
-  if (!value) return null;
-  const parts = value.split("/");
-  if (parts.length !== 3) return null;
-
-  const [dayStr, monthStr, yearStr] = parts;
-  const day = Number(dayStr);
-  const month = Number(monthStr);
-  const year = Number(yearStr);
-
-  if (!day || !month || !year) return null;
-
-  // Mes en JS es 0–11
-  return new Date(year, month - 1, day);
-}
-
 export function ServicesProvider({ children }) {
-  const [state, setState] = useState({
-    services: [],
-    loading: true,
-    error: null,
-  });
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Cargar servicios desde el CSV (solo lectura)
   useEffect(() => {
-    fetchServiciosFromSheet()
-      .then((rows) => {
-        console.log("📥 Servicios recibidos en contexto:", rows.slice(0, 5));
-        console.log("📊 Total filas:", rows.length);
+    let isMounted = true;
 
-        const mapped = rows.map((r, index) => {
-          const rawDate =
-            r.Fecha || r.fecha || r[" FECHA"] || r["Fecha "] || "";
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
 
-          const dateObj = parseDateDMY(rawDate);
+        const data = await fetchServiciosFromSheet(); // 👈 AHORA SÍ IMPORTADO
+        if (!isMounted) return;
 
-          return {
-            id: index + 1,
-            date: rawDate,
-            dateObj, // 👈 usamos esto para filtros
-            dogName: r.Perro || r.perro,
-            ownerName: r.Dueño || r.dueno || r.duenio || r["Dueño"],
-            type: r.Servicio || r.servicio,
-            price: Number(r.Precio || r.precio || 0),
-            paymentMethod: r["Método de pago"] || r.metodo || r["Metodo de pago"],
-            groomer: r.Groomer || r.groomer || "",
-          };
-        });
+        setServices(data);
+      } catch (err) {
+        console.error("[ServicesContext] Error cargando servicios:", err);
+        if (!isMounted) return;
+        setError(err.message || "Error al cargar servicios.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
 
-        setState({
-          services: mapped,
-          loading: false,
-          error: null,
-        });
-      })
-      .catch((err) => {
-        console.error("❌ Error cargando servicios:", err);
-        setState({
-          services: [],
-          loading: false,
-          error: err.message || "Error al cargar servicios",
-        });
-      });
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // Crear un nuevo servicio (panel -> Apps Script -> hoja)
+  async function addService(service) {
+    // `service` viene con la forma:
+    // { date, dogName, ownerName, type, price, paymentMethod, groomer, notes }
+    try {
+      setError(null);
+
+      await createServiceOnSheet(service);
+      console.log("[ServicesContext] Servicio creado en sheet");
+
+      // Agregamos el servicio también en memoria para verlo sin recargar
+      const nuevoServicio = {
+        id: services.length + 1,
+        rawDate: service.date,
+        date: service.date,
+        dateObj: new Date(service.date),
+        dogName: service.dogName,
+        ownerName: service.ownerName,
+        type: service.type,
+        price: Number(service.price || 0),
+        paymentMethod: service.paymentMethod,
+        groomer: service.groomer,
+        notes: service.notes || "",
+      };
+
+      setServices((prev) => [...prev, nuevoServicio]);
+    } catch (err) {
+      console.error("[ServicesContext] Error creando servicio:", err);
+      setError(err.message || "Error al crear servicio.");
+      throw err;
+    }
+  }
 
   return (
     <ServicesContext.Provider
       value={{
-        services: state.services,
-        loading: state.loading,
-        error: state.error,
+        services,
+        loading,
+        error,
+        addService,
       }}
     >
       {children}

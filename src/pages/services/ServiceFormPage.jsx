@@ -1,19 +1,27 @@
 // src/pages/services/ServiceFormPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useServices } from "../../context/ServicesContext";
+
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`; // para <input type="date">
+}
 
 export default function ServiceFormPage() {
   const navigate = useNavigate();
-  const today = new Date().toISOString().slice(0, 10);
+  const { addService, loading } = useServices();
 
   const [form, setForm] = useState({
-    date: today,
+    date: todayISO(),
     dogName: "",
     ownerName: "",
-    breed: "",
-    serviceType: "BAÑO_CORTE",
+    type: "Baño + corte",
     price: "",
-    paymentMethod: "EFECTIVO",
+    paymentMethod: "Efectivo",
     groomer: "",
     notes: "",
   });
@@ -23,15 +31,30 @@ export default function ServiceFormPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    console.log("Nuevo servicio:", form);
-    alert("Servicio guardado (por ahora solo en consola).");
-    navigate("/services");
-  }
 
-  function handleCancel() {
-    navigate("/services");
+    const payload = {
+      date: form.date,
+      dogName: form.dogName.trim(),
+      ownerName: form.ownerName.trim(),
+      type: form.type,
+      price: Number(form.price || 0),
+      paymentMethod: form.paymentMethod,
+      groomer: form.groomer.trim(),
+      notes: form.notes.trim(),
+    };
+
+    try {
+      await addService(payload);
+      alert("✅ Servicio guardado correctamente en Bandidos.");
+      navigate("/services");
+    } catch (err) {
+      console.error("[ServiceFormPage] Error al guardar servicio:", err);
+      alert(
+        "❌ Ocurrió un error al guardar el servicio. Revisá la consola para más detalles."
+      );
+    }
   }
 
   return (
@@ -45,86 +68,83 @@ export default function ServiceFormPage() {
         </div>
       </header>
 
-      <form className="form-card" onSubmit={handleSubmit}>
-        <div className="form-grid">
-          <div className="form-field">
+      <div className="card">
+        <form className="form-grid" onSubmit={handleSubmit}>
+          {/* Fecha */}
+          <div className="form-group">
             <label htmlFor="date">Fecha</label>
             <input
               id="date"
-              type="date"
               name="date"
+              type="date"
               value={form.date}
               onChange={handleChange}
               required
             />
           </div>
 
-          <div className="form-field">
+          {/* Nombre del perro */}
+          <div className="form-group">
             <label htmlFor="dogName">Nombre del perro</label>
             <input
               id="dogName"
-              type="text"
               name="dogName"
+              type="text"
+              placeholder="Ej: Luna"
               value={form.dogName}
               onChange={handleChange}
-              placeholder="Ej: Luna"
               required
             />
           </div>
 
-          <div className="form-field">
+          {/* Dueño */}
+          <div className="form-group">
             <label htmlFor="ownerName">Dueño</label>
             <input
               id="ownerName"
-              type="text"
               name="ownerName"
+              type="text"
+              placeholder="Nombre del dueño"
               value={form.ownerName}
               onChange={handleChange}
-              placeholder="Nombre del dueño"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="breed">Raza</label>
-            <input
-              id="breed"
-              type="text"
-              name="breed"
-              value={form.breed}
-              onChange={handleChange}
-              placeholder="Ej: Schnauzer"
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="serviceType">Tipo de servicio</label>
-            <select
-              id="serviceType"
-              name="serviceType"
-              value={form.serviceType}
-              onChange={handleChange}
-            >
-              <option value="BAÑO">Baño</option>
-              <option value="CORTE">Corte</option>
-              <option value="BAÑO_CORTE">Baño + corte</option>
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="price">Precio (ARS)</label>
-            <input
-              id="price"
-              type="number"
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              min="0"
-              step="100"
               required
             />
           </div>
 
-          <div className="form-field">
+          {/* Tipo de servicio */}
+          <div className="form-group">
+            <label htmlFor="type">Tipo de servicio</label>
+            <select
+              id="type"
+              name="type"
+              value={form.type}
+              onChange={handleChange}
+            >
+              <option value="Baño">Baño</option>
+              <option value="Baño + corte">Baño + corte</option>
+              <option value="Corte">Corte</option>
+              <option value="Completo">Completo</option>
+            </select>
+          </div>
+
+          {/* Precio */}
+          <div className="form-group">
+            <label htmlFor="price">Precio (ARS)</label>
+            <input
+              id="price"
+              name="price"
+              type="number"
+              min="0"
+              step="100"
+              placeholder="Ej: 8500"
+              value={form.price}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          {/* Método de pago */}
+          <div className="form-group">
             <label htmlFor="paymentMethod">Método de pago</label>
             <select
               id="paymentMethod"
@@ -132,51 +152,50 @@ export default function ServiceFormPage() {
               value={form.paymentMethod}
               onChange={handleChange}
             >
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="DEBITO">Débito</option>
-              <option value="CREDITO">Crédito</option>
-              <option value="MP">Mercado Pago</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Débito automático">Débito automático</option>
+              <option value="Tarjeta">Tarjeta</option>
             </select>
           </div>
 
-          <div className="form-field">
+          {/* Groomer */}
+          <div className="form-group">
             <label htmlFor="groomer">Groomer</label>
             <input
               id="groomer"
-              type="text"
               name="groomer"
+              type="text"
+              placeholder="Quién atendió"
               value={form.groomer}
               onChange={handleChange}
-              placeholder="Quien atendió"
             />
           </div>
-        </div>
 
-        <div className="form-field" style={{ marginTop: 12 }}>
-          <label htmlFor="notes">Notas</label>
-          <textarea
-            id="notes"
-            name="notes"
-            rows={3}
-            value={form.notes}
-            onChange={handleChange}
-            placeholder="Observaciones del perro o del servicio..."
-          />
-        </div>
+          {/* Notas */}
+          <div className="form-group form-group--full">
+            <label htmlFor="notes">Notas</label>
+            <textarea
+              id="notes"
+              name="notes"
+              rows={3}
+              placeholder="Observaciones del perro o del servicio..."
+              value={form.notes}
+              onChange={handleChange}
+            />
+          </div>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            Guardar servicio
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleCancel}
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
+          <div className="form-actions form-group--full">
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={loading}
+            >
+              {loading ? "Guardando..." : "Guardar servicio"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
