@@ -13,7 +13,7 @@ function parseDateDMY(str) {
   const [d, m, y] = parts.map((n) => parseInt(n, 10));
   if (!d || !m || !y) return null;
 
-  return new Date(y, m - 1, d);
+  return new Date(d, m - 1, y);
 }
 
 // ---------------------------------------------------------------------------

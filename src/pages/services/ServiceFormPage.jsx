@@ -8,12 +8,13 @@ function todayISO() {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`; // para <input type="date">
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export default function ServiceFormPage() {
   const navigate = useNavigate();
-  const { addService, loading } = useServices();
+  const { addService } = useServices();
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     date: todayISO(),
@@ -33,6 +34,9 @@ export default function ServiceFormPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
 
     const payload = {
       date: form.date,
@@ -54,6 +58,8 @@ export default function ServiceFormPage() {
       alert(
         "❌ Ocurrió un error al guardar el servicio. Revisá la consola para más detalles."
       );
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -68,10 +74,11 @@ export default function ServiceFormPage() {
         </div>
       </header>
 
-      <div className="card">
+      {/* CARD igual estilo que Empleados */}
+      <div className="form-card">
         <form className="form-grid" onSubmit={handleSubmit}>
           {/* Fecha */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="date">Fecha</label>
             <input
               id="date"
@@ -84,7 +91,7 @@ export default function ServiceFormPage() {
           </div>
 
           {/* Nombre del perro */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="dogName">Nombre del perro</label>
             <input
               id="dogName"
@@ -98,7 +105,7 @@ export default function ServiceFormPage() {
           </div>
 
           {/* Dueño */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="ownerName">Dueño</label>
             <input
               id="ownerName"
@@ -112,7 +119,7 @@ export default function ServiceFormPage() {
           </div>
 
           {/* Tipo de servicio */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="type">Tipo de servicio</label>
             <select
               id="type"
@@ -128,7 +135,7 @@ export default function ServiceFormPage() {
           </div>
 
           {/* Precio */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="price">Precio (ARS)</label>
             <input
               id="price"
@@ -144,7 +151,7 @@ export default function ServiceFormPage() {
           </div>
 
           {/* Método de pago */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="paymentMethod">Método de pago</label>
             <select
               id="paymentMethod"
@@ -160,7 +167,7 @@ export default function ServiceFormPage() {
           </div>
 
           {/* Groomer */}
-          <div className="form-group">
+          <div className="form-field">
             <label htmlFor="groomer">Groomer</label>
             <input
               id="groomer"
@@ -172,8 +179,8 @@ export default function ServiceFormPage() {
             />
           </div>
 
-          {/* Notas */}
-          <div className="form-group form-group--full">
+          {/* Notas: ocupa todo el ancho */}
+          <div className="form-field form-field--full">
             <label htmlFor="notes">Notas</label>
             <textarea
               id="notes"
@@ -185,13 +192,23 @@ export default function ServiceFormPage() {
             />
           </div>
 
-          <div className="form-actions form-group--full">
+          {/* Botón: full width en grid */}
+          <div className="form-actions form-field--full">
             <button
               type="submit"
-              className="btn-primary"
-              disabled={loading}
+              className={`btn-primary ${
+                submitting ? "btn-primary--loading" : ""
+              }`}
+              disabled={submitting}
             >
-              {loading ? "Guardando..." : "Guardar servicio"}
+              {submitting ? (
+                <>
+                  <span className="btn-spinner" />
+                  Guardando...
+                </>
+              ) : (
+                "Guardar servicio"
+              )}
             </button>
           </div>
         </form>
