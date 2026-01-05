@@ -47,7 +47,7 @@ export default function DashboardPage() {
     <div className="page-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Dashboard</h1>
+          <h1 className="page-title">Inicio</h1>
           <p className="page-subtitle">
             Resumen del negocio de Bandidos · {formattedDate}
           </p>

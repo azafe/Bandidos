@@ -1,24 +1,40 @@
 // src/services/googleSheetsService.js
 // Carga de servicios desde el CSV público de Google Sheets
-// + Escritura de nuevos servicios vía Apps Script (sin tocar Código.gs)
+// + Escritura / borrado de servicios vía Apps Script
+
+import Papa from "papaparse";
 
 const CSV_URL = import.meta.env.VITE_BANDIDOS_SERVICIOS_CSV_URL;
 const SCRIPT_URL = import.meta.env.VITE_BANDIDOS_SERVICIOS_SCRIPT_URL;
 
+// ─────────────────────────────────────────────
+// Helper: parsear fecha dd/MM/yyyy
+// ─────────────────────────────────────────────
 function parseDateDMY(str) {
   if (!str) return null;
-  const parts = str.split("/");
-  if (parts.length !== 3) return null;
-
-  const [d, m, y] = parts.map((n) => parseInt(n, 10));
-  if (!d || !m || !y) return null;
-
-  return new Date(d, m - 1, y);
+  // Espera "dd/MM/yyyy"
+  const [dd, mm, yyyy] = str.split("/");
+  if (!dd || !mm || !yyyy) return null;
+  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  if (isNaN(d.getTime())) return null;
+  return d;
 }
 
-// ---------------------------------------------------------------------------
-// LECTURA: traer todos los servicios desde el CSV
-// ---------------------------------------------------------------------------
+function formatDateToDMY(value) {
+  if (!value) return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+
+  if (raw.includes("/")) return raw;
+
+  if (raw.includes("-")) {
+    const [yyyy, mm, dd] = raw.split("-");
+    if (!yyyy || !mm || !dd) return raw;
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  return raw;
+}
 
 // ─────────────────────────────────────────────
 // LECTURA: traer servicios desde la hoja (CSV)
@@ -34,73 +50,57 @@ export async function fetchServiciosFromSheet() {
   }
 
   const text = await res.text();
-  console.log("CSV RAW TEXT (primeros 300 chars):", text.slice(0, 300));
+  const parsed = Papa.parse(text, {
+    header: true,
+    skipEmptyLines: true,
+  });
 
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length <= 1) return [];
+  if (parsed.errors?.length) {
+    console.warn("[fetchServiciosFromSheet] Errores parseando CSV:", parsed.errors);
+  }
 
-  const [headerLine, ...rows] = lines;
-  const headers = headerLine.split(",");
+  const servicios = (parsed.data || []).map((row, index) => {
+    const fecha = row["Fecha"] ?? "";
+    const perro = row["Perro"] ?? "";
+    const dueno = row["Dueño"] ?? "";
+    const servicio = row["Servicio"] ?? "";
+    const precio = row["Precio"] ?? "";
+    const metodo = row["Método de pago"] ?? "";
+    const groomer = row["Groomer"] ?? "";
+    const notas = row["Notas"] ?? "";
 
-  // Esperamos encabezados estilo:
-  // Fecha,Perro,Dueño,Servicio,Precio,Método de pago,Groomer,Notas,...
-  const idxFecha = headers.indexOf("Fecha");
-  const idxPerro = headers.indexOf("Perro");
-  const idxDueno = headers.indexOf("Dueño");
-  const idxServicio = headers.indexOf("Servicio");
-  const idxPrecio = headers.indexOf("Precio");
-  const idxMetodo = headers.indexOf("Método de pago");
-  const idxGroomer = headers.indexOf("Groomer");
-  const idxNotas = headers.indexOf("Notas");
+    const dateObj = parseDateDMY(fecha);
 
-  const servicios = rows
-    .filter((line) => line.trim() !== "")
-    .map((line, index) => {
-      const cols = line.split(",");
+    return {
+      // index 0 corresponde a la fila 2 de Sheets (1 = encabezado)
+      id: index + 1,
+      sheetRow: index + 2,
+      date: fecha,
+      dateObj,
+      dogName: perro,
+      ownerName: dueno,
+      type: servicio,
+      price: Number(precio) || 0,
+      paymentMethod: metodo,
+      groomer,
+      notes: notas,
+    };
+  });
 
-      const fecha = cols[idxFecha] ?? "";
-      const perro = cols[idxPerro] ?? "";
-      const dueno = cols[idxDueno] ?? "";
-      const servicio = cols[idxServicio] ?? "";
-      const precio = cols[idxPrecio] ?? "";
-      const metodo = cols[idxMetodo] ?? "";
-      const groomer = cols[idxGroomer] ?? "";
-      const notas = idxNotas >= 0 ? cols[idxNotas] ?? "" : "";
-
-      const dateObj = parseDateDMY(fecha);
-
-      return {
-        id: index + 1,
-        date: fecha,
-        dateObj,
-        dogName: perro,
-        ownerName: dueno,
-        type: servicio,
-        price: Number(precio) || 0,
-        paymentMethod: metodo,
-        groomer,
-        notes: notas,
-      };
-    });
-
-  console.log("fetchServiciosFromSheet ->", servicios.length, "servicios");
   return servicios;
 }
 
-
-// ---------------------------------------------------------------------------
-// ESCRITURA: crear un nuevo servicio en la hoja de Google
-// ---------------------------------------------------------------------------
-
+// ─────────────────────────────────────────────
+// ESCRITURA: crear un nuevo servicio
+// ─────────────────────────────────────────────
 export async function createServiceOnSheet(service) {
   if (!SCRIPT_URL) {
     throw new Error("VITE_BANDIDOS_SERVICIOS_SCRIPT_URL no está definida");
   }
 
-  // Payload que espera tu Apps Script (igual al que probaste con curl)
   const payload = {
     action: "create",
-    Fecha: service.date,                 // "2025-11-21"
+    Fecha: formatDateToDMY(service.date),
     Perro: service.dogName,
     Dueño: service.ownerName,
     Servicio: service.type,
@@ -110,11 +110,7 @@ export async function createServiceOnSheet(service) {
     Notas: service.notes || "",
   };
 
-  console.log("[createServiceOnSheet] payload ->", payload);
-
   try {
-    // Usamos no-cors porque no necesitamos leer la respuesta
-    // y así evitamos los problemas de CORS del navegador.
     await fetch(SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
@@ -123,11 +119,36 @@ export async function createServiceOnSheet(service) {
       },
       body: JSON.stringify(payload),
     });
-
-    // No intentamos leer response.json() porque en no-cors
-    // la respuesta es "opaque". Si falla la red, va al catch.
   } catch (err) {
     console.error("[createServiceOnSheet] Error en fetch:", err);
+    throw err;
+  }
+}
+
+// ─────────────────────────────────────────────
+// ESCRITURA: eliminar servicio por fila de hoja
+// ─────────────────────────────────────────────
+export async function deleteServiceOnSheet(sheetRow) {
+  if (!SCRIPT_URL) {
+    throw new Error("VITE_BANDIDOS_SERVICIOS_SCRIPT_URL no está definida");
+  }
+
+  const payload = {
+    action: "delete",
+    row: String(sheetRow),
+  };
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("[deleteServiceOnSheet] Error en fetch:", err);
     throw err;
   }
 }

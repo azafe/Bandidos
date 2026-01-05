@@ -36,7 +36,7 @@ export default function LoginPage() {
 
         <p style={{ fontSize: "0.85rem", color: "#666" }}>
           Por ahora este login es solo de prueba. Podés navegar directo al
-          dashboard desde <code>/</code>.
+          Inicio desde <code>/</code>.
         </p>
       </div>
     </div>

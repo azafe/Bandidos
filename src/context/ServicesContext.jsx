@@ -3,16 +3,17 @@ import { createContext, useContext, useEffect, useState } from "react";
 import {
   fetchServiciosFromSheet,
   createServiceOnSheet,
+  deleteServiceOnSheet,
 } from "../services/googleSheetsService";
 
-const ServicesContext = createContext();
+const ServicesContext = createContext(null);
 
 export function ServicesProvider({ children }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Cargar servicios desde el CSV (solo lectura)
+  // Cargar servicios desde el CSV
   useEffect(() => {
     let isMounted = true;
 
@@ -20,10 +21,8 @@ export function ServicesProvider({ children }) {
       try {
         setLoading(true);
         setError(null);
-
-        const data = await fetchServiciosFromSheet(); // 👈 AHORA SÍ IMPORTADO
+        const data = await fetchServiciosFromSheet();
         if (!isMounted) return;
-
         setServices(data);
       } catch (err) {
         console.error("[ServicesContext] Error cargando servicios:", err);
@@ -40,35 +39,40 @@ export function ServicesProvider({ children }) {
     };
   }, []);
 
-  // Crear un nuevo servicio (panel -> Apps Script -> hoja)
-  async function addService(service) {
-    // `service` viene con la forma:
-    // { date, dogName, ownerName, type, price, paymentMethod, groomer, notes }
+  // Crear un nuevo servicio
+  async function addService(servicePayload) {
     try {
       setError(null);
 
-      await createServiceOnSheet(service);
-      console.log("[ServicesContext] Servicio creado en sheet");
-
-      // Agregamos el servicio también en memoria para verlo sin recargar
-      const nuevoServicio = {
-        id: services.length + 1,
-        rawDate: service.date,
-        date: service.date,
-        dateObj: new Date(service.date),
-        dogName: service.dogName,
-        ownerName: service.ownerName,
-        type: service.type,
-        price: Number(service.price || 0),
-        paymentMethod: service.paymentMethod,
-        groomer: service.groomer,
-        notes: service.notes || "",
-      };
-
-      setServices((prev) => [...prev, nuevoServicio]);
+      // Guardar en hoja (Apps Script)
+      await createServiceOnSheet(servicePayload);
+      const data = await fetchServiciosFromSheet();
+      setServices(data);
     } catch (err) {
       console.error("[ServicesContext] Error creando servicio:", err);
       setError(err.message || "Error al crear servicio.");
+      throw err;
+    }
+  }
+
+  // Eliminar servicio
+  async function deleteService(service) {
+    try {
+      setError(null);
+
+      if (service.sheetRow) {
+        await deleteServiceOnSheet(service.sheetRow);
+      } else {
+        console.warn(
+          "[ServicesContext] Servicio sin sheetRow, solo se eliminará en memoria."
+        );
+      }
+
+      const data = await fetchServiciosFromSheet();
+      setServices(data);
+    } catch (err) {
+      console.error("[ServicesContext] Error eliminando servicio:", err);
+      setError(err.message || "Error al eliminar servicio.");
       throw err;
     }
   }
@@ -80,6 +84,7 @@ export function ServicesProvider({ children }) {
         loading,
         error,
         addService,
+        deleteService,
       }}
     >
       {children}

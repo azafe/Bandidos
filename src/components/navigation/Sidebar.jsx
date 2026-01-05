@@ -33,7 +33,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
-          Dashboard
+          Inicio
         </NavLink>
 
         <NavLink

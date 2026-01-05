@@ -55,7 +55,7 @@ function parseSheetDate(dateStr) {
 }
 
 export default function ServicesListPage() {
-  const { services } = useServices();
+  const { services, deleteService } = useServices();
   const [search, setSearch] = useState("");
 
   const now = new Date();
@@ -116,6 +116,21 @@ export default function ServicesListPage() {
     year: "numeric",
   });
 
+  async function handleDelete(service) {
+    const ok = window.confirm(
+      `¿Eliminar el turno de ${service.dogName} (${service.date})?`
+    );
+    if (!ok) return;
+
+    try {
+      await deleteService(service);
+    } catch {
+      alert("No se pudo eliminar el servicio. Revisá la consola.");
+    }
+  }
+
+  
+
   return (
     <div className="page-content">
       <header className="page-header">
@@ -172,12 +187,13 @@ export default function ServicesListPage() {
                 <th>Precio</th>
                 <th>Método</th>
                 <th>Groomer</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {servicesToday.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 16 }}>
+                  <td colSpan={8} style={{ textAlign: "center", padding: 16 }}>
                     Hoy todavía no se registraron servicios.
                   </td>
                 </tr>
@@ -191,6 +207,15 @@ export default function ServicesListPage() {
                     <td>${Number(s.price).toLocaleString("es-AR")}</td>
                     <td>{s.paymentMethod}</td>
                     <td>{s.groomer}</td>
+                    <td>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={() => handleDelete(s)}
+                    >
+                      Eliminar
+                    </button>
+           </td>
                   </tr>
                 ))
               )}
@@ -246,12 +271,13 @@ export default function ServicesListPage() {
                 <th>Precio</th>
                 <th>Método</th>
                 <th>Groomer</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filteredMonthServices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 16 }}>
+                  <td colSpan={8} style={{ textAlign: "center", padding: 16 }}>
                     No hay servicios que coincidan con la búsqueda en este mes.
                   </td>
                 </tr>
@@ -265,6 +291,15 @@ export default function ServicesListPage() {
                     <td>${Number(s.price).toLocaleString("es-AR")}</td>
                     <td>{s.paymentMethod}</td>
                     <td>{s.groomer}</td>
+                     <td>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={() => handleDelete(s)}
+                    >
+                      Eliminar
+                    </button>
+                  </td>
                   </tr>
                 ))
               )}
