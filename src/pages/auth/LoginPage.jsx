@@ -3,12 +3,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
+import "./login.css";
 
 export default function LoginPage() {
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ email: "", password: "", role: "admin" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
 
   function handleChange(e) {
@@ -25,15 +25,7 @@ export default function LoginPage() {
 
     try {
       setSubmitting(true);
-      if (mode === "login") {
-        await login({ email: form.email, password: form.password });
-      } else {
-        await register({
-          email: form.email,
-          password: form.password,
-          role: form.role,
-        });
-      }
+      await login({ email: form.email, password: form.password });
       navigate("/");
     } catch (err) {
       alert(err.message || "No se pudo iniciar sesión.");
@@ -43,146 +35,82 @@ export default function LoginPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "radial-gradient(circle at top left, #262938, #111217 55%)",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          padding: "24px 28px",
-          borderRadius: "16px",
-          boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-          maxWidth: "380px",
-          width: "100%",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: 12,
-          }}
-        >
-          <img
-            src={logo}
-            alt="Logo Bandidos"
-            style={{ width: 72, height: 72, borderRadius: "50%" }}
-          />
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <img src={logo} alt="Logo Bandidos" />
         </div>
-        <h1
-          style={{
-            fontFamily: "Fredoka, system-ui, sans-serif",
-            fontSize: "1.6rem",
-            marginBottom: "8px",
-          }}
-        >
-          Bandidos
-        </h1>
-        <p style={{ fontSize: "0.9rem", marginBottom: "18px" }}>
-          {mode === "login" ? "Inicio de sesión" : "Crear cuenta de acceso"}
-        </p>
+        <h1 className="login-title">Bandidos</h1>
+        <p className="login-subtitle">Inicio de sesión</p>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          <button
-            type="button"
-            className={mode === "register" ? "btn-primary" : "btn-secondary"}
-            onClick={() => setMode("register")}
-          >
-            Registrar
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
+        <form onSubmit={handleSubmit} className="login-form">
+          <label className="login-label" htmlFor="email">
             Email
+          </label>
+          <div className="login-input">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="login-input__icon"
+            >
+              <path
+                d="M4 6.75C4 5.784 4.784 5 5.75 5h12.5C19.216 5 20 5.784 20 6.75v10.5c0 .966-.784 1.75-1.75 1.75H5.75C4.784 19 4 18.216 4 17.25V6.75zm1.75-.25a.25.25 0 0 0-.25.25v.317l6.5 4.55 6.5-4.55V6.75a.25.25 0 0 0-.25-.25H5.75zm12.75 2.384-5.96 4.172a1 1 0 0 1-1.08 0L5.5 8.884v8.366c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V8.884z"
+                fill="currentColor"
+              />
+            </svg>
             <input
+              id="email"
               name="email"
               type="email"
               value={form.email}
               onChange={handleChange}
               placeholder="tu@email.com"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
+              autoComplete="email"
+              aria-label="Email"
               required
             />
-          </label>
+          </div>
 
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
+          <label className="login-label" htmlFor="password">
             Contraseña
+          </label>
+          <div className="login-input">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="login-input__icon"
+            >
+              <path
+                d="M8.75 8V6.75a3.25 3.25 0 0 1 6.5 0V8h1.5A1.75 1.75 0 0 1 18.5 9.75v7.5A1.75 1.75 0 0 1 16.75 19h-9.5A1.75 1.75 0 0 1 5.5 17.25v-7.5A1.75 1.75 0 0 1 7.25 8h1.5zm1.5 0h3.5V6.75a1.75 1.75 0 0 0-3.5 0V8z"
+                fill="currentColor"
+              />
+            </svg>
             <input
+              id="password"
               name="password"
               type="password"
               value={form.password}
               onChange={handleChange}
               placeholder="••••••••"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
+              autoComplete="current-password"
+              aria-label="Contraseña"
               required
             />
-          </label>
-
-          {mode === "register" && (
-            <label style={{ fontSize: "0.85rem", color: "#333" }}>
-              Rol
-              <select
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  marginTop: 6,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                  background: "#fff",
-                }}
-              >
-                <option value="admin">Admin</option>
-                <option value="staff">Staff</option>
-              </select>
-            </label>
-          )}
+          </div>
 
           <button
             type="submit"
-            className="btn-primary"
+            className="login-button"
             disabled={submitting}
           >
-            {submitting
-              ? "Procesando..."
-              : mode === "login"
-                ? "Ingresar"
-                : "Crear cuenta"}
+            {submitting && <span className="login-spinner" aria-hidden="true" />}
+            {submitting ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
 
-        {mode === "login" && (
-          <div style={{ marginTop: 12 }}>
-            <Link
-              to="/forgot-password"
-              style={{ fontSize: "0.85rem", color: "#4a4a4a" }}
-            >
-              Olvidé mi contraseña
-            </Link>
-          </div>
-        )}
+        <div className="login-footer">
+          <Link to="/forgot-password">Olvidé mi contraseña</Link>
+        </div>
       </div>
     </div>
   );
