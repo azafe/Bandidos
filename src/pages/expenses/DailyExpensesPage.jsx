@@ -1,6 +1,7 @@
 // src/pages/expenses/DailyExpensesPage.jsx
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function DailyExpensesPage() {
   const today = new Date().toISOString().slice(0, 10);
@@ -29,6 +30,11 @@ export default function DailyExpensesPage() {
     supplier: "",
   });
   const [editingId, setEditingId] = useState(null);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+
+  function formatCurrency(value) {
+    return `$${Number(value || 0).toLocaleString("es-AR")}`;
+  }
 
   const totalToday = expenses.reduce((sum, exp) => {
     if (exp.date === form.date) return sum + Number(exp.amount || 0);
@@ -270,7 +276,7 @@ export default function DailyExpensesPage() {
         </div>
       </form>
 
-      {/* Tabla de gastos */}
+      {/* Lista de gastos */}
       <div className="card" style={{ marginTop: 18 }}>
         <h2 className="card-title">Listado de gastos</h2>
         <p className="card-subtitle">
@@ -285,57 +291,95 @@ export default function DailyExpensesPage() {
           </div>
         )}
 
-        <table className="table table--compact">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Categoría</th>
-              <th>Descripción</th>
-              <th>Monto</th>
-              <th>Método</th>
-              <th>Proveedor</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{ textAlign: "center", padding: 16 }}>
-                  Sin gastos cargados.
-                </td>
-              </tr>
-            ) : (
-              expenses.map((exp) => (
-                <tr key={exp.id}>
-                  <td>{exp.date}</td>
-                  <td>{exp.category?.name || exp.category_id}</td>
-                  <td>{exp.description}</td>
-                  <td>${Number(exp.amount || 0).toLocaleString("es-AR")}</td>
-                  <td>{exp.payment_method?.name || exp.payment_method_id}</td>
-                  <td>{exp.supplier?.name || exp.supplier_id || "-"}</td>
-                  <td>
+        <div className="list-wrapper">
+          {expenses.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin gastos cargados.
+            </div>
+          ) : (
+            expenses.map((exp) => (
+              <div
+                key={exp.id}
+                className="list-item"
+                onClick={() => setSelectedExpense(exp)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">
+                    {exp.description || "Gasto"}
+                  </div>
+                  <div className="list-item__actions">
                     <button
                       type="button"
                       className="btn-secondary btn-sm"
-                      onClick={() => startEdit(exp)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startEdit(exp);
+                      }}
                     >
                       Editar
                     </button>
                     <button
                       type="button"
                       className="btn-danger btn-sm"
-                      onClick={() => handleDelete(exp.id)}
-                      style={{ marginLeft: 8 }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(exp.id);
+                      }}
                     >
                       Eliminar
                     </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Fecha: {exp.date || "-"}</span>
+                  <span>Categoría: {exp.category?.name || exp.category_id || "-"}</span>
+                  <span>Monto: {formatCurrency(exp.amount)}</span>
+                  <span>
+                    Método: {exp.payment_method?.name || exp.payment_method_id || "-"}
+                  </span>
+                  <span>Proveedor: {exp.supplier?.name || exp.supplier_id || "-"}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedExpense)}
+        onClose={() => setSelectedExpense(null)}
+        title="Detalle del gasto"
+      >
+        {selectedExpense && (
+          <>
+            <div>
+              <strong>Fecha:</strong> {selectedExpense.date || "-"}
+            </div>
+            <div>
+              <strong>Categoría:</strong>{" "}
+              {selectedExpense.category?.name ||
+                selectedExpense.category_id ||
+                "-"}
+            </div>
+            <div>
+              <strong>Descripción:</strong> {selectedExpense.description || "-"}
+            </div>
+            <div>
+              <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
+            </div>
+            <div>
+              <strong>Método de pago:</strong>{" "}
+              {selectedExpense.payment_method?.name ||
+                selectedExpense.payment_method_id ||
+                "-"}
+            </div>
+            <div>
+              <strong>Proveedor:</strong>{" "}
+              {selectedExpense.supplier?.name || selectedExpense.supplier_id || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

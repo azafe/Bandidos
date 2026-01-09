@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UsersPage() {
@@ -13,6 +14,7 @@ export default function UsersPage() {
     role: "staff",
   });
   const [editingId, setEditingId] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -163,51 +165,68 @@ export default function UsersPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
-                    Sin usuarios cargados.
-                  </td>
-                </tr>
-              ) : (
-                items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.email}</td>
-                    <td>{item.role}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(item)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(item.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {items.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin usuarios cargados.
+            </div>
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                className="list-item"
+                onClick={() => setSelectedUser(item)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{item.email}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(item);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Rol: {item.role || "-"}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedUser)}
+        onClose={() => setSelectedUser(null)}
+        title="Detalle del usuario"
+      >
+        {selectedUser && (
+          <>
+            <div>
+              <strong>Email:</strong> {selectedUser.email || "-"}
+            </div>
+            <div>
+              <strong>Rol:</strong> {selectedUser.role || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

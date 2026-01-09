@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function PetsPage() {
   const [filters, setFilters] = useState({ customer_id: "", q: "" });
@@ -13,6 +14,12 @@ export default function PetsPage() {
   } = useApiResource("/v2/pets", filters);
   const { items: customers } = useApiResource("/v2/customers");
   const [editingId, setEditingId] = useState(null);
+  const [selectedPet, setSelectedPet] = useState(null);
+
+  function truncate(text, max) {
+    if (!text) return "";
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
 
   const [form, setForm] = useState({
     customer_id: "",
@@ -237,57 +244,87 @@ export default function PetsPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Cliente</th>
-                <th>Raza</th>
-                <th>Tamaño</th>
-                <th>Notas</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pets.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
-                    Sin mascotas cargadas.
-                  </td>
-                </tr>
-              ) : (
-                pets.map((pet) => (
-                  <tr key={pet.id}>
-                    <td>{pet.name}</td>
-                    <td>{pet.customer?.name || pet.customer_id}</td>
-                    <td>{pet.breed}</td>
-                    <td>{pet.size}</td>
-                    <td>{pet.notes}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(pet)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(pet.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {pets.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin mascotas cargadas.
+            </div>
+          ) : (
+            pets.map((pet) => (
+              <div
+                key={pet.id}
+                className="list-item"
+                onClick={() => setSelectedPet(pet)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{pet.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(pet);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(pet.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>
+                    Cliente: {pet.customer?.name || pet.customer_id || "-"}
+                  </span>
+                  <span>Raza: {pet.breed || "-"}</span>
+                  <span>Tamaño: {pet.size || "-"}</span>
+                </div>
+                {pet.notes && (
+                  <div className="list-item__meta">
+                    <span>Notas: {truncate(pet.notes, 80)}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedPet)}
+        onClose={() => setSelectedPet(null)}
+        title="Detalle de la mascota"
+      >
+        {selectedPet && (
+          <>
+            <div>
+              <strong>Nombre:</strong> {selectedPet.name || "-"}
+            </div>
+            <div>
+              <strong>Cliente:</strong>{" "}
+              {selectedPet.customer?.name || selectedPet.customer_id || "-"}
+            </div>
+            <div>
+              <strong>Raza:</strong> {selectedPet.breed || "-"}
+            </div>
+            <div>
+              <strong>Tamaño:</strong> {selectedPet.size || "-"}
+            </div>
+            <div>
+              <strong>Notas:</strong> {selectedPet.notes || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
@@ -12,6 +13,12 @@ export default function CustomersPage() {
     deleteItem,
   } = useApiResource("/v2/customers", search ? { q: search } : undefined);
   const [editingId, setEditingId] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  function truncate(text, max) {
+    if (!text) return "";
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
 
   const [form, setForm] = useState({
     name: "",
@@ -192,55 +199,80 @@ export default function CustomersPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Notas</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: "center", padding: 16 }}>
-                    Sin clientes cargados.
-                  </td>
-                </tr>
-              ) : (
-                customers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td>{customer.name}</td>
-                    <td>{customer.phone}</td>
-                    <td>{customer.email}</td>
-                    <td>{customer.notes}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(customer)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(customer.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {customers.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin clientes cargados.
+            </div>
+          ) : (
+            customers.map((customer) => (
+              <div
+                key={customer.id}
+                className="list-item"
+                onClick={() => setSelectedCustomer(customer)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{customer.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(customer);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(customer.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Tel: {customer.phone || "-"}</span>
+                  <span>Email: {customer.email || "-"}</span>
+                </div>
+                {customer.notes && (
+                  <div className="list-item__meta">
+                    <span>Notas: {truncate(customer.notes, 80)}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedCustomer)}
+        onClose={() => setSelectedCustomer(null)}
+        title="Detalle del cliente"
+      >
+        {selectedCustomer && (
+          <>
+            <div>
+              <strong>Nombre:</strong> {selectedCustomer.name || "-"}
+            </div>
+            <div>
+              <strong>Teléfono:</strong> {selectedCustomer.phone || "-"}
+            </div>
+            <div>
+              <strong>Email:</strong> {selectedCustomer.email || "-"}
+            </div>
+            <div>
+              <strong>Notas:</strong> {selectedCustomer.notes || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

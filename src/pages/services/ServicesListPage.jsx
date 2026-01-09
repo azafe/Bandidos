@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 /**
  * Convierte el string de fecha de Google Sheets
@@ -60,6 +61,7 @@ export default function ServicesListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [selectedService, setSelectedService] = useState(null);
   const [filters, setFilters] = useState(() => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -148,6 +150,11 @@ export default function ServicesListPage() {
   });
 
   const periodLabel = `${filters.from} → ${filters.to}`;
+
+  function formatPrice(value) {
+    if (value === null || value === undefined || value === "") return "-";
+    return `$${Number(value).toLocaleString("es-AR")}`;
+  }
 
   async function handleDelete(service) {
     const ok = window.confirm(
@@ -320,66 +327,66 @@ export default function ServicesListPage() {
         </div>
       </div>
 
-      {/* Tabla: servicios de hoy */}
+      {/* Lista: servicios de hoy */}
       <div className="card" style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>Servicios de hoy</h2>
         <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 12 }}>
           Turnos registrados en la fecha actual.
         </p>
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Hora / Fecha</th>
-                <th>Perro</th>
-                <th>Dueño</th>
-                <th>Servicio</th>
-                <th>Precio</th>
-                <th>Método</th>
-                <th>Groomer</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {servicesToday.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 16 }}>
-                    Hoy todavía no se registraron servicios.
-                  </td>
-                </tr>
-              ) : (
-                servicesToday.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.date}</td>
-                    <td>{s.dogName || s.pet?.name}</td>
-                    <td>{s.ownerName || s.customer?.name}</td>
-                    <td>{s.type || s.service_type?.name}</td>
-                    <td>${Number(s.price).toLocaleString("es-AR")}</td>
-                    <td>{s.paymentMethod || s.payment_method?.name}</td>
-                    <td>{s.groomer?.name || s.groomer}</td>
-                    <td>
-                      <Link to={`/services/${s.id}`} className="btn-secondary btn-sm">
-                        Editar
-                      </Link>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(s)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {servicesToday.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Hoy todavía no se registraron servicios.
+            </div>
+          ) : (
+            servicesToday.map((s) => (
+              <div
+                key={s.id}
+                className="list-item"
+                onClick={() => setSelectedService(s)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">
+                    {s.dogName || s.pet?.name || "Servicio"}
+                  </div>
+                  <div className="list-item__actions">
+                    <Link
+                      to={`/services/${s.id}`}
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Editar
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(s);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Fecha: {s.date || "-"}</span>
+                  <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
+                  <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
+                  <span>Precio: {formatPrice(s.price)}</span>
+                  <span>
+                    Método: {s.paymentMethod || s.payment_method?.name || "-"}
+                  </span>
+                  <span>Groomer: {s.groomer?.name || s.groomer || "-"}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Tabla: servicios del mes + buscador */}
+      {/* Lista: servicios del período + buscador */}
       <div className="card">
         <div
           style={{
@@ -415,57 +422,98 @@ export default function ServicesListPage() {
           />
         </div>
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Perro</th>
-                <th>Dueño</th>
-                <th>Servicio</th>
-                <th>Precio</th>
-                <th>Método</th>
-                <th>Groomer</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredServices.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 16 }}>
-                    No hay servicios que coincidan con la búsqueda en este período.
-                  </td>
-                </tr>
-              ) : (
-                filteredServices.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.date}</td>
-                    <td>{s.dogName || s.pet?.name}</td>
-                    <td>{s.ownerName || s.customer?.name}</td>
-                    <td>{s.type || s.service_type?.name}</td>
-                    <td>${Number(s.price).toLocaleString("es-AR")}</td>
-                    <td>{s.paymentMethod || s.payment_method?.name}</td>
-                    <td>{s.groomer?.name || s.groomer}</td>
-                     <td>
-                      <Link to={`/services/${s.id}`} className="btn-secondary btn-sm">
-                        Editar
-                      </Link>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(s)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                  </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {filteredServices.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              No hay servicios que coincidan con la búsqueda en este período.
+            </div>
+          ) : (
+            filteredServices.map((s) => (
+              <div
+                key={s.id}
+                className="list-item"
+                onClick={() => setSelectedService(s)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">
+                    {s.dogName || s.pet?.name || "Servicio"}
+                  </div>
+                  <div className="list-item__actions">
+                    <Link
+                      to={`/services/${s.id}`}
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Editar
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(s);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Fecha: {s.date || "-"}</span>
+                  <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
+                  <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
+                  <span>Precio: {formatPrice(s.price)}</span>
+                  <span>
+                    Método: {s.paymentMethod || s.payment_method?.name || "-"}
+                  </span>
+                  <span>Groomer: {s.groomer?.name || s.groomer || "-"}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedService)}
+        onClose={() => setSelectedService(null)}
+        title="Detalle del servicio"
+      >
+        {selectedService && (
+          <>
+            <div>
+              <strong>Fecha:</strong> {selectedService.date || "-"}
+            </div>
+            <div>
+              <strong>Perro:</strong>{" "}
+              {selectedService.dogName || selectedService.pet?.name || "-"}
+            </div>
+            <div>
+              <strong>Dueño:</strong>{" "}
+              {selectedService.ownerName || selectedService.customer?.name || "-"}
+            </div>
+            <div>
+              <strong>Servicio:</strong>{" "}
+              {selectedService.type ||
+                selectedService.service_type?.name ||
+                "-"}
+            </div>
+            <div>
+              <strong>Precio:</strong> {formatPrice(selectedService.price)}
+            </div>
+            <div>
+              <strong>Método de pago:</strong>{" "}
+              {selectedService.paymentMethod ||
+                selectedService.payment_method?.name ||
+                "-"}
+            </div>
+            <div>
+              <strong>Groomer:</strong>{" "}
+              {selectedService.groomer?.name || selectedService.groomer || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

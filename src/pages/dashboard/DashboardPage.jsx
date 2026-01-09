@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
+import Modal from "../../components/ui/Modal";
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   });
   const [summary, setSummary] = useState(null);
   const [daily, setDaily] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -169,47 +171,52 @@ export default function DashboardPage() {
               {error}
             </div>
           ) : (
-            <table className="table table--compact">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Ingresos</th>
-                  <th>Gastos</th>
-                  <th>Servicios</th>
-                </tr>
-              </thead>
-              <tbody>
-                {daily.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: "center", padding: 16 }}>
-                      No hay datos para el rango seleccionado.
-                    </td>
-                  </tr>
-                ) : (
-                  daily.map((row, index) => (
-                    <tr key={row.date || index}>
-                      <td>{row.date || row.day || "-"}</td>
-                      <td>
-                        $
-                        {Number(
-                          row.income || row.total_income || row.totalIncome || 0
-                        ).toLocaleString("es-AR")}
-                      </td>
-                      <td>
-                        $
-                        {Number(
-                          row.expenses ||
-                            row.total_expenses ||
-                            row.totalExpenses ||
-                            0
-                        ).toLocaleString("es-AR")}
-                      </td>
-                      <td>{row.services || row.total_services || 0}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <div className="list-wrapper">
+              {daily.length === 0 ? (
+                <div className="card-subtitle" style={{ textAlign: "center" }}>
+                  No hay datos para el rango seleccionado.
+                </div>
+              ) : (
+                daily.map((row, index) => {
+                  const dateLabel = row.date || row.day || "-";
+                  const income =
+                    row.income || row.total_income || row.totalIncome || 0;
+                  const expenses =
+                    row.expenses ||
+                    row.total_expenses ||
+                    row.totalExpenses ||
+                    0;
+                  const services = row.services || row.total_services || 0;
+                  return (
+                    <div
+                      key={row.date || index}
+                      className="list-item"
+                      onClick={() =>
+                        setSelectedReport({
+                          dateLabel,
+                          income,
+                          expenses,
+                          services,
+                        })
+                      }
+                    >
+                      <div className="list-item__header">
+                        <div className="list-item__title">{dateLabel}</div>
+                      </div>
+                      <div className="list-item__meta">
+                        <span>
+                          Ingresos: ${Number(income).toLocaleString("es-AR")}
+                        </span>
+                        <span>
+                          Gastos: ${Number(expenses).toLocaleString("es-AR")}
+                        </span>
+                        <span>Servicios: {services}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           )}
         </div>
 
@@ -281,6 +288,31 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      <Modal
+        isOpen={Boolean(selectedReport)}
+        onClose={() => setSelectedReport(null)}
+        title="Detalle del reporte diario"
+      >
+        {selectedReport && (
+          <>
+            <div>
+              <strong>Fecha:</strong> {selectedReport.dateLabel}
+            </div>
+            <div>
+              <strong>Ingresos:</strong>{" "}
+              ${Number(selectedReport.income).toLocaleString("es-AR")}
+            </div>
+            <div>
+              <strong>Gastos:</strong>{" "}
+              ${Number(selectedReport.expenses).toLocaleString("es-AR")}
+            </div>
+            <div>
+              <strong>Servicios:</strong> {selectedReport.services}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

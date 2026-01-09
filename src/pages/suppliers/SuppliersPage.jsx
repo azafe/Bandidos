@@ -1,6 +1,7 @@
 // src/pages/suppliers/SuppliersPage.jsx
 import { useMemo, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function SuppliersPage() {
   const [filters, setFilters] = useState({ q: "", category: "" });
@@ -14,10 +15,16 @@ export default function SuppliersPage() {
   } = useApiResource("/v2/suppliers", filters);
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const [editingId, setEditingId] = useState(null);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
   const paymentMethodById = useMemo(() => {
     const entries = paymentMethods.map((method) => [method.id, method.name]);
     return new Map(entries);
   }, [paymentMethods]);
+
+  function truncate(text, max) {
+    if (!text) return "";
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
 
   const [form, setForm] = useState({
     name: "",
@@ -250,61 +257,92 @@ export default function SuppliersPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Rubro</th>
-                <th>Teléfono</th>
-                <th>Método pago</th>
-                <th>Notas</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {suppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
-                    Sin proveedores cargados.
-                  </td>
-                </tr>
-              ) : (
-                suppliers.map((s) => (
-                  <tr key={s.id}>
-                    <td>{s.name}</td>
-                    <td>{s.category}</td>
-                    <td>{s.phone}</td>
-                    <td>
-                      {s.payment_method?.name ||
-                        paymentMethodById.get(s.payment_method_id) ||
-                        "-"}
-                    </td>
-                    <td>{s.notes}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(s)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(s.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {suppliers.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin proveedores cargados.
+            </div>
+          ) : (
+            suppliers.map((s) => (
+              <div
+                key={s.id}
+                className="list-item"
+                onClick={() => setSelectedSupplier(s)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{s.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(s);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(s.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Rubro: {s.category || "-"}</span>
+                  <span>Tel: {s.phone || "-"}</span>
+                  <span>
+                    Pago:{" "}
+                    {s.payment_method?.name ||
+                      paymentMethodById.get(s.payment_method_id) ||
+                      "-"}
+                  </span>
+                </div>
+                {s.notes && (
+                  <div className="list-item__meta">
+                    <span>Notas: {truncate(s.notes, 80)}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedSupplier)}
+        onClose={() => setSelectedSupplier(null)}
+        title="Detalle del proveedor"
+      >
+        {selectedSupplier && (
+          <>
+            <div>
+              <strong>Nombre:</strong> {selectedSupplier.name || "-"}
+            </div>
+            <div>
+              <strong>Rubro:</strong> {selectedSupplier.category || "-"}
+            </div>
+            <div>
+              <strong>Teléfono:</strong> {selectedSupplier.phone || "-"}
+            </div>
+            <div>
+              <strong>Método de pago:</strong>{" "}
+              {selectedSupplier.payment_method?.name ||
+                paymentMethodById.get(selectedSupplier.payment_method_id) ||
+                "-"}
+            </div>
+            <div>
+              <strong>Notas:</strong> {selectedSupplier.notes || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

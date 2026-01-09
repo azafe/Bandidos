@@ -1,6 +1,7 @@
 // src/pages/expenses/FixedExpensesPage.jsx
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function FixedExpensesPage() {
   const [filters, setFilters] = useState({ category_id: "", status: "" });
@@ -29,6 +30,11 @@ export default function FixedExpensesPage() {
     status: "active",
   });
   const [editingId, setEditingId] = useState(null);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+
+  function formatCurrency(value) {
+    return `$${Number(value || 0).toLocaleString("es-AR")}`;
+  }
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -282,7 +288,7 @@ export default function FixedExpensesPage() {
         </div>
       </form>
 
-      {/* Tabla de gastos fijos */}
+      {/* Lista de gastos fijos */}
       <div className="card" style={{ marginTop: 18 }}>
         <h2 className="card-title">Listado de gastos fijos</h2>
         <p className="card-subtitle">
@@ -297,61 +303,99 @@ export default function FixedExpensesPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Categoría</th>
-                <th>Monto</th>
-                <th>Vence día</th>
-                <th>Método pago</th>
-                <th>Proveedor</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fixedExpenses.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 16 }}>
-                    Sin gastos fijos cargados.
-                  </td>
-                </tr>
-              ) : (
-                fixedExpenses.map((e) => (
-                  <tr key={e.id}>
-                    <td>{e.name}</td>
-                    <td>{e.category?.name || e.category_id}</td>
-                    <td>${Number(e.amount || 0).toLocaleString("es-AR")}</td>
-                    <td>{e.due_day || e.dueDay}</td>
-                    <td>{e.payment_method?.name || e.payment_method_id}</td>
-                    <td>{e.supplier?.name || e.supplier_id || "-"}</td>
-                    <td>{e.status === "active" ? "Activo" : "Inactivo"}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(e)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(e.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {fixedExpenses.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin gastos fijos cargados.
+            </div>
+          ) : (
+            fixedExpenses.map((e) => (
+              <div
+                key={e.id}
+                className="list-item"
+                onClick={() => setSelectedExpense(e)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{e.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startEdit(e);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(e.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Categoría: {e.category?.name || e.category_id || "-"}</span>
+                  <span>Monto: {formatCurrency(e.amount)}</span>
+                  <span>Vence: {e.due_day || e.dueDay || "-"}</span>
+                  <span>
+                    Método: {e.payment_method?.name || e.payment_method_id || "-"}
+                  </span>
+                  <span>Proveedor: {e.supplier?.name || e.supplier_id || "-"}</span>
+                  <span>Estado: {e.status === "active" ? "Activo" : "Inactivo"}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedExpense)}
+        onClose={() => setSelectedExpense(null)}
+        title="Detalle del gasto fijo"
+      >
+        {selectedExpense && (
+          <>
+            <div>
+              <strong>Nombre:</strong> {selectedExpense.name || "-"}
+            </div>
+            <div>
+              <strong>Categoría:</strong>{" "}
+              {selectedExpense.category?.name ||
+                selectedExpense.category_id ||
+                "-"}
+            </div>
+            <div>
+              <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
+            </div>
+            <div>
+              <strong>Vence día:</strong>{" "}
+              {selectedExpense.due_day || selectedExpense.dueDay || "-"}
+            </div>
+            <div>
+              <strong>Método de pago:</strong>{" "}
+              {selectedExpense.payment_method?.name ||
+                selectedExpense.payment_method_id ||
+                "-"}
+            </div>
+            <div>
+              <strong>Proveedor:</strong>{" "}
+              {selectedExpense.supplier?.name || selectedExpense.supplier_id || "-"}
+            </div>
+            <div>
+              <strong>Estado:</strong>{" "}
+              {selectedExpense.status === "active" ? "Activo" : "Inactivo"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

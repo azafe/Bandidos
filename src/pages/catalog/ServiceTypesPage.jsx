@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function ServiceTypesPage() {
   const { items, loading, error, createItem, updateItem, deleteItem } =
     useApiResource("/v2/service-types");
   const [form, setForm] = useState({ name: "", default_price: "" });
   const [editingId, setEditingId] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -127,55 +129,71 @@ export default function ServiceTypesPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Precio sugerido</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={3} style={{ textAlign: "center", padding: 16 }}>
-                    Sin tipos cargados.
-                  </td>
-                </tr>
-              ) : (
-                items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>
-                      {item.default_price
-                        ? `$${Number(item.default_price).toLocaleString("es-AR")}`
-                        : "-"}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(item)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(item.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {items.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin tipos cargados.
+            </div>
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                className="list-item"
+                onClick={() => setSelectedType(item)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{item.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(item);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Precio sugerido: {item.default_price ? `$${Number(item.default_price).toLocaleString("es-AR")}` : "-"}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedType)}
+        onClose={() => setSelectedType(null)}
+        title="Detalle del tipo de servicio"
+      >
+        {selectedType && (
+          <>
+            <div>
+              <strong>Nombre:</strong> {selectedType.name || "-"}
+            </div>
+            <div>
+              <strong>Precio sugerido:</strong>{" "}
+              {selectedType.default_price
+                ? `$${Number(selectedType.default_price).toLocaleString("es-AR")}`
+                : "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

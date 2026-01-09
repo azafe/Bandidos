@@ -1,6 +1,7 @@
 // src/pages/employees/EmployeesPage.jsx
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function EmployeesPage() {
   const {
@@ -12,6 +13,12 @@ export default function EmployeesPage() {
     deleteItem,
   } = useApiResource("/v2/employees");
   const [editingId, setEditingId] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  function truncate(text, max) {
+    if (!text) return "";
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
 
   const [form, setForm] = useState({
     name: "",
@@ -213,7 +220,7 @@ export default function EmployeesPage() {
         </div>
       </form>
 
-      {/* Tabla */}
+      {/* Lista */}
       <div className="card" style={{ marginTop: 18 }}>
         <h2 className="card-title">Listado de empleados</h2>
         <p className="card-subtitle">
@@ -227,59 +234,91 @@ export default function EmployeesPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Rol</th>
-                <th>Teléfono</th>
-                <th>Email</th>
-                <th>Estado</th>
-                <th>Notas</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 16 }}>
-                    Sin empleados cargados.
-                  </td>
-                </tr>
-              ) : (
-                employees.map((emp) => (
-                  <tr key={emp.id}>
-                    <td>{emp.name}</td>
-                    <td>{emp.role}</td>
-                    <td>{emp.phone}</td>
-                    <td>{emp.email}</td>
-                    <td>{emp.status === "active" ? "Activo" : "Inactivo"}</td>
-                    <td>{emp.notes}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(emp)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(emp.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {employees.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin empleados cargados.
+            </div>
+          ) : (
+            employees.map((emp) => (
+              <div
+                key={emp.id}
+                className="list-item"
+                onClick={() => setSelectedEmployee(emp)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{emp.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(emp);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(emp.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Rol: {emp.role || "-"}</span>
+                  <span>Tel: {emp.phone || "-"}</span>
+                  <span>Email: {emp.email || "-"}</span>
+                  <span>
+                    Estado: {emp.status === "active" ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
+                {emp.notes && (
+                  <div className="list-item__meta">
+                    <span>Notas: {truncate(emp.notes, 80)}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedEmployee)}
+        onClose={() => setSelectedEmployee(null)}
+        title="Detalle del empleado"
+      >
+        {selectedEmployee && (
+          <>
+            <div>
+              <strong>Nombre:</strong> {selectedEmployee.name || "-"}
+            </div>
+            <div>
+              <strong>Rol:</strong> {selectedEmployee.role || "-"}
+            </div>
+            <div>
+              <strong>Teléfono:</strong> {selectedEmployee.phone || "-"}
+            </div>
+            <div>
+              <strong>Email:</strong> {selectedEmployee.email || "-"}
+            </div>
+            <div>
+              <strong>Estado:</strong>{" "}
+              {selectedEmployee.status === "active" ? "Activo" : "Inactivo"}
+            </div>
+            <div>
+              <strong>Notas:</strong> {selectedEmployee.notes || "-"}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

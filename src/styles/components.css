@@ -163,6 +163,135 @@
   color: var(--color-text-soft);
 }
 
+/* ===== Lists ===== */
+.list-wrapper {
+  display: grid;
+  gap: 12px;
+}
+
+.list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.list-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-strong);
+}
+
+.list-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.list-item__title {
+  font-weight: 600;
+  color: #1b1f2f;
+}
+
+.list-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.list-item__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list-item__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.list-item__actions button {
+  cursor: pointer;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 16, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.modal-card {
+  position: relative;
+  width: min(560px, 92vw);
+  border-radius: 18px;
+  padding: 20px 22px;
+  background: var(--color-surface-strong);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow-strong);
+  z-index: 1;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #1b1f2f;
+}
+
+.modal-close {
+  border: none;
+  background: #f1f2f6;
+  color: #1b1f2f;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  font-size: 1.25rem;
+  display: grid;
+  place-items: center;
+}
+
+.modal-close:focus-visible {
+  outline: 2px solid #14151f;
+  outline-offset: 3px;
+}
+
+.modal-body {
+  display: grid;
+  gap: 8px;
+  color: #2b2f3f;
+  font-size: 0.9rem;
+}
+
+.modal-body strong {
+  color: #11151f;
+}
+
 /* Resumen de totales en formularios (gastos diarios / fijos) */
 .expenses-total {
   margin-top: 14px;

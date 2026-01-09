@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
+import Modal from "../../components/ui/Modal";
 
 export default function PaymentMethodsPage() {
   const { items, loading, error, createItem, updateItem, deleteItem } =
     useApiResource("/v2/payment-methods");
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [selectedMethod, setSelectedMethod] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -101,49 +103,63 @@ export default function PaymentMethodsPage() {
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="table table--compact">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={2} style={{ textAlign: "center", padding: 16 }}>
-                    Sin métodos cargados.
-                  </td>
-                </tr>
-              ) : (
-                items.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.name}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        onClick={() => startEdit(item)}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-danger btn-sm"
-                        onClick={() => handleDelete(item.id)}
-                        style={{ marginLeft: 8 }}
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="list-wrapper">
+          {items.length === 0 ? (
+            <div className="card-subtitle" style={{ textAlign: "center" }}>
+              Sin métodos cargados.
+            </div>
+          ) : (
+            items.map((item) => (
+              <div
+                key={item.id}
+                className="list-item"
+                onClick={() => setSelectedMethod(item)}
+              >
+                <div className="list-item__header">
+                  <div className="list-item__title">{item.name}</div>
+                  <div className="list-item__actions">
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(item);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-danger btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+                <div className="list-item__meta">
+                  <span>Nombre: {item.name || "-"}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(selectedMethod)}
+        onClose={() => setSelectedMethod(null)}
+        title="Detalle del método"
+      >
+        {selectedMethod && (
+          <div>
+            <strong>Nombre:</strong> {selectedMethod.name || "-"}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
