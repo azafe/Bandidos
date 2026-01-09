@@ -156,6 +156,16 @@ export default function ServicesListPage() {
     return `$${Number(value).toLocaleString("es-AR")}`;
   }
 
+  function formatDateDisplay(value) {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const dd = String(parsed.getDate()).padStart(2, "0");
+    const yyyy = parsed.getFullYear();
+    return `${mm}-${dd}-${yyyy}`;
+  }
+
   async function handleDelete(service) {
     const ok = window.confirm(
       `¿Eliminar el turno de ${service.dogName || service.pet?.name} (${service.date})?`
@@ -354,7 +364,7 @@ export default function ServicesListPage() {
                   </div>
                 </div>
                 <div className="list-item__meta">
-                  <span>Fecha: {s.date || "-"}</span>
+                  <span>Fecha: {formatDateDisplay(s.date)}</span>
                   <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
                   <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
                   <span>Precio: {formatPrice(s.price)}</span>
@@ -423,7 +433,7 @@ export default function ServicesListPage() {
                   </div>
                 </div>
                 <div className="list-item__meta">
-                  <span>Fecha: {s.date || "-"}</span>
+                  <span>Fecha: {formatDateDisplay(s.date)}</span>
                   <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
                   <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
                   <span>Precio: {formatPrice(s.price)}</span>
