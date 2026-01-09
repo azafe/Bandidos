@@ -460,7 +460,7 @@ export default function PetsPage() {
                 </div>
               </>
             )}
-            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <div className="modal-actions">
               {isEditingModal ? (
                 <>
                   <button
@@ -481,7 +481,7 @@ export default function PetsPage() {
               ) : (
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-primary"
                   onClick={() => openModalEdit(selectedPet)}
                 >
                   <span

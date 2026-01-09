@@ -292,6 +292,13 @@
   color: #11151f;
 }
 
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 /* Resumen de totales en formularios (gastos diarios / fijos) */
 .expenses-total {
   margin-top: 14px;
