@@ -1,5 +1,5 @@
 // src/pages/suppliers/SuppliersPage.jsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 
 export default function SuppliersPage() {
@@ -14,6 +14,10 @@ export default function SuppliersPage() {
   } = useApiResource("/v2/suppliers", filters);
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const [editingId, setEditingId] = useState(null);
+  const paymentMethodById = useMemo(() => {
+    const entries = paymentMethods.map((method) => [method.id, method.name]);
+    return new Map(entries);
+  }, [paymentMethods]);
 
   const [form, setForm] = useState({
     name: "",
@@ -271,7 +275,11 @@ export default function SuppliersPage() {
                     <td>{s.name}</td>
                     <td>{s.category}</td>
                     <td>{s.phone}</td>
-                    <td>{s.payment_method?.name || s.payment_method_id || "-"}</td>
+                    <td>
+                      {s.payment_method?.name ||
+                        paymentMethodById.get(s.payment_method_id) ||
+                        "-"}
+                    </td>
                     <td>{s.notes}</td>
                     <td>
                       <button
