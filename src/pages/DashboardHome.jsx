@@ -5,7 +5,6 @@ import DashboardHeader from "../components/dashboard/DashboardHeader";
 import KpiGrid from "../components/dashboard/KpiGrid";
 import ChartsSection from "../components/dashboard/ChartsSection";
 import RecentActivity from "../components/dashboard/RecentActivity";
-import QuickActions from "../components/dashboard/QuickActions";
 import AlertsPanel from "../components/dashboard/AlertsPanel";
 import SkeletonDashboard from "../components/dashboard/SkeletonDashboard";
 import { fetchDashboardData } from "../lib/dashboardApi";
@@ -198,7 +197,6 @@ export default function DashboardHome() {
           <RecentActivity items={metrics.recentActivity} />
         </div>
         <div className="dashboard-bottom__side">
-          <QuickActions />
           <AlertsPanel alerts={metrics.alerts} />
         </div>
       </section>
