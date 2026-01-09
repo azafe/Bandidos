@@ -1,9 +1,19 @@
 // src/pages/suppliers/SuppliersPage.jsx
 import { useState } from "react";
-import { useSuppliers } from "../../context/SuppliersContext";
+import { useApiResource } from "../../hooks/useApiResource";
 
 export default function SuppliersPage() {
-  const { suppliers, addSupplier } = useSuppliers();
+  const [filters, setFilters] = useState({ q: "", category: "" });
+  const {
+    items: suppliers,
+    loading,
+    error,
+    createItem,
+    updateItem,
+    deleteItem,
+  } = useApiResource("/v2/suppliers", filters);
+  const { items: paymentMethods } = useApiResource("/v2/payment-methods");
+  const [editingId, setEditingId] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -18,21 +28,64 @@ export default function SuppliersPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
       alert("Ingresá al menos el nombre del proveedor.");
       return;
     }
 
-    addSupplier({
-      name: form.name.trim(),
-      category: form.category.trim(),
-      phone: form.phone.trim(),
-      payment: form.payment,
-      notes: form.notes.trim(),
-    });
+    try {
+      const payload = {
+        name: form.name.trim(),
+        category: form.category.trim(),
+        phone: form.phone.trim(),
+        payment_method_id: form.payment || null,
+        notes: form.notes.trim(),
+      };
+      if (editingId) {
+        await updateItem(editingId, payload);
+      } else {
+        await createItem(payload);
+      }
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el proveedor.");
+      return;
+    }
 
+    setForm({
+      name: "",
+      category: "",
+      phone: "",
+      payment: "",
+      notes: "",
+    });
+    setEditingId(null);
+  }
+
+  async function handleDelete(id) {
+    const ok = window.confirm("¿Eliminar este proveedor?");
+    if (!ok) return;
+    try {
+      await deleteItem(id);
+    } catch (err) {
+      alert(err.message || "No se pudo eliminar el proveedor.");
+    }
+  }
+
+  function startEdit(supplier) {
+    setEditingId(supplier.id);
+    setForm({
+      name: supplier.name || "",
+      category: supplier.category || "",
+      phone: supplier.phone || "",
+      payment: supplier.payment_method_id || "",
+      notes: supplier.notes || "",
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
     setForm({
       name: "",
       category: "",
@@ -53,11 +106,47 @@ export default function SuppliersPage() {
             con quién comprás insumos, snacks y servicios.
           </p>
         </div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="Buscar proveedor..."
+            value={filters.q}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, q: e.target.value }))
+            }
+            style={{
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.12)",
+              padding: "8px 14px",
+              background: "#12131a",
+              color: "#fff",
+              minWidth: 220,
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Filtrar por rubro..."
+            value={filters.category}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, category: e.target.value }))
+            }
+            style={{
+              borderRadius: 999,
+              border: "1px solid rgba(255,255,255,0.12)",
+              padding: "8px 14px",
+              background: "#12131a",
+              color: "#fff",
+              minWidth: 200,
+            }}
+          />
+        </div>
       </header>
 
       {/* Formulario */}
       <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">Nuevo proveedor</h2>
+        <h2 className="card-title">
+          {editingId ? "Editar proveedor" : "Nuevo proveedor"}
+        </h2>
         <p className="card-subtitle">
           Completá los datos básicos. Más adelante podemos sumar CUIT, dirección
           y condiciones de pago.
@@ -110,10 +199,11 @@ export default function SuppliersPage() {
               onChange={handleChange}
             >
               <option value="">Seleccioná</option>
-              <option value="Efectivo">Efectivo</option>
-              <option value="Mercado Pago">Mercado Pago</option>
-              <option value="Transferencia">Transferencia</option>
-              <option value="Tarjeta">Tarjeta</option>
+              {paymentMethods.map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -132,8 +222,13 @@ export default function SuppliersPage() {
 
         <div className="form-actions">
           <button type="submit" className="btn-primary">
-            Guardar proveedor
+            {editingId ? "Guardar cambios" : "Guardar proveedor"}
           </button>
+          {editingId && (
+            <button type="button" className="btn-secondary" onClick={cancelEdit}>
+              Cancelar
+            </button>
+          )}
         </div>
       </form>
 
@@ -144,6 +239,13 @@ export default function SuppliersPage() {
           Vista rápida de todos los proveedores con los que trabaja Bandidos.
         </p>
 
+        {loading && <div className="card-subtitle">Cargando...</div>}
+        {error && (
+          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
+            {error}
+          </div>
+        )}
+
         <div className="table-wrapper">
           <table className="table table--compact">
             <thead>
@@ -153,12 +255,13 @@ export default function SuppliersPage() {
                 <th>Teléfono</th>
                 <th>Método pago</th>
                 <th>Notas</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {suppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", padding: 16 }}>
+                  <td colSpan={6} style={{ textAlign: "center", padding: 16 }}>
                     Sin proveedores cargados.
                   </td>
                 </tr>
@@ -168,8 +271,25 @@ export default function SuppliersPage() {
                     <td>{s.name}</td>
                     <td>{s.category}</td>
                     <td>{s.phone}</td>
-                    <td>{s.payment}</td>
+                    <td>{s.payment_method?.name || s.payment_method_id || "-"}</td>
                     <td>{s.notes}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        onClick={() => startEdit(s)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-danger btn-sm"
+                        onClick={() => handleDelete(s.id)}
+                        style={{ marginLeft: 8 }}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}

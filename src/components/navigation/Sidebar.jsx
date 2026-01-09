@@ -1,8 +1,10 @@
 // src/components/navigation/Sidebar.jsx
 import { NavLink } from "react-router-dom";
 import logo from "../../assets/bandidos-logo.jpg";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
+  const { user, logout } = useAuth();
   const handleNavigate = () => {
     if (onNavigate) onNavigate();
   };
@@ -45,6 +47,22 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
+          to="/customers"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Clientes
+        </NavLink>
+
+        <NavLink
+          to="/pets"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Mascotas
+        </NavLink>
+
+        <NavLink
           to="/expenses/daily"
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
@@ -58,6 +76,30 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           onClick={handleNavigate}
         >
           Gastos fijos
+        </NavLink>
+
+        <NavLink
+          to="/catalog/service-types"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Tipos de servicio
+        </NavLink>
+
+        <NavLink
+          to="/catalog/payment-methods"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Métodos de pago
+        </NavLink>
+
+        <NavLink
+          to="/catalog/expense-categories"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Categorías gastos
         </NavLink>
 
         <NavLink
@@ -75,7 +117,30 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         >
           Proveedores
         </NavLink>
+
+        {user?.role === "admin" && (
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) => makeClassName(isActive)}
+            onClick={handleNavigate}
+          >
+            Usuarios
+          </NavLink>
+        )}
       </nav>
+
+      <div className="sidebar__nav" style={{ marginTop: "auto" }}>
+        <button
+          type="button"
+          className="sidebar__nav-link"
+          onClick={() => {
+            logout();
+            handleNavigate();
+          }}
+        >
+          Cerrar sesión
+        </button>
+      </div>
     </aside>
   );
 }

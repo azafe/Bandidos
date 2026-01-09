@@ -1,24 +1,22 @@
-// src/pages/employees/EmployeesPage.jsx
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 
-export default function EmployeesPage() {
+export default function CustomersPage() {
+  const [search, setSearch] = useState("");
   const {
-    items: employees,
+    items: customers,
     loading,
     error,
     createItem,
     updateItem,
     deleteItem,
-  } = useApiResource("/v2/employees");
+  } = useApiResource("/v2/customers", search ? { q: search } : undefined);
   const [editingId, setEditingId] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
-    role: "Groomer",
     phone: "",
     email: "",
-    status: "active",
     notes: "",
   });
 
@@ -30,59 +28,57 @@ export default function EmployeesPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) {
-      alert("Ingresá al menos el nombre del empleado.");
+      alert("Ingresá el nombre del cliente.");
       return;
     }
 
     try {
-      const payload = {
-        name: form.name.trim(),
-        role: form.role,
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        status: form.status,
-        notes: form.notes.trim(),
-      };
       if (editingId) {
-        await updateItem(editingId, payload);
+        await updateItem(editingId, {
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          notes: form.notes.trim(),
+        });
       } else {
-        await createItem(payload);
+        await createItem({
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          notes: form.notes.trim(),
+        });
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el empleado.");
+      alert(err.message || "No se pudo guardar el cliente.");
       return;
     }
 
     setForm({
       name: "",
-      role: "Groomer",
       phone: "",
       email: "",
-      status: "active",
       notes: "",
     });
     setEditingId(null);
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este empleado?");
+    const ok = window.confirm("¿Eliminar este cliente?");
     if (!ok) return;
     try {
       await deleteItem(id);
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el empleado.");
+      alert(err.message || "No se pudo eliminar el cliente.");
     }
   }
 
-  function startEdit(emp) {
-    setEditingId(emp.id);
+  function startEdit(customer) {
+    setEditingId(customer.id);
     setForm({
-      name: emp.name || "",
-      role: emp.role || "Groomer",
-      phone: emp.phone || "",
-      email: emp.email || "",
-      status: emp.status || "active",
-      notes: emp.notes || "",
+      name: customer.name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      notes: customer.notes || "",
     });
   }
 
@@ -90,35 +86,43 @@ export default function EmployeesPage() {
     setEditingId(null);
     setForm({
       name: "",
-      role: "Groomer",
       phone: "",
       email: "",
-      status: "active",
       notes: "",
     });
   }
 
   return (
     <div className="page-content">
-      {/* Encabezado */}
       <header className="page-header">
         <div>
-          <h1 className="page-title">Empleados</h1>
+          <h1 className="page-title">Clientes</h1>
           <p className="page-subtitle">
-            Registro del equipo de Bandidos: quién trabaja, en qué rol y cómo
-            contactarlos.
+            Registro de dueños y datos de contacto.
           </p>
         </div>
+        <input
+          type="text"
+          placeholder="Buscar por nombre, email o teléfono..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            borderRadius: 999,
+            border: "1px solid rgba(255,255,255,0.12)",
+            padding: "8px 14px",
+            background: "#12131a",
+            color: "#fff",
+            minWidth: 260,
+          }}
+        />
       </header>
 
-      {/* Formulario */}
       <form className="form-card" onSubmit={handleSubmit}>
         <h2 className="card-title">
-          {editingId ? "Editar empleado" : "Nuevo empleado"}
+          {editingId ? "Editar cliente" : "Nuevo cliente"}
         </h2>
         <p className="card-subtitle">
-          Cargá los datos básicos del empleado. Más adelante podemos sumar
-          sueldos, horarios y comisiones.
+          Cargá los datos para asociar mascotas y servicios.
         </p>
 
         <div className="form-grid">
@@ -126,84 +130,48 @@ export default function EmployeesPage() {
             <label htmlFor="name">Nombre completo</label>
             <input
               id="name"
-              type="text"
               name="name"
-              placeholder="Ej: Juan Pérez"
+              type="text"
               value={form.name}
               onChange={handleChange}
               required
             />
           </div>
-
-          <div className="form-field">
-            <label htmlFor="role">Rol</label>
-            <select
-              id="role"
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-            >
-              <option value="Groomer">Groomer</option>
-              <option value="Recepción">Recepción</option>
-              <option value="Ayudante">Ayudante</option>
-              <option value="Administración">Administración</option>
-              <option value="Otro">Otro</option>
-            </select>
-          </div>
-
           <div className="form-field">
             <label htmlFor="phone">Teléfono</label>
             <input
               id="phone"
-              type="text"
               name="phone"
-              placeholder="Ej: 381-555-5555"
+              type="text"
               value={form.phone}
               onChange={handleChange}
             />
           </div>
-
           <div className="form-field">
             <label htmlFor="email">Email</label>
             <input
               id="email"
-              type="email"
               name="email"
-              placeholder="Ej: empleado@bandidos.com"
+              type="email"
               value={form.email}
               onChange={handleChange}
             />
           </div>
-
-          <div className="form-field">
-            <label htmlFor="status">Estado</label>
-            <select
-              id="status"
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-            >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-            </select>
-          </div>
-
           <div className="form-field form-field--full">
             <label htmlFor="notes">Notas</label>
             <textarea
               id="notes"
               name="notes"
-              placeholder="Observaciones, horarios, días que no trabaja, etc."
+              rows={3}
               value={form.notes}
               onChange={handleChange}
-              rows={3}
             />
           </div>
         </div>
 
         <div className="form-actions">
           <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar empleado"}
+            {editingId ? "Guardar cambios" : "Guardar cliente"}
           </button>
           {editingId && (
             <button type="button" className="btn-secondary" onClick={cancelEdit}>
@@ -213,12 +181,9 @@ export default function EmployeesPage() {
         </div>
       </form>
 
-      {/* Tabla */}
       <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de empleados</h2>
-        <p className="card-subtitle">
-          Vista general del equipo actual de Bandidos.
-        </p>
+        <h2 className="card-title">Listado de clientes</h2>
+        <p className="card-subtitle">Clientes registrados en Bandidos.</p>
 
         {loading && <div className="card-subtitle">Cargando...</div>}
         {error && (
@@ -232,42 +197,38 @@ export default function EmployeesPage() {
             <thead>
               <tr>
                 <th>Nombre</th>
-                <th>Rol</th>
                 <th>Teléfono</th>
                 <th>Email</th>
-                <th>Estado</th>
                 <th>Notas</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {employees.length === 0 ? (
+              {customers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 16 }}>
-                    Sin empleados cargados.
+                  <td colSpan={5} style={{ textAlign: "center", padding: 16 }}>
+                    Sin clientes cargados.
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
-                  <tr key={emp.id}>
-                    <td>{emp.name}</td>
-                    <td>{emp.role}</td>
-                    <td>{emp.phone}</td>
-                    <td>{emp.email}</td>
-                    <td>{emp.status === "active" ? "Activo" : "Inactivo"}</td>
-                    <td>{emp.notes}</td>
+                customers.map((customer) => (
+                  <tr key={customer.id}>
+                    <td>{customer.name}</td>
+                    <td>{customer.phone}</td>
+                    <td>{customer.email}</td>
+                    <td>{customer.notes}</td>
                     <td>
                       <button
                         type="button"
                         className="btn-secondary btn-sm"
-                        onClick={() => startEdit(emp)}
+                        onClick={() => startEdit(customer)}
                       >
                         Editar
                       </button>
                       <button
                         type="button"
                         className="btn-danger btn-sm"
-                        onClick={() => handleDelete(emp.id)}
+                        onClick={() => handleDelete(customer.id)}
                         style={{ marginLeft: 8 }}
                       >
                         Eliminar

@@ -17,7 +17,7 @@ export default function MainLayout({ children }) {
           isSidebarOpen ? "app-sidebar--open" : ""
         }`}
       >
-        <Sidebar />
+        <Sidebar isOpen={isSidebarOpen} onNavigate={closeSidebar} />
       </aside>
 
       {/* OVERLAY para mobile */}

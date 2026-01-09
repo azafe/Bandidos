@@ -1,7 +1,8 @@
 // src/pages/services/ServicesListPage.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useServices } from "../../context/ServicesContext";
+import { apiRequest } from "../../services/apiClient";
+import { useApiResource } from "../../hooks/useApiResource";
 
 /**
  * Convierte el string de fecha de Google Sheets
@@ -55,75 +56,109 @@ function parseSheetDate(dateStr) {
 }
 
 export default function ServicesListPage() {
-  const { services, deleteService } = useServices();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    return {
+      from: `${yyyy}-${mm}-01`,
+      to: now.toISOString().slice(0, 10),
+      customer_id: "",
+      pet_id: "",
+      service_type_id: "",
+      groomer_id: "",
+    };
+  });
+  const { items: customers } = useApiResource("/v2/customers");
+  const { items: pets } = useApiResource("/v2/pets");
+  const { items: serviceTypes } = useApiResource("/v2/service-types");
+  const { items: employees } = useApiResource("/v2/employees");
 
-  const now = new Date();
+  useEffect(() => {
+    let active = true;
 
-  // Normalizamos la lista con objeto Date ya parseado
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiRequest("/v2/services", { params: filters });
+        if (!active) return;
+        setServices(Array.isArray(data) ? data : data?.items || []);
+      } catch (err) {
+        if (!active) return;
+        setError(err.message || "No se pudieron cargar los servicios.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [filters]);
+
+  // Stats
   const servicesWithDate = services.map((s) => ({
     ...s,
     _dateObj: parseSheetDate(s.date),
   }));
 
-  // Servicios del mes actual
-  const servicesThisMonth = servicesWithDate.filter((s) => {
+  const now = new Date();
+  const servicesToday = servicesWithDate.filter((s) => {
     const d = s._dateObj;
     if (!d) return false;
-    return (
-      d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
-    );
+    return d.toDateString() === now.toDateString();
   });
 
-  // Servicios de hoy
-  const servicesToday = servicesThisMonth.filter((s) => {
-    const d = s._dateObj;
-    if (!d) return false;
-    return d.getDate() === now.getDate();
-  });
-
-  // Stats
   const countToday = servicesToday.length;
   const totalToday = servicesToday.reduce(
     (acc, s) => acc + (Number(s.price) || 0),
     0
   );
 
-  const countMonth = servicesThisMonth.length;
-  const totalMonth = servicesThisMonth.reduce(
+  const countPeriod = servicesWithDate.length;
+  const totalPeriod = servicesWithDate.reduce(
     (acc, s) => acc + (Number(s.price) || 0),
     0
   );
 
-  // Filtro de búsqueda sobre los servicios del mes
+  // Filtro de búsqueda sobre los servicios
   const searchTerm = search.trim().toLowerCase();
-  const filteredMonthServices = servicesThisMonth.filter((s) => {
+  const filteredServices = servicesWithDate.filter((s) => {
     if (!searchTerm) return true;
 
     return [
       s.dogName,
+      s.pet?.name,
       s.ownerName,
+      s.customer?.name,
       s.type,
+      s.service_type?.name,
       s.paymentMethod,
-      s.groomer,
+      s.payment_method?.name,
+      s.groomer?.name || s.groomer,
     ]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(searchTerm));
   });
 
-  const monthLabel = now.toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  });
+  const periodLabel = `${filters.from} → ${filters.to}`;
 
   async function handleDelete(service) {
     const ok = window.confirm(
-      `¿Eliminar el turno de ${service.dogName} (${service.date})?`
+      `¿Eliminar el turno de ${service.dogName || service.pet?.name} (${service.date})?`
     );
     if (!ok) return;
 
     try {
-      await deleteService(service);
+      await apiRequest(`/v2/services/${service.id}`, { method: "DELETE" });
+      const data = await apiRequest("/v2/services", { params: filters });
+      setServices(Array.isArray(data) ? data : data?.items || []);
     } catch {
       alert("No se pudo eliminar el servicio. Revisá la consola.");
     }
@@ -137,7 +172,7 @@ export default function ServicesListPage() {
         <div>
           <h1 className="page-title">Servicios</h1>
           <p className="page-subtitle">
-            Servicios de hoy y del último mes con datos registrados en Bandidos.
+            Servicios registrados en Bandidos para el período seleccionado.
           </p>
         </div>
 
@@ -145,6 +180,122 @@ export default function ServicesListPage() {
           + Nuevo servicio
         </Link>
       </header>
+
+      {loading && <div className="card">Cargando servicios...</div>}
+      {error && (
+        <div className="card" style={{ color: "#f37b7b" }}>
+          {error}
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
+          Filtros de período
+        </h3>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div className="form-field">
+            <label htmlFor="from">Desde</label>
+            <input
+              id="from"
+              type="date"
+              value={filters.from}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, from: e.target.value }))
+              }
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="to">Hasta</label>
+            <input
+              id="to"
+              type="date"
+              value={filters.to}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, to: e.target.value }))
+              }
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="customer_id">Cliente</label>
+            <select
+              id="customer_id"
+              value={filters.customer_id}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  customer_id: e.target.value,
+                  pet_id: "",
+                }))
+              }
+            >
+              <option value="">Todos</option>
+              {customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label htmlFor="pet_id">Mascota</label>
+            <select
+              id="pet_id"
+              value={filters.pet_id}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, pet_id: e.target.value }))
+              }
+            >
+              <option value="">Todas</option>
+              {pets
+                .filter((p) =>
+                  filters.customer_id ? p.customer_id === filters.customer_id : true
+                )
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label htmlFor="service_type_id">Servicio</label>
+            <select
+              id="service_type_id"
+              value={filters.service_type_id}
+              onChange={(e) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  service_type_id: e.target.value,
+                }))
+              }
+            >
+              <option value="">Todos</option>
+              {serviceTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-field">
+            <label htmlFor="groomer_id">Groomer</label>
+            <select
+              id="groomer_id"
+              value={filters.groomer_id}
+              onChange={(e) =>
+                setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
+              }
+            >
+              <option value="">Todos</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
 
       {/* Cards resumen */}
       <div className="cards-row" style={{ display: "flex", gap: 16, marginBottom: 24 }}>
@@ -158,13 +309,13 @@ export default function ServicesListPage() {
         </div>
 
         <div className="card" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>Servicios del mes</h3>
-          <p style={{ fontSize: "2rem", fontWeight: 600 }}>{countMonth}</p>
+          <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>Servicios del período</h3>
+          <p style={{ fontSize: "2rem", fontWeight: 600 }}>{countPeriod}</p>
           <p style={{ fontSize: "0.9rem", color: "#999" }}>
-            Ingresos del mes:{" "}
-            <strong>${totalMonth.toLocaleString("es-AR")}</strong>
+            Ingresos del período:{" "}
+            <strong>${totalPeriod.toLocaleString("es-AR")}</strong>
             <br />
-            <span style={{ fontSize: "0.8rem" }}>Período: {monthLabel}</span>
+            <span style={{ fontSize: "0.8rem" }}>Período: {periodLabel}</span>
           </p>
         </div>
       </div>
@@ -201,21 +352,25 @@ export default function ServicesListPage() {
                 servicesToday.map((s) => (
                   <tr key={s.id}>
                     <td>{s.date}</td>
-                    <td>{s.dogName}</td>
-                    <td>{s.ownerName}</td>
-                    <td>{s.type}</td>
+                    <td>{s.dogName || s.pet?.name}</td>
+                    <td>{s.ownerName || s.customer?.name}</td>
+                    <td>{s.type || s.service_type?.name}</td>
                     <td>${Number(s.price).toLocaleString("es-AR")}</td>
-                    <td>{s.paymentMethod}</td>
-                    <td>{s.groomer}</td>
+                    <td>{s.paymentMethod || s.payment_method?.name}</td>
+                    <td>{s.groomer?.name || s.groomer}</td>
                     <td>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={() => handleDelete(s)}
-                    >
-                      Eliminar
-                    </button>
-           </td>
+                      <Link to={`/services/${s.id}`} className="btn-secondary btn-sm">
+                        Editar
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn-danger btn-sm"
+                        onClick={() => handleDelete(s)}
+                        style={{ marginLeft: 8 }}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -236,10 +391,10 @@ export default function ServicesListPage() {
         >
           <div>
             <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
-              Servicios de {monthLabel}
+              Servicios del período
             </h2>
             <p style={{ fontSize: "0.85rem", color: "#888" }}>
-              Historial de servicios del mes mostrado. Usá el buscador para
+              Historial de servicios del período mostrado. Usá el buscador para
               filtrar por perro, dueño, servicio, método o groomer.
             </p>
           </div>
@@ -275,30 +430,34 @@ export default function ServicesListPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredMonthServices.length === 0 ? (
+              {filteredServices.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: "center", padding: 16 }}>
-                    No hay servicios que coincidan con la búsqueda en este mes.
+                    No hay servicios que coincidan con la búsqueda en este período.
                   </td>
                 </tr>
               ) : (
-                filteredMonthServices.map((s) => (
+                filteredServices.map((s) => (
                   <tr key={s.id}>
                     <td>{s.date}</td>
-                    <td>{s.dogName}</td>
-                    <td>{s.ownerName}</td>
-                    <td>{s.type}</td>
+                    <td>{s.dogName || s.pet?.name}</td>
+                    <td>{s.ownerName || s.customer?.name}</td>
+                    <td>{s.type || s.service_type?.name}</td>
                     <td>${Number(s.price).toLocaleString("es-AR")}</td>
-                    <td>{s.paymentMethod}</td>
-                    <td>{s.groomer}</td>
+                    <td>{s.paymentMethod || s.payment_method?.name}</td>
+                    <td>{s.groomer?.name || s.groomer}</td>
                      <td>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={() => handleDelete(s)}
-                    >
-                      Eliminar
-                    </button>
+                      <Link to={`/services/${s.id}`} className="btn-secondary btn-sm">
+                        Editar
+                      </Link>
+                      <button
+                        type="button"
+                        className="btn-danger btn-sm"
+                        onClick={() => handleDelete(s)}
+                        style={{ marginLeft: 8 }}
+                      >
+                        Eliminar
+                      </button>
                   </td>
                   </tr>
                 ))

@@ -1,7 +1,7 @@
 // src/pages/services/ServiceFormPage.jsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useServices } from "../../context/ServicesContext";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { apiRequest } from "../../services/apiClient";
 
 function todayISO() {
   const d = new Date();
@@ -13,17 +13,25 @@ function todayISO() {
 
 export default function ServiceFormPage() {
   const navigate = useNavigate();
-  const { addService } = useServices();
+  const { id } = useParams();
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [options, setOptions] = useState({
+    customers: [],
+    pets: [],
+    serviceTypes: [],
+    paymentMethods: [],
+    employees: [],
+  });
 
   const [form, setForm] = useState({
     date: todayISO(),
-    dogName: "",
-    ownerName: "",
-    type: "Baño + corte",
+    customer_id: "",
+    pet_id: "",
+    service_type_id: "",
     price: "",
-    paymentMethod: "Efectivo",
-    groomer: "",
+    payment_method_id: "",
+    groomer_id: "",
     notes: "",
   });
 
@@ -31,6 +39,82 @@ export default function ServiceFormPage() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadOptions() {
+      try {
+        setLoading(true);
+        const [
+          customers,
+          pets,
+          serviceTypes,
+          paymentMethods,
+          employees,
+        ] = await Promise.all([
+          apiRequest("/v2/customers"),
+          apiRequest("/v2/pets"),
+          apiRequest("/v2/service-types"),
+          apiRequest("/v2/payment-methods"),
+          apiRequest("/v2/employees"),
+        ]);
+        if (!active) return;
+        setOptions({
+          customers: Array.isArray(customers) ? customers : customers?.items || [],
+          pets: Array.isArray(pets) ? pets : pets?.items || [],
+          serviceTypes: Array.isArray(serviceTypes)
+            ? serviceTypes
+            : serviceTypes?.items || [],
+          paymentMethods: Array.isArray(paymentMethods)
+            ? paymentMethods
+            : paymentMethods?.items || [],
+          employees: Array.isArray(employees)
+            ? employees
+            : employees?.items || [],
+        });
+      } catch (err) {
+        console.error("[ServiceFormPage] Error cargando opciones:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadOptions();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadService() {
+      if (!id) return;
+      try {
+        const data = await apiRequest(`/v2/services/${id}`);
+        if (!active) return;
+        setForm({
+          date: data.date || todayISO(),
+          customer_id: data.customer_id || data.customer?.id || "",
+          pet_id: data.pet_id || data.pet?.id || "",
+          service_type_id: data.service_type_id || data.service_type?.id || "",
+          price: data.price ? String(data.price) : "",
+          payment_method_id:
+            data.payment_method_id || data.payment_method?.id || "",
+          groomer_id: data.groomer_id || data.groomer?.id || "",
+          notes: data.notes || "",
+        });
+      } catch (err) {
+        console.error("[ServiceFormPage] Error cargando servicio:", err);
+      }
+    }
+
+    loadService();
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -40,18 +124,23 @@ export default function ServiceFormPage() {
 
     const payload = {
       date: form.date,
-      dogName: form.dogName.trim(),
-      ownerName: form.ownerName.trim(),
-      type: form.type,
+      customer_id: form.customer_id,
+      pet_id: form.pet_id,
+      service_type_id: form.service_type_id,
       price: Number(form.price || 0),
-      paymentMethod: form.paymentMethod,
-      groomer: form.groomer.trim(),
+      payment_method_id: form.payment_method_id,
+      groomer_id: form.groomer_id || null,
       notes: form.notes.trim(),
     };
 
     try {
-      await addService(payload);
-      alert("✅ Servicio guardado correctamente en Bandidos.");
+      if (id) {
+        await apiRequest(`/v2/services/${id}`, { method: "PUT", body: payload });
+        alert("✅ Servicio actualizado correctamente.");
+      } else {
+        await apiRequest("/v2/services", { method: "POST", body: payload });
+        alert("✅ Servicio guardado correctamente en Bandidos.");
+      }
       navigate("/services");
     } catch (err) {
       console.error("[ServiceFormPage] Error al guardar servicio:", err);
@@ -67,7 +156,9 @@ export default function ServiceFormPage() {
     <div className="page-content">
       <header className="page-header">
         <div>
-          <h1 className="page-title">Nuevo servicio</h1>
+          <h1 className="page-title">
+            {id ? "Editar servicio" : "Nuevo servicio"}
+          </h1>
           <p className="page-subtitle">
             Cargá un baño, corte o servicio completo para Bandidos.
           </p>
@@ -76,6 +167,9 @@ export default function ServiceFormPage() {
 
       {/* CARD igual estilo que Empleados */}
       <div className="form-card">
+        {loading && (
+          <p className="card-subtitle">Cargando clientes y catálogos...</p>
+        )}
         <form className="form-grid" onSubmit={handleSubmit}>
           {/* Fecha */}
           <div className="form-field">
@@ -90,51 +184,67 @@ export default function ServiceFormPage() {
             />
           </div>
 
-          {/* Nombre del perro */}
           <div className="form-field">
-            <label htmlFor="dogName">Nombre del perro</label>
-            <input
-              id="dogName"
-              name="dogName"
-              type="text"
-              placeholder="Ej: Luna"
-              value={form.dogName}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Dueño */}
-          <div className="form-field">
-            <label htmlFor="ownerName">Dueño</label>
-            <input
-              id="ownerName"
-              name="ownerName"
-              type="text"
-              placeholder="Nombre del dueño"
-              value={form.ownerName}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Tipo de servicio */}
-          <div className="form-field">
-            <label htmlFor="type">Tipo de servicio</label>
+            <label htmlFor="customer_id">Cliente</label>
             <select
-              id="type"
-              name="type"
-              value={form.type}
+              id="customer_id"
+              name="customer_id"
+              value={form.customer_id}
               onChange={handleChange}
+              required
+              disabled={loading}
             >
-              <option value="Baño">Baño</option>
-              <option value="Baño + corte">Baño + corte</option>
-              <option value="Corte">Corte</option>
-              <option value="Completo">Completo</option>
+              <option value="">Seleccioná cliente</option>
+              {options.customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Precio */}
+          <div className="form-field">
+            <label htmlFor="pet_id">Mascota</label>
+            <select
+              id="pet_id"
+              name="pet_id"
+              value={form.pet_id}
+              onChange={handleChange}
+              required
+              disabled={loading}
+            >
+              <option value="">Seleccioná mascota</option>
+              {options.pets
+                .filter((p) =>
+                  form.customer_id ? p.customer_id === form.customer_id : true
+                )
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="service_type_id">Tipo de servicio</label>
+            <select
+              id="service_type_id"
+              name="service_type_id"
+              value={form.service_type_id}
+              onChange={handleChange}
+              required
+              disabled={loading}
+            >
+              <option value="">Seleccioná servicio</option>
+              {options.serviceTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="form-field">
             <label htmlFor="price">Precio (ARS)</label>
             <input
@@ -150,33 +260,41 @@ export default function ServiceFormPage() {
             />
           </div>
 
-          {/* Método de pago */}
           <div className="form-field">
-            <label htmlFor="paymentMethod">Método de pago</label>
+            <label htmlFor="payment_method_id">Método de pago</label>
             <select
-              id="paymentMethod"
-              name="paymentMethod"
-              value={form.paymentMethod}
+              id="payment_method_id"
+              name="payment_method_id"
+              value={form.payment_method_id}
               onChange={handleChange}
+              required
+              disabled={loading}
             >
-              <option value="Efectivo">Efectivo</option>
-              <option value="Transferencia">Transferencia</option>
-              <option value="Débito automático">Débito automático</option>
-              <option value="Tarjeta">Tarjeta</option>
+              <option value="">Seleccioná método</option>
+              {options.paymentMethods.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Groomer */}
           <div className="form-field">
-            <label htmlFor="groomer">Groomer</label>
-            <input
-              id="groomer"
-              name="groomer"
-              type="text"
-              placeholder="Quién atendió"
-              value={form.groomer}
+            <label htmlFor="groomer_id">Groomer</label>
+            <select
+              id="groomer_id"
+              name="groomer_id"
+              value={form.groomer_id}
               onChange={handleChange}
-            />
+              disabled={loading}
+            >
+              <option value="">Seleccioná</option>
+              {options.employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Notas: ocupa todo el ancho */}
@@ -199,7 +317,7 @@ export default function ServiceFormPage() {
               className={`btn-primary ${
                 submitting ? "btn-primary--loading" : ""
               }`}
-              disabled={submitting}
+              disabled={submitting || loading}
             >
               {submitting ? (
                 <>
