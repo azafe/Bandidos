@@ -10,6 +10,8 @@ import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
 import LoginPage from "./pages/auth/LoginPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import PetsPage from "./pages/pets/PetsPage";
 import ServiceTypesPage from "./pages/catalog/ServiceTypesPage";
@@ -25,6 +27,8 @@ function App() {
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/*"
           element={

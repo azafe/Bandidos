@@ -1,6 +1,6 @@
 // src/pages/auth/LoginPage.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
@@ -165,6 +165,17 @@ export default function LoginPage() {
                 : "Crear cuenta"}
           </button>
         </form>
+
+        {mode === "login" && (
+          <div style={{ marginTop: 12 }}>
+            <Link
+              to="/forgot-password"
+              style={{ fontSize: "0.85rem", color: "#4a4a4a" }}
+            >
+              Olvidé mi contraseña
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
