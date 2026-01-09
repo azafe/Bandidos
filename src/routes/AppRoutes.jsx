@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "../pages/auth/LoginPage";
 import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "../pages/auth/ResetPasswordPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
+import DashboardHome from "../pages/DashboardHome";
 import ServicesListPage from "../pages/services/ServicesListPage";
 
 export default function AppRoutes() {
@@ -11,7 +11,7 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/" element={<DashboardPage />} />
+      <Route path="/" element={<DashboardHome />} />
       <Route path="/services" element={<ServicesListPage />} />
 
       <Route path="*" element={<Navigate to="/" />} />

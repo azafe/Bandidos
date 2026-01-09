@@ -2,7 +2,7 @@
 import { Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 
-import DashboardPage from "./pages/dashboard/DashboardPage";
+import DashboardHome from "./pages/DashboardHome";
 import ServicesListPage from "./pages/services/ServicesListPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
 import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
@@ -35,7 +35,7 @@ function App() {
             <ProtectedRoute>
               <MainLayout>
                 <Routes>
-                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/" element={<DashboardHome />} />
                   <Route path="/services" element={<ServicesListPage />} />
                   <Route path="/services/new" element={<ServiceFormPage />} />
                   <Route path="/services/:id" element={<ServiceFormPage />} />
