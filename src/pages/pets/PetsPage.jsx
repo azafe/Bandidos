@@ -17,6 +17,14 @@ export default function PetsPage() {
   const { user } = useAuth();
   const [editingId, setEditingId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    customer_id: "",
+    name: "",
+    breed: "",
+    size: "",
+    notes: "",
+  });
   const isAdmin = user?.role === "admin";
   const customerById = useMemo(() => {
     const entries = customers.map((customer) => [customer.id, customer.name]);
@@ -91,6 +99,54 @@ export default function PetsPage() {
       alert(err.message || "No se pudo eliminar la mascota.");
       return false;
     }
+  }
+
+  function openModalEdit(pet) {
+    setModalForm({
+      customer_id: pet.customer_id || "",
+      name: pet.name || "",
+      breed: pet.breed || "",
+      size: pet.size || "",
+      notes: pet.notes || "",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedPet) return;
+    if (!modalForm.name.trim() || !modalForm.customer_id) {
+      alert("Ingresá nombre y cliente.");
+      return;
+    }
+    try {
+      await updateItem(selectedPet.id, {
+        customer_id: modalForm.customer_id,
+        name: modalForm.name.trim(),
+        breed: modalForm.breed.trim(),
+        size: modalForm.size.trim(),
+        notes: modalForm.notes.trim(),
+      });
+      setSelectedPet((prev) =>
+        prev
+          ? {
+              ...prev,
+              customer_id: modalForm.customer_id,
+              name: modalForm.name.trim(),
+              breed: modalForm.breed.trim(),
+              size: modalForm.size.trim(),
+              notes: modalForm.notes.trim(),
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar la mascota.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedPet(null);
+    setIsEditingModal(false);
   }
 
   function startEdit(pet) {
@@ -303,53 +359,149 @@ export default function PetsPage() {
 
       <Modal
         isOpen={Boolean(selectedPet)}
-        onClose={() => setSelectedPet(null)}
+        onClose={closeModal}
         title="Detalle de la mascota"
       >
         {selectedPet && (
           <>
-            <div>
-              <strong>Nombre:</strong> {selectedPet.name || "-"}
-            </div>
-            <div>
-              <strong>Cliente:</strong>{" "}
-              {selectedPet.customer?.name ||
-                customerById.get(selectedPet.customer_id) ||
-                "-"}
-            </div>
-            <div>
-              <strong>Raza:</strong> {selectedPet.breed || "-"}
-            </div>
-            <div>
-              <strong>Tamaño:</strong> {selectedPet.size || "-"}
-            </div>
-            <div>
-              <strong>Notas:</strong> {selectedPet.notes || "-"}
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  startEdit(selectedPet);
-                  setSelectedPet(null);
-                }}
-              >
-                <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    width="16"
-                    height="16"
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Nombre</span>
+                  <input
+                    type="text"
+                    value={modalForm.name}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Cliente</span>
+                  <select
+                    value={modalForm.customer_id}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        customer_id: e.target.value,
+                      }))
+                    }
                   >
-                    <path
-                      d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 2.75 2.75 1.99-1.66z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  Editar
-                </span>
-              </button>
+                    <option value="">Seleccioná</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Raza</span>
+                  <input
+                    type="text"
+                    value={modalForm.breed}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        breed: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Tamaño</span>
+                  <input
+                    type="text"
+                    value={modalForm.size}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        size: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Notas</span>
+                  <textarea
+                    rows={3}
+                    value={modalForm.notes}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Nombre:</strong> {selectedPet.name || "-"}
+                </div>
+                <div>
+                  <strong>Cliente:</strong>{" "}
+                  {selectedPet.customer?.name ||
+                    customerById.get(selectedPet.customer_id) ||
+                    "-"}
+                </div>
+                <div>
+                  <strong>Raza:</strong> {selectedPet.breed || "-"}
+                </div>
+                <div>
+                  <strong>Tamaño:</strong> {selectedPet.size || "-"}
+                </div>
+                <div>
+                  <strong>Notas:</strong> {selectedPet.notes || "-"}
+                </div>
+              </>
+            )}
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => openModalEdit(selectedPet)}
+                >
+                  <span
+                    style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                    >
+                      <path
+                        d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 2.75 2.75 1.99-1.66z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    Editar
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 className="btn-danger"
@@ -357,7 +509,7 @@ export default function PetsPage() {
                 onClick={async () => {
                   if (!isAdmin) return;
                   const removed = await handleDelete(selectedPet.id);
-                  if (removed) setSelectedPet(null);
+                  if (removed) closeModal();
                 }}
                 title={
                   isAdmin
