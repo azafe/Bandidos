@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 
@@ -15,6 +15,10 @@ export default function PetsPage() {
   const { items: customers } = useApiResource("/v2/customers");
   const [editingId, setEditingId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
+  const customerById = useMemo(() => {
+    const entries = customers.map((customer) => [customer.id, customer.name]);
+    return new Map(entries);
+  }, [customers]);
 
   function truncate(text, max) {
     if (!text) return "";
@@ -282,7 +286,12 @@ export default function PetsPage() {
                   </div>
                 </div>
                 <div className="list-item__meta">
-                  <span>Cliente: {pet.customer?.name || "-"}</span>
+                  <span>
+                    Cliente:{" "}
+                    {pet.customer?.name ||
+                      customerById.get(pet.customer_id) ||
+                      "-"}
+                  </span>
                   <span>Raza: {pet.breed || "-"}</span>
                   <span>Tamaño: {pet.size || "-"}</span>
                 </div>
@@ -309,7 +318,9 @@ export default function PetsPage() {
             </div>
             <div>
               <strong>Cliente:</strong>{" "}
-              {selectedPet.customer?.name || "-"}
+              {selectedPet.customer?.name ||
+                customerById.get(selectedPet.customer_id) ||
+                "-"}
             </div>
             <div>
               <strong>Raza:</strong> {selectedPet.breed || "-"}
