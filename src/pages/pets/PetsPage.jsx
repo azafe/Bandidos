@@ -282,9 +282,7 @@ export default function PetsPage() {
                   </div>
                 </div>
                 <div className="list-item__meta">
-                  <span>
-                    Cliente: {pet.customer?.name || pet.customer_id || "-"}
-                  </span>
+                  <span>Cliente: {pet.customer?.name || "-"}</span>
                   <span>Raza: {pet.breed || "-"}</span>
                   <span>Tamaño: {pet.size || "-"}</span>
                 </div>
