@@ -323,18 +323,6 @@ export default function PetsPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{pet.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(pet);
-                      }}
-                    >
-                      Editar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>

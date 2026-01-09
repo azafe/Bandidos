@@ -16,6 +16,14 @@ export default function SuppliersPage() {
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const [editingId, setEditingId] = useState(null);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    name: "",
+    category: "",
+    phone: "",
+    payment_method_id: "",
+    notes: "",
+  });
   const paymentMethodById = useMemo(() => {
     const entries = paymentMethods.map((method) => [method.id, method.name]);
     return new Map(entries);
@@ -76,11 +84,13 @@ export default function SuppliersPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este proveedor?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el proveedor.");
+      return false;
     }
   }
 
@@ -104,6 +114,54 @@ export default function SuppliersPage() {
       payment: "",
       notes: "",
     });
+  }
+
+  function openModalEdit(supplier) {
+    setModalForm({
+      name: supplier.name || "",
+      category: supplier.category || "",
+      phone: supplier.phone || "",
+      payment_method_id: supplier.payment_method_id || "",
+      notes: supplier.notes || "",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedSupplier) return;
+    if (!modalForm.name.trim()) {
+      alert("Ingresá al menos el nombre del proveedor.");
+      return;
+    }
+    try {
+      await updateItem(selectedSupplier.id, {
+        name: modalForm.name.trim(),
+        category: modalForm.category.trim(),
+        phone: modalForm.phone.trim(),
+        payment_method_id: modalForm.payment_method_id || null,
+        notes: modalForm.notes.trim(),
+      });
+      setSelectedSupplier((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: modalForm.name.trim(),
+              category: modalForm.category.trim(),
+              phone: modalForm.phone.trim(),
+              payment_method_id: modalForm.payment_method_id || null,
+              notes: modalForm.notes.trim(),
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el proveedor.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedSupplier(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -271,28 +329,6 @@ export default function SuppliersPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{s.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(s);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(s.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Rubro: {s.category || "-"}</span>
@@ -317,28 +353,146 @@ export default function SuppliersPage() {
 
       <Modal
         isOpen={Boolean(selectedSupplier)}
-        onClose={() => setSelectedSupplier(null)}
+        onClose={closeModal}
         title="Detalle del proveedor"
       >
         {selectedSupplier && (
           <>
-            <div>
-              <strong>Nombre:</strong> {selectedSupplier.name || "-"}
-            </div>
-            <div>
-              <strong>Rubro:</strong> {selectedSupplier.category || "-"}
-            </div>
-            <div>
-              <strong>Teléfono:</strong> {selectedSupplier.phone || "-"}
-            </div>
-            <div>
-              <strong>Método de pago:</strong>{" "}
-              {selectedSupplier.payment_method?.name ||
-                paymentMethodById.get(selectedSupplier.payment_method_id) ||
-                "-"}
-            </div>
-            <div>
-              <strong>Notas:</strong> {selectedSupplier.notes || "-"}
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Nombre</span>
+                  <input
+                    type="text"
+                    value={modalForm.name}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Rubro</span>
+                  <input
+                    type="text"
+                    value={modalForm.category}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Teléfono</span>
+                  <input
+                    type="text"
+                    value={modalForm.phone}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Método de pago</span>
+                  <select
+                    value={modalForm.payment_method_id}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        payment_method_id: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Seleccioná</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Notas</span>
+                  <textarea
+                    rows={3}
+                    value={modalForm.notes}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Nombre:</strong> {selectedSupplier.name || "-"}
+                </div>
+                <div>
+                  <strong>Rubro:</strong> {selectedSupplier.category || "-"}
+                </div>
+                <div>
+                  <strong>Teléfono:</strong> {selectedSupplier.phone || "-"}
+                </div>
+                <div>
+                  <strong>Método de pago:</strong>{" "}
+                  {selectedSupplier.payment_method?.name ||
+                    paymentMethodById.get(selectedSupplier.payment_method_id) ||
+                    "-"}
+                </div>
+                <div>
+                  <strong>Notas:</strong> {selectedSupplier.notes || "-"}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedSupplier)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedSupplier.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

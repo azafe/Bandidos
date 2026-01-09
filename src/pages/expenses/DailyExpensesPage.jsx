@@ -31,6 +31,15 @@ export default function DailyExpensesPage() {
   });
   const [editingId, setEditingId] = useState(null);
   const [selectedExpense, setSelectedExpense] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    date: today,
+    category: "",
+    description: "",
+    amount: "",
+    paymentMethod: "",
+    supplier: "",
+  });
 
   function formatCurrency(value) {
     return `$${Number(value || 0).toLocaleString("es-AR")}`;
@@ -84,11 +93,13 @@ export default function DailyExpensesPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este gasto?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el gasto.");
+      return false;
     }
   }
 
@@ -114,6 +125,59 @@ export default function DailyExpensesPage() {
       paymentMethod: "",
       supplier: "",
     });
+  }
+
+  function openModalEdit(expense) {
+    setModalForm({
+      date: expense.date || today,
+      category: expense.category_id || expense.category?.id || "",
+      description: expense.description || "",
+      amount: expense.amount ? String(expense.amount) : "",
+      paymentMethod: expense.payment_method_id || expense.payment_method?.id || "",
+      supplier: expense.supplier_id || expense.supplier?.id || "",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedExpense) return;
+    const amountNumber = Number(modalForm.amount);
+    if (!amountNumber || amountNumber <= 0) {
+      alert("Ingresá un monto válido.");
+      return;
+    }
+    try {
+      const payload = {
+        date: modalForm.date,
+        category_id: modalForm.category,
+        description: modalForm.description || "(Sin detalle)",
+        amount: amountNumber,
+        payment_method_id: modalForm.paymentMethod,
+        supplier_id: modalForm.supplier || null,
+      };
+      await updateItem(selectedExpense.id, payload);
+      setSelectedExpense((prev) =>
+        prev
+          ? {
+              ...prev,
+              date: modalForm.date,
+              category_id: modalForm.category,
+              description: modalForm.description || "(Sin detalle)",
+              amount: amountNumber,
+              payment_method_id: modalForm.paymentMethod,
+              supplier_id: modalForm.supplier || null,
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el gasto.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedExpense(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -307,28 +371,6 @@ export default function DailyExpensesPage() {
                   <div className="list-item__title">
                     {exp.description || "Gasto"}
                   </div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        startEdit(exp);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDelete(exp.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {exp.date || "-"}</span>
@@ -347,35 +389,183 @@ export default function DailyExpensesPage() {
 
       <Modal
         isOpen={Boolean(selectedExpense)}
-        onClose={() => setSelectedExpense(null)}
+        onClose={closeModal}
         title="Detalle del gasto"
       >
         {selectedExpense && (
           <>
-            <div>
-              <strong>Fecha:</strong> {selectedExpense.date || "-"}
-            </div>
-            <div>
-              <strong>Categoría:</strong>{" "}
-              {selectedExpense.category?.name ||
-                selectedExpense.category_id ||
-                "-"}
-            </div>
-            <div>
-              <strong>Descripción:</strong> {selectedExpense.description || "-"}
-            </div>
-            <div>
-              <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
-            </div>
-            <div>
-              <strong>Método de pago:</strong>{" "}
-              {selectedExpense.payment_method?.name ||
-                selectedExpense.payment_method_id ||
-                "-"}
-            </div>
-            <div>
-              <strong>Proveedor:</strong>{" "}
-              {selectedExpense.supplier?.name || selectedExpense.supplier_id || "-"}
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Fecha</span>
+                  <input
+                    type="date"
+                    value={modalForm.date}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        date: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Categoría</span>
+                  <select
+                    value={modalForm.category}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        category: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Seleccioná</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Descripción</span>
+                  <input
+                    type="text"
+                    value={modalForm.description}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Monto</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={modalForm.amount}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        amount: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Método de pago</span>
+                  <select
+                    value={modalForm.paymentMethod}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        paymentMethod: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Seleccioná</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Proveedor</span>
+                  <select
+                    value={modalForm.supplier}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        supplier: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Seleccioná</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Fecha:</strong> {selectedExpense.date || "-"}
+                </div>
+                <div>
+                  <strong>Categoría:</strong>{" "}
+                  {selectedExpense.category?.name ||
+                    selectedExpense.category_id ||
+                    "-"}
+                </div>
+                <div>
+                  <strong>Descripción:</strong>{" "}
+                  {selectedExpense.description || "-"}
+                </div>
+                <div>
+                  <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
+                </div>
+                <div>
+                  <strong>Método de pago:</strong>{" "}
+                  {selectedExpense.payment_method?.name ||
+                    selectedExpense.payment_method_id ||
+                    "-"}
+                </div>
+                <div>
+                  <strong>Proveedor:</strong>{" "}
+                  {selectedExpense.supplier?.name ||
+                    selectedExpense.supplier_id ||
+                    "-"}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedExpense)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedExpense.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

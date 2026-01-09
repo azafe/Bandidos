@@ -14,6 +14,13 @@ export default function CustomersPage() {
   } = useApiResource("/v2/customers", search ? { q: search } : undefined);
   const [editingId, setEditingId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    notes: "",
+  });
 
   function truncate(text, max) {
     if (!text) return "";
@@ -71,11 +78,13 @@ export default function CustomersPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este cliente?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el cliente.");
+      return false;
     }
   }
 
@@ -97,6 +106,51 @@ export default function CustomersPage() {
       email: "",
       notes: "",
     });
+  }
+
+  function openModalEdit(customer) {
+    setModalForm({
+      name: customer.name || "",
+      phone: customer.phone || "",
+      email: customer.email || "",
+      notes: customer.notes || "",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedCustomer) return;
+    if (!modalForm.name.trim()) {
+      alert("Ingresá el nombre del cliente.");
+      return;
+    }
+    try {
+      await updateItem(selectedCustomer.id, {
+        name: modalForm.name.trim(),
+        phone: modalForm.phone.trim(),
+        email: modalForm.email.trim(),
+        notes: modalForm.notes.trim(),
+      });
+      setSelectedCustomer((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: modalForm.name.trim(),
+              phone: modalForm.phone.trim(),
+              email: modalForm.email.trim(),
+              notes: modalForm.notes.trim(),
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el cliente.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedCustomer(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -213,28 +267,6 @@ export default function CustomersPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{customer.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(customer);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(customer.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Tel: {customer.phone || "-"}</span>
@@ -253,22 +285,121 @@ export default function CustomersPage() {
 
       <Modal
         isOpen={Boolean(selectedCustomer)}
-        onClose={() => setSelectedCustomer(null)}
+        onClose={closeModal}
         title="Detalle del cliente"
       >
         {selectedCustomer && (
           <>
-            <div>
-              <strong>Nombre:</strong> {selectedCustomer.name || "-"}
-            </div>
-            <div>
-              <strong>Teléfono:</strong> {selectedCustomer.phone || "-"}
-            </div>
-            <div>
-              <strong>Email:</strong> {selectedCustomer.email || "-"}
-            </div>
-            <div>
-              <strong>Notas:</strong> {selectedCustomer.notes || "-"}
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Nombre</span>
+                  <input
+                    type="text"
+                    value={modalForm.name}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Teléfono</span>
+                  <input
+                    type="text"
+                    value={modalForm.phone}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={modalForm.email}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Notas</span>
+                  <textarea
+                    rows={3}
+                    value={modalForm.notes}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Nombre:</strong> {selectedCustomer.name || "-"}
+                </div>
+                <div>
+                  <strong>Teléfono:</strong> {selectedCustomer.phone || "-"}
+                </div>
+                <div>
+                  <strong>Email:</strong> {selectedCustomer.email || "-"}
+                </div>
+                <div>
+                  <strong>Notas:</strong> {selectedCustomer.notes || "-"}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedCustomer)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedCustomer.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

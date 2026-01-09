@@ -8,6 +8,8 @@ export default function PaymentMethodsPage() {
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [selectedMethod, setSelectedMethod] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalName, setModalName] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,11 +33,13 @@ export default function PaymentMethodsPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este método de pago?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el método.");
+      return false;
     }
   }
 
@@ -47,6 +51,33 @@ export default function PaymentMethodsPage() {
   function cancelEdit() {
     setEditingId(null);
     setName("");
+  }
+
+  function openModalEdit(item) {
+    setModalName(item.name || "");
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedMethod) return;
+    if (!modalName.trim()) {
+      alert("Ingresá el nombre del método.");
+      return;
+    }
+    try {
+      await updateItem(selectedMethod.id, { name: modalName.trim() });
+      setSelectedMethod((prev) =>
+        prev ? { ...prev, name: modalName.trim() } : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el método.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedMethod(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -117,28 +148,6 @@ export default function PaymentMethodsPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{item.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(item);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Nombre: {item.name || "-"}</span>
@@ -151,13 +160,66 @@ export default function PaymentMethodsPage() {
 
       <Modal
         isOpen={Boolean(selectedMethod)}
-        onClose={() => setSelectedMethod(null)}
+        onClose={closeModal}
         title="Detalle del método"
       >
         {selectedMethod && (
-          <div>
-            <strong>Nombre:</strong> {selectedMethod.name || "-"}
-          </div>
+          <>
+            {isEditingModal ? (
+              <label className="form-field">
+                <span>Nombre</span>
+                <input
+                  type="text"
+                  value={modalName}
+                  onChange={(e) => setModalName(e.target.value)}
+                />
+              </label>
+            ) : (
+              <div>
+                <strong>Nombre:</strong> {selectedMethod.name || "-"}
+              </div>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedMethod)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedMethod.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
       </Modal>
     </div>

@@ -15,6 +15,12 @@ export default function UsersPage() {
   });
   const [editingId, setEditingId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    email: "",
+    password: "",
+    role: "staff",
+  });
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -52,11 +58,13 @@ export default function UsersPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este usuario?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el usuario.");
+      return false;
     }
   }
 
@@ -72,6 +80,48 @@ export default function UsersPage() {
   function cancelEdit() {
     setEditingId(null);
     setForm({ email: "", password: "", role: "staff" });
+  }
+
+  function openModalEdit(item) {
+    setModalForm({
+      email: item.email || "",
+      password: "",
+      role: item.role || "staff",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedUser) return;
+    if (!modalForm.email.trim()) {
+      alert("Ingresá email.");
+      return;
+    }
+    try {
+      const payload = {
+        email: modalForm.email.trim(),
+        role: modalForm.role,
+        ...(modalForm.password ? { password: modalForm.password } : {}),
+      };
+      await updateItem(selectedUser.id, payload);
+      setSelectedUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              email: modalForm.email.trim(),
+              role: modalForm.role,
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el usuario.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedUser(null);
+    setIsEditingModal(false);
   }
 
   if (!isAdmin) {
@@ -179,28 +229,6 @@ export default function UsersPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{item.email}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(item);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Rol: {item.role || "-"}</span>
@@ -213,16 +241,104 @@ export default function UsersPage() {
 
       <Modal
         isOpen={Boolean(selectedUser)}
-        onClose={() => setSelectedUser(null)}
+        onClose={closeModal}
         title="Detalle del usuario"
       >
         {selectedUser && (
           <>
-            <div>
-              <strong>Email:</strong> {selectedUser.email || "-"}
-            </div>
-            <div>
-              <strong>Rol:</strong> {selectedUser.role || "-"}
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={modalForm.email}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Contraseña</span>
+                  <input
+                    type="password"
+                    value={modalForm.password}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Rol</span>
+                  <select
+                    value={modalForm.role}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        role: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="staff">Staff</option>
+                  </select>
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Email:</strong> {selectedUser.email || "-"}
+                </div>
+                <div>
+                  <strong>Rol:</strong> {selectedUser.role || "-"}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedUser)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedUser.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

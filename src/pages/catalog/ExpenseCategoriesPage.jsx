@@ -8,6 +8,8 @@ export default function ExpenseCategoriesPage() {
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalName, setModalName] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,11 +33,13 @@ export default function ExpenseCategoriesPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar esta categoría?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar la categoría.");
+      return false;
     }
   }
 
@@ -47,6 +51,33 @@ export default function ExpenseCategoriesPage() {
   function cancelEdit() {
     setEditingId(null);
     setName("");
+  }
+
+  function openModalEdit(item) {
+    setModalName(item.name || "");
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedCategory) return;
+    if (!modalName.trim()) {
+      alert("Ingresá el nombre de la categoría.");
+      return;
+    }
+    try {
+      await updateItem(selectedCategory.id, { name: modalName.trim() });
+      setSelectedCategory((prev) =>
+        prev ? { ...prev, name: modalName.trim() } : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar la categoría.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedCategory(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -117,28 +148,6 @@ export default function ExpenseCategoriesPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{item.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(item);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Nombre: {item.name || "-"}</span>
@@ -151,13 +160,66 @@ export default function ExpenseCategoriesPage() {
 
       <Modal
         isOpen={Boolean(selectedCategory)}
-        onClose={() => setSelectedCategory(null)}
+        onClose={closeModal}
         title="Detalle de la categoría"
       >
         {selectedCategory && (
-          <div>
-            <strong>Nombre:</strong> {selectedCategory.name || "-"}
-          </div>
+          <>
+            {isEditingModal ? (
+              <label className="form-field">
+                <span>Nombre</span>
+                <input
+                  type="text"
+                  value={modalName}
+                  onChange={(e) => setModalName(e.target.value)}
+                />
+              </label>
+            ) : (
+              <div>
+                <strong>Nombre:</strong> {selectedCategory.name || "-"}
+              </div>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedCategory)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedCategory.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
+            </div>
+          </>
         )}
       </Modal>
     </div>

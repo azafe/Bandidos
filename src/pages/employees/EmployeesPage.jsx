@@ -14,6 +14,15 @@ export default function EmployeesPage() {
   } = useApiResource("/v2/employees");
   const [editingId, setEditingId] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    name: "",
+    role: "Groomer",
+    phone: "",
+    email: "",
+    status: "active",
+    notes: "",
+  });
 
   function truncate(text, max) {
     if (!text) return "";
@@ -73,11 +82,13 @@ export default function EmployeesPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este empleado?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el empleado.");
+      return false;
     }
   }
 
@@ -103,6 +114,57 @@ export default function EmployeesPage() {
       status: "active",
       notes: "",
     });
+  }
+
+  function openModalEdit(employee) {
+    setModalForm({
+      name: employee.name || "",
+      role: employee.role || "Groomer",
+      phone: employee.phone || "",
+      email: employee.email || "",
+      status: employee.status || "active",
+      notes: employee.notes || "",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedEmployee) return;
+    if (!modalForm.name.trim()) {
+      alert("Ingresá al menos el nombre del empleado.");
+      return;
+    }
+    try {
+      await updateItem(selectedEmployee.id, {
+        name: modalForm.name.trim(),
+        role: modalForm.role,
+        phone: modalForm.phone.trim(),
+        email: modalForm.email.trim(),
+        status: modalForm.status,
+        notes: modalForm.notes.trim(),
+      });
+      setSelectedEmployee((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: modalForm.name.trim(),
+              role: modalForm.role,
+              phone: modalForm.phone.trim(),
+              email: modalForm.email.trim(),
+              status: modalForm.status,
+              notes: modalForm.notes.trim(),
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el empleado.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedEmployee(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -248,28 +310,6 @@ export default function EmployeesPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{emp.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(emp);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(emp.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Rol: {emp.role || "-"}</span>
@@ -292,29 +332,156 @@ export default function EmployeesPage() {
 
       <Modal
         isOpen={Boolean(selectedEmployee)}
-        onClose={() => setSelectedEmployee(null)}
+        onClose={closeModal}
         title="Detalle del empleado"
       >
         {selectedEmployee && (
           <>
-            <div>
-              <strong>Nombre:</strong> {selectedEmployee.name || "-"}
-            </div>
-            <div>
-              <strong>Rol:</strong> {selectedEmployee.role || "-"}
-            </div>
-            <div>
-              <strong>Teléfono:</strong> {selectedEmployee.phone || "-"}
-            </div>
-            <div>
-              <strong>Email:</strong> {selectedEmployee.email || "-"}
-            </div>
-            <div>
-              <strong>Estado:</strong>{" "}
-              {selectedEmployee.status === "active" ? "Activo" : "Inactivo"}
-            </div>
-            <div>
-              <strong>Notas:</strong> {selectedEmployee.notes || "-"}
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Nombre</span>
+                  <input
+                    type="text"
+                    value={modalForm.name}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Rol</span>
+                  <input
+                    type="text"
+                    value={modalForm.role}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        role: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Teléfono</span>
+                  <input
+                    type="text"
+                    value={modalForm.phone}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={modalForm.email}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Estado</span>
+                  <select
+                    value={modalForm.status}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        status: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="active">Activo</option>
+                    <option value="inactive">Inactivo</option>
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Notas</span>
+                  <textarea
+                    rows={3}
+                    value={modalForm.notes}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Nombre:</strong> {selectedEmployee.name || "-"}
+                </div>
+                <div>
+                  <strong>Rol:</strong> {selectedEmployee.role || "-"}
+                </div>
+                <div>
+                  <strong>Teléfono:</strong> {selectedEmployee.phone || "-"}
+                </div>
+                <div>
+                  <strong>Email:</strong> {selectedEmployee.email || "-"}
+                </div>
+                <div>
+                  <strong>Estado:</strong>{" "}
+                  {selectedEmployee.status === "active" ? "Activo" : "Inactivo"}
+                </div>
+                <div>
+                  <strong>Notas:</strong> {selectedEmployee.notes || "-"}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedEmployee)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedEmployee.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}

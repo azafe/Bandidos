@@ -160,14 +160,16 @@ export default function ServicesListPage() {
     const ok = window.confirm(
       `¿Eliminar el turno de ${service.dogName || service.pet?.name} (${service.date})?`
     );
-    if (!ok) return;
+    if (!ok) return false;
 
     try {
       await apiRequest(`/v2/services/${service.id}`, { method: "DELETE" });
       const data = await apiRequest("/v2/services", { params: filters });
       setServices(Array.isArray(data) ? data : data?.items || []);
+      return true;
     } catch {
       alert("No se pudo eliminar el servicio. Revisá la consola.");
+      return false;
     }
   }
 
@@ -350,25 +352,6 @@ export default function ServicesListPage() {
                   <div className="list-item__title">
                     {s.dogName || s.pet?.name || "Servicio"}
                   </div>
-                  <div className="list-item__actions">
-                    <Link
-                      to={`/services/${s.id}`}
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(s);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {s.date || "-"}</span>
@@ -438,25 +421,6 @@ export default function ServicesListPage() {
                   <div className="list-item__title">
                     {s.dogName || s.pet?.name || "Servicio"}
                   </div>
-                  <div className="list-item__actions">
-                    <Link
-                      to={`/services/${s.id}`}
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Editar
-                    </Link>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(s);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {s.date || "-"}</span>
@@ -510,6 +474,25 @@ export default function ServicesListPage() {
             <div>
               <strong>Groomer:</strong>{" "}
               {selectedService.groomer?.name || selectedService.groomer || "-"}
+            </div>
+            <div className="modal-actions">
+              <Link
+                to={`/services/${selectedService.id}`}
+                className="btn-primary"
+                onClick={() => setSelectedService(null)}
+              >
+                Editar
+              </Link>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={async () => {
+                  const removed = await handleDelete(selectedService);
+                  if (removed) setSelectedService(null);
+                }}
+              >
+                Eliminar
+              </button>
             </div>
           </>
         )}

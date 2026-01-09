@@ -8,6 +8,8 @@ export default function ServiceTypesPage() {
   const [form, setForm] = useState({ name: "", default_price: "" });
   const [editingId, setEditingId] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({ name: "", default_price: "" });
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -42,11 +44,13 @@ export default function ServiceTypesPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar este tipo de servicio?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar el tipo.");
+      return false;
     }
   }
 
@@ -61,6 +65,50 @@ export default function ServiceTypesPage() {
   function cancelEdit() {
     setEditingId(null);
     setForm({ name: "", default_price: "" });
+  }
+
+  function openModalEdit(item) {
+    setModalForm({
+      name: item.name || "",
+      default_price: item.default_price ? String(item.default_price) : "",
+    });
+    setIsEditingModal(true);
+  }
+
+  async function handleModalSave() {
+    if (!selectedType) return;
+    if (!modalForm.name.trim()) {
+      alert("Ingresá el nombre del servicio.");
+      return;
+    }
+    try {
+      const payload = {
+        name: modalForm.name.trim(),
+        default_price: modalForm.default_price
+          ? Number(modalForm.default_price)
+          : null,
+      };
+      await updateItem(selectedType.id, payload);
+      setSelectedType((prev) =>
+        prev
+          ? {
+              ...prev,
+              name: modalForm.name.trim(),
+              default_price: modalForm.default_price
+                ? Number(modalForm.default_price)
+                : null,
+            }
+          : prev
+      );
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el tipo de servicio.");
+    }
+  }
+
+  function closeModal() {
+    setSelectedType(null);
+    setIsEditingModal(false);
   }
 
   return (
@@ -143,28 +191,6 @@ export default function ServiceTypesPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">{item.name}</div>
-                  <div className="list-item__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEdit(item);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Precio sugerido: {item.default_price ? `$${Number(item.default_price).toLocaleString("es-AR")}` : "-"}</span>
@@ -177,19 +203,94 @@ export default function ServiceTypesPage() {
 
       <Modal
         isOpen={Boolean(selectedType)}
-        onClose={() => setSelectedType(null)}
+        onClose={closeModal}
         title="Detalle del tipo de servicio"
       >
         {selectedType && (
           <>
-            <div>
-              <strong>Nombre:</strong> {selectedType.name || "-"}
-            </div>
-            <div>
-              <strong>Precio sugerido:</strong>{" "}
-              {selectedType.default_price
-                ? `$${Number(selectedType.default_price).toLocaleString("es-AR")}`
-                : "-"}
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Nombre</span>
+                  <input
+                    type="text"
+                    value={modalForm.name}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Precio sugerido</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={modalForm.default_price}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        default_price: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Nombre:</strong> {selectedType.name || "-"}
+                </div>
+                <div>
+                  <strong>Precio sugerido:</strong>{" "}
+                  {selectedType.default_price
+                    ? `$${Number(selectedType.default_price).toLocaleString("es-AR")}`
+                    : "-"}
+                </div>
+              </>
+            )}
+            <div className="modal-actions">
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedType)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedType.id);
+                      if (removed) closeModal();
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}
