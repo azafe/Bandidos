@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import { useAuth } from "../../context/AuthContext";
 
 export default function PetsPage() {
   const [filters, setFilters] = useState({ customer_id: "", q: "" });
@@ -13,8 +14,10 @@ export default function PetsPage() {
     deleteItem,
   } = useApiResource("/v2/pets", filters);
   const { items: customers } = useApiResource("/v2/customers");
+  const { user } = useAuth();
   const [editingId, setEditingId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
+  const isAdmin = user?.role === "admin";
   const customerById = useMemo(() => {
     const entries = customers.map((customer) => [customer.id, customer.name]);
     return new Map(entries);
@@ -80,11 +83,13 @@ export default function PetsPage() {
 
   async function handleDelete(id) {
     const ok = window.confirm("¿Eliminar esta mascota?");
-    if (!ok) return;
+    if (!ok) return false;
     try {
       await deleteItem(id);
+      return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar la mascota.");
+      return false;
     }
   }
 
@@ -273,16 +278,6 @@ export default function PetsPage() {
                     >
                       Editar
                     </button>
-                    <button
-                      type="button"
-                      className="btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(pet.id);
-                      }}
-                    >
-                      Eliminar
-                    </button>
                   </div>
                 </div>
                 <div className="list-item__meta">
@@ -330,6 +325,61 @@ export default function PetsPage() {
             </div>
             <div>
               <strong>Notas:</strong> {selectedPet.notes || "-"}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  startEdit(selectedPet);
+                  setSelectedPet(null);
+                }}
+              >
+                <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                  >
+                    <path
+                      d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 2.75 2.75 1.99-1.66z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  Editar
+                </span>
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                disabled={!isAdmin}
+                onClick={async () => {
+                  if (!isAdmin) return;
+                  const removed = await handleDelete(selectedPet.id);
+                  if (removed) setSelectedPet(null);
+                }}
+                title={
+                  isAdmin
+                    ? "Eliminar mascota"
+                    : "Solo administradores pueden eliminar"
+                }
+              >
+                <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                  >
+                    <path
+                      d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM7 9h2v9H7V9z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                  Eliminar
+                </span>
+              </button>
             </div>
           </>
         )}
