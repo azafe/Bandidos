@@ -309,7 +309,7 @@ export default function PetsPage() {
             </div>
             <div>
               <strong>Cliente:</strong>{" "}
-              {selectedPet.customer?.name || selectedPet.customer_id || "-"}
+              {selectedPet.customer?.name || "-"}
             </div>
             <div>
               <strong>Raza:</strong> {selectedPet.breed || "-"}
