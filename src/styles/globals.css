@@ -7,23 +7,28 @@
 
 /* ===== Variables ===== */
 :root {
-  --color-primary: #c01879;
-  --color-primary-light: #f7d1ea;
-  --color-primary-dark: #8b0f58;
+  --color-primary: #d948ef;
+  --color-primary-light: #f6d7fb;
+  --color-primary-dark: #b12fd1;
+  --color-accent: #ff4fa8;
+  --color-accent-strong: #b344ff;
 
-  --color-bg: #111217;
-  --color-bg-soft: #1b1d23;
-  --color-surface: #ffffff;
+  --color-bg: #0f1016;
+  --color-bg-soft: #171a24;
+  --color-surface: rgba(255, 255, 255, 0.92);
+  --color-surface-strong: #ffffff;
 
-  --color-text: #222222;
-  --color-text-soft: #666666;
-  --color-border-soft: #e2e2e2;
+  --color-text: #10131f;
+  --color-text-soft: #6a7184;
+  --color-border-soft: #e1e5f0;
+  --color-focus: #d948ef;
 
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
 
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.12);
+  --shadow-soft: 0 16px 40px rgba(12, 14, 23, 0.18);
+  --shadow-strong: 0 24px 60px rgba(10, 12, 20, 0.28);
 }
 
 /* ===== Reset ===== */
@@ -44,8 +49,35 @@ body,
 /* ===== Body ===== */
 body {
   font-family: "Poppins", system-ui, sans-serif;
-  background: radial-gradient(circle at top left, #262938, #111217 55%);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 79, 168, 0.25), transparent 55%),
+    radial-gradient(circle at 80% 10%, rgba(80, 230, 220, 0.2), transparent 60%),
+    radial-gradient(circle at 40% 60%, rgba(131, 86, 255, 0.22), transparent 65%),
+    radial-gradient(circle at top left, #2a2e45, #0f1016 60%);
+  background-attachment: fixed;
   color: var(--color-text);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.035) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.12;
+  mix-blend-mode: soft-light;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 h1,
@@ -80,4 +112,9 @@ a {
 .btn-danger:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.btn-danger:focus-visible {
+  outline: 2px solid #14151f;
+  outline-offset: 3px;
 }

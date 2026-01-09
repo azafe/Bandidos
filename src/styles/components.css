@@ -1,44 +1,67 @@
 /* ===== Botones ===== */
 .btn-primary {
-  background: var(--color-primary);
+  background: linear-gradient(
+    120deg,
+    var(--color-accent),
+    var(--color-primary) 60%,
+    var(--color-accent-strong)
+  );
   color: #ffffff;
-  border-radius: 999px;
+  border-radius: 14px;
   border: none;
   padding: 10px 18px;
   font-size: 0.9rem;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(192, 24, 121, 0.35);
-  transition: background 0.15s ease, transform 0.05s ease;
+  box-shadow: 0 12px 24px rgba(217, 72, 239, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(217, 72, 239, 0.38);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid #14151f;
+  outline-offset: 3px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.25);
   padding: 9px 16px;
   font-size: 0.9rem;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
   cursor: pointer;
+}
+
+.btn-secondary:focus-visible {
+  outline: 2px solid #14151f;
+  outline-offset: 3px;
 }
 
 /* ===== Cards genéricas ===== */
 .card {
   background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-lg);
   padding: 18px 20px;
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
 }
 
 .card-title {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 4px;
-  color: var(--color-text);
+  color: #1a1f2f;
 }
 
 .card-subtitle {
@@ -57,9 +80,11 @@
 
 .kpi-card {
   background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
   box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
   display: flex;
   flex-direction: column;
   gap: 4px;
