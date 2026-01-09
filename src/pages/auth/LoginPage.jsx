@@ -1,6 +1,7 @@
 // src/pages/auth/LoginPage.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
@@ -62,6 +63,19 @@ export default function LoginPage() {
           width: "100%",
         }}
       >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: 12,
+          }}
+        >
+          <img
+            src={logo}
+            alt="Logo Bandidos"
+            style={{ width: 72, height: 72, borderRadius: "50%" }}
+          />
+        </div>
         <h1
           style={{
             fontFamily: "Fredoka, system-ui, sans-serif",
@@ -69,20 +83,13 @@ export default function LoginPage() {
             marginBottom: "8px",
           }}
         >
-          Bandidos · Panel
+          Bandidos
         </h1>
         <p style={{ fontSize: "0.9rem", marginBottom: "18px" }}>
           {mode === "login" ? "Inicio de sesión" : "Crear cuenta de acceso"}
         </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-          <button
-            type="button"
-            className={mode === "login" ? "btn-primary" : "btn-secondary"}
-            onClick={() => setMode("login")}
-          >
-            Ingresar
-          </button>
           <button
             type="button"
             className={mode === "register" ? "btn-primary" : "btn-secondary"}
