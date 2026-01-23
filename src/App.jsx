@@ -14,6 +14,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import PetsPage from "./pages/pets/PetsPage";
+import PetDetailPage from "./pages/pets/PetDetailPage";
 import ServiceTypesPage from "./pages/catalog/ServiceTypesPage";
 import PaymentMethodsPage from "./pages/catalog/PaymentMethodsPage";
 import ExpenseCategoriesPage from "./pages/catalog/ExpenseCategoriesPage";
@@ -41,6 +42,7 @@ function App() {
                   <Route path="/services/:id" element={<ServiceFormPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
+                  <Route path="/pets/:id" element={<PetDetailPage />} />
                   <Route path="/expenses/daily" element={<DailyExpensesPage />} />
                   <Route path="/expenses/fixed" element={<FixedExpensesPage />} />
                   <Route path="/employees" element={<EmployeesPage />} />

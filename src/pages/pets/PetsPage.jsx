@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
@@ -467,28 +468,37 @@ export default function PetsPage() {
                   </button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => openModalEdit(selectedPet)}
-                >
-                  <span
-                    style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
+                <>
+                  <Link
+                    to={`/pets/${selectedPet.id}`}
+                    className="btn-secondary"
+                    onClick={closeModal}
                   >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
+                    Ver ficha
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => openModalEdit(selectedPet)}
+                  >
+                    <span
+                      style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
                     >
-                      <path
-                        d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 2.75 2.75 1.99-1.66z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                    Editar
-                  </span>
-                </button>
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        width="16"
+                        height="16"
+                      >
+                        <path
+                          d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 2.75 2.75 1.99-1.66z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      Editar
+                    </span>
+                  </button>
+                </>
               )}
               <button
                 type="button"
