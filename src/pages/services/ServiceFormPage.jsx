@@ -11,6 +11,26 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatDateDisplay(value) {
+  if (!value) return "";
+  const raw = String(value);
+  const datePart = raw.includes("T") ? raw.slice(0, 10) : raw;
+  const [year, month, day] = datePart.split("-");
+  if (!year || !month || !day) return raw;
+  return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+}
+
+function parseDateDisplay(value) {
+  if (!value) return "";
+  const match = String(value).match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return "";
+  const [, day, month, year] = match;
+  const dayNum = Number(day);
+  const monthNum = Number(month);
+  if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) return "";
+  return `${year}-${month}-${day}`;
+}
+
 export default function ServiceFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -25,7 +45,7 @@ export default function ServiceFormPage() {
   });
 
   const [form, setForm] = useState({
-    date: todayISO(),
+    date: formatDateDisplay(todayISO()),
     customer_id: "",
     pet_id: "",
     service_type_id: "",
@@ -95,7 +115,7 @@ export default function ServiceFormPage() {
         const data = await apiRequest(`/v2/services/${id}`);
         if (!active) return;
         setForm({
-          date: data.date || todayISO(),
+          date: formatDateDisplay(data.date || todayISO()),
           customer_id: data.customer_id || data.customer?.id || "",
           pet_id: data.pet_id || data.pet?.id || "",
           service_type_id: data.service_type_id || data.service_type?.id || "",
@@ -122,8 +142,15 @@ export default function ServiceFormPage() {
 
     setSubmitting(true);
 
+    const isoDate = parseDateDisplay(form.date);
+    if (!isoDate) {
+      alert("Ingresá una fecha válida con formato DD-MM-AAAA.");
+      setSubmitting(false);
+      return;
+    }
+
     const payload = {
-      date: form.date,
+      date: isoDate,
       customer_id: form.customer_id,
       pet_id: form.pet_id,
       service_type_id: form.service_type_id,
@@ -177,7 +204,11 @@ export default function ServiceFormPage() {
             <input
               id="date"
               name="date"
-              type="date"
+              type="text"
+              inputMode="numeric"
+              placeholder="DD-MM-AAAA"
+              pattern="\\d{2}-\\d{2}-\\d{4}"
+              maxLength={10}
               value={form.date}
               onChange={handleChange}
               required
