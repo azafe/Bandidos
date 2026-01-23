@@ -141,6 +141,11 @@ export default function ServicesListPage() {
     service.customer?.name ||
     getNameById(customers, service.customer_id) ||
     "-";
+  const resolvePetName = (service) =>
+    service.dogName ||
+    service.pet?.name ||
+    getNameById(pets, service.pet_id) ||
+    "-";
   const resolveServiceTypeName = (service) =>
     service.type ||
     service.service_type?.name ||
@@ -165,6 +170,7 @@ export default function ServicesListPage() {
     return [
       s.dogName,
       s.pet?.name,
+      resolvePetName(s),
       resolveOwnerName(s),
       resolveServiceTypeName(s),
       resolvePaymentMethodName(s),
@@ -193,7 +199,7 @@ export default function ServicesListPage() {
 
   async function handleDelete(service) {
     const ok = window.confirm(
-      `¿Eliminar el turno de ${service.dogName || service.pet?.name} (${service.date})?`
+      `¿Eliminar el turno de ${resolvePetName(service)} (${service.date})?`
     );
     if (!ok) return false;
 
@@ -385,7 +391,7 @@ export default function ServicesListPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">
-                    {resolveServiceTypeName(s)} - {s.dogName || s.pet?.name || "-"}
+                    {resolvePetName(s)} - {resolveServiceTypeName(s)}
                   </div>
                 </div>
                 <div className="list-item__meta">
@@ -451,7 +457,7 @@ export default function ServicesListPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">
-                    {resolveServiceTypeName(s)} - {s.dogName || s.pet?.name || "-"}
+                    {resolvePetName(s)} - {resolveServiceTypeName(s)}
                   </div>
                 </div>
                 <div className="list-item__meta">
@@ -479,7 +485,7 @@ export default function ServicesListPage() {
             </div>
             <div>
               <strong>Perro:</strong>{" "}
-              {selectedService.dogName || selectedService.pet?.name || "-"}
+              {resolvePetName(selectedService)}
             </div>
             <div>
               <strong>Dueño:</strong>{" "}
