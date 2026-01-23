@@ -45,6 +45,21 @@ export default function DailyExpensesPage() {
     return `$${Number(value || 0).toLocaleString("es-AR")}`;
   }
 
+  function formatDate(value) {
+    if (!value) return "-";
+    const raw = String(value);
+    const datePart = raw.includes("T") ? raw.slice(0, 10) : raw;
+    const [year, month, day] = datePart.split("-");
+    if (!year || !month || !day) return raw;
+    return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+  }
+
+  function getNameById(list, id) {
+    if (!id) return "";
+    const match = list.find((item) => String(item.id) === String(id));
+    return match?.name || "";
+  }
+
   const totalToday = expenses.reduce((sum, exp) => {
     if (exp.date === form.date) return sum + Number(exp.amount || 0);
     return sum;
@@ -373,13 +388,26 @@ export default function DailyExpensesPage() {
                   </div>
                 </div>
                 <div className="list-item__meta">
-                  <span>Fecha: {exp.date || "-"}</span>
-                  <span>Categoría: {exp.category?.name || exp.category_id || "-"}</span>
+                  <span>Fecha: {formatDate(exp.date)}</span>
+                  <span>
+                    Categoría:{" "}
+                    {exp.category?.name ||
+                      getNameById(categories, exp.category_id) ||
+                      "-"}
+                  </span>
                   <span>Monto: {formatCurrency(exp.amount)}</span>
                   <span>
-                    Método: {exp.payment_method?.name || exp.payment_method_id || "-"}
+                    Método:{" "}
+                    {exp.payment_method?.name ||
+                      getNameById(paymentMethods, exp.payment_method_id) ||
+                      "-"}
                   </span>
-                  <span>Proveedor: {exp.supplier?.name || exp.supplier_id || "-"}</span>
+                  <span>
+                    Proveedor:{" "}
+                    {exp.supplier?.name ||
+                      getNameById(suppliers, exp.supplier_id) ||
+                      "-"}
+                  </span>
                 </div>
               </div>
             ))

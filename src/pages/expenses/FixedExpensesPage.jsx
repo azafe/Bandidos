@@ -46,6 +46,12 @@ export default function FixedExpensesPage() {
     return `$${Number(value || 0).toLocaleString("es-AR")}`;
   }
 
+  function getNameById(list, id) {
+    if (!id) return "";
+    const match = list.find((item) => String(item.id) === String(id));
+    return match?.name || "";
+  }
+
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -387,13 +393,26 @@ export default function FixedExpensesPage() {
                   <div className="list-item__title">{e.name}</div>
                 </div>
                 <div className="list-item__meta">
-                  <span>Categoría: {e.category?.name || e.category_id || "-"}</span>
+                  <span>
+                    Categoría:{" "}
+                    {e.category?.name ||
+                      getNameById(categories, e.category_id) ||
+                      "-"}
+                  </span>
                   <span>Monto: {formatCurrency(e.amount)}</span>
                   <span>Vence: {e.due_day || e.dueDay || "-"}</span>
                   <span>
-                    Método: {e.payment_method?.name || e.payment_method_id || "-"}
+                    Método:{" "}
+                    {e.payment_method?.name ||
+                      getNameById(paymentMethods, e.payment_method_id) ||
+                      "-"}
                   </span>
-                  <span>Proveedor: {e.supplier?.name || e.supplier_id || "-"}</span>
+                  <span>
+                    Proveedor:{" "}
+                    {e.supplier?.name ||
+                      getNameById(suppliers, e.supplier_id) ||
+                      "-"}
+                  </span>
                   <span>Estado: {e.status === "active" ? "Activo" : "Inactivo"}</span>
                 </div>
               </div>
