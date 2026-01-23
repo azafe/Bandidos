@@ -55,6 +55,23 @@
   color: #1b1f2f;
 }
 
+.date-field__control {
+  position: relative;
+}
+
+.date-field__display {
+  width: 100%;
+}
+
+.date-field__native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {

@@ -20,17 +20,6 @@ function formatDateDisplay(value) {
   return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
 }
 
-function parseDateDisplay(value) {
-  if (!value) return "";
-  const match = String(value).match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (!match) return "";
-  const [, day, month, year] = match;
-  const dayNum = Number(day);
-  const monthNum = Number(month);
-  if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) return "";
-  return `${year}-${month}-${day}`;
-}
-
 export default function ServiceFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -45,7 +34,7 @@ export default function ServiceFormPage() {
   });
 
   const [form, setForm] = useState({
-    date: formatDateDisplay(todayISO()),
+    date: todayISO(),
     customer_id: "",
     pet_id: "",
     service_type_id: "",
@@ -115,7 +104,7 @@ export default function ServiceFormPage() {
         const data = await apiRequest(`/v2/services/${id}`);
         if (!active) return;
         setForm({
-          date: formatDateDisplay(data.date || todayISO()),
+          date: data.date || todayISO(),
           customer_id: data.customer_id || data.customer?.id || "",
           pet_id: data.pet_id || data.pet?.id || "",
           service_type_id: data.service_type_id || data.service_type?.id || "",
@@ -142,15 +131,8 @@ export default function ServiceFormPage() {
 
     setSubmitting(true);
 
-    const isoDate = parseDateDisplay(form.date);
-    if (!isoDate) {
-      alert("Ingresá una fecha válida con formato DD-MM-AAAA.");
-      setSubmitting(false);
-      return;
-    }
-
     const payload = {
-      date: isoDate,
+      date: form.date,
       customer_id: form.customer_id,
       pet_id: form.pet_id,
       service_type_id: form.service_type_id,
@@ -201,18 +183,27 @@ export default function ServiceFormPage() {
           {/* Fecha */}
           <div className="form-field">
             <label htmlFor="date">Fecha</label>
-            <input
-              id="date"
-              name="date"
-              type="text"
-              inputMode="numeric"
-              placeholder="DD-MM-AAAA"
-              pattern="\\d{2}-\\d{2}-\\d{4}"
-              maxLength={10}
-              value={form.date}
-              onChange={handleChange}
-              required
-            />
+            <div className="date-field__control">
+              <input
+                id="date_display"
+                type="text"
+                className="date-field__display"
+                value={formatDateDisplay(form.date)}
+                placeholder="DD-MM-AAAA"
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <input
+                id="date"
+                name="date"
+                type="date"
+                className="date-field__native"
+                value={form.date}
+                onChange={handleChange}
+                required
+              />
+            </div>
           </div>
 
           <div className="form-field">
