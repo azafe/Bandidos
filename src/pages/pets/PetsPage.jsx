@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 
 export default function PetsPage() {
-  const [filters, setFilters] = useState({ customer_id: "", q: "" });
+  const [filters, setFilters] = useState({ q: "" });
   const {
     items: pets,
     loading,
@@ -14,23 +14,18 @@ export default function PetsPage() {
     updateItem,
     deleteItem,
   } = useApiResource("/v2/pets", filters);
-  const { items: customers } = useApiResource("/v2/customers");
   const { user } = useAuth();
   const [editingId, setEditingId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
   const [isEditingModal, setIsEditingModal] = useState(false);
   const [modalForm, setModalForm] = useState({
-    customer_id: "",
     name: "",
     breed: "",
-    size: "",
+    owner_name: "",
+    owner_phone: "",
     notes: "",
   });
   const isAdmin = user?.role === "admin";
-  const customerById = useMemo(() => {
-    const entries = customers.map((customer) => [customer.id, customer.name]);
-    return new Map(entries);
-  }, [customers]);
 
   function truncate(text, max) {
     if (!text) return "";
@@ -38,10 +33,10 @@ export default function PetsPage() {
   }
 
   const [form, setForm] = useState({
-    customer_id: "",
     name: "",
     breed: "",
-    size: "",
+    owner_name: "",
+    owner_phone: "",
     notes: "",
   });
 
@@ -52,26 +47,26 @@ export default function PetsPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.customer_id) {
-      alert("Ingresá nombre y cliente.");
+    if (!form.name.trim() || !form.owner_name.trim()) {
+      alert("Ingresá el nombre de la mascota y el dueño.");
       return;
     }
 
     try {
       if (editingId) {
         await updateItem(editingId, {
-          customer_id: form.customer_id,
           name: form.name.trim(),
           breed: form.breed.trim(),
-          size: form.size.trim(),
+          owner_name: form.owner_name.trim(),
+          owner_phone: form.owner_phone.trim(),
           notes: form.notes.trim(),
         });
       } else {
         await createItem({
-          customer_id: form.customer_id,
           name: form.name.trim(),
           breed: form.breed.trim(),
-          size: form.size.trim(),
+          owner_name: form.owner_name.trim(),
+          owner_phone: form.owner_phone.trim(),
           notes: form.notes.trim(),
         });
       }
@@ -81,10 +76,10 @@ export default function PetsPage() {
     }
 
     setForm({
-      customer_id: "",
       name: "",
       breed: "",
-      size: "",
+      owner_name: "",
+      owner_phone: "",
       notes: "",
     });
     setEditingId(null);
@@ -104,10 +99,10 @@ export default function PetsPage() {
 
   function openModalEdit(pet) {
     setModalForm({
-      customer_id: pet.customer_id || "",
       name: pet.name || "",
       breed: pet.breed || "",
-      size: pet.size || "",
+      owner_name: pet.owner_name || "",
+      owner_phone: pet.owner_phone || "",
       notes: pet.notes || "",
     });
     setIsEditingModal(true);
@@ -115,26 +110,26 @@ export default function PetsPage() {
 
   async function handleModalSave() {
     if (!selectedPet) return;
-    if (!modalForm.name.trim() || !modalForm.customer_id) {
-      alert("Ingresá nombre y cliente.");
+    if (!modalForm.name.trim() || !modalForm.owner_name.trim()) {
+      alert("Ingresá el nombre de la mascota y el dueño.");
       return;
     }
     try {
       await updateItem(selectedPet.id, {
-        customer_id: modalForm.customer_id,
         name: modalForm.name.trim(),
         breed: modalForm.breed.trim(),
-        size: modalForm.size.trim(),
+        owner_name: modalForm.owner_name.trim(),
+        owner_phone: modalForm.owner_phone.trim(),
         notes: modalForm.notes.trim(),
       });
       setSelectedPet((prev) =>
         prev
           ? {
               ...prev,
-              customer_id: modalForm.customer_id,
               name: modalForm.name.trim(),
               breed: modalForm.breed.trim(),
-              size: modalForm.size.trim(),
+              owner_name: modalForm.owner_name.trim(),
+              owner_phone: modalForm.owner_phone.trim(),
               notes: modalForm.notes.trim(),
             }
           : prev
@@ -153,10 +148,10 @@ export default function PetsPage() {
   function startEdit(pet) {
     setEditingId(pet.id);
     setForm({
-      customer_id: pet.customer_id || "",
       name: pet.name || "",
       breed: pet.breed || "",
-      size: pet.size || "",
+      owner_name: pet.owner_name || "",
+      owner_phone: pet.owner_phone || "",
       notes: pet.notes || "",
     });
   }
@@ -164,10 +159,10 @@ export default function PetsPage() {
   function cancelEdit() {
     setEditingId(null);
     setForm({
-      customer_id: "",
       name: "",
       breed: "",
-      size: "",
+      owner_name: "",
+      owner_phone: "",
       notes: "",
     });
   }
@@ -182,22 +177,9 @@ export default function PetsPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <select
-            value={filters.customer_id}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, customer_id: e.target.value }))
-            }
-          >
-            <option value="">Todos los clientes</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
           <input
             type="text"
-            placeholder="Buscar por nombre o raza..."
+            placeholder="Buscar por mascota, duenio o celular..."
             value={filters.q}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, q: e.target.value }))
@@ -219,30 +201,12 @@ export default function PetsPage() {
           {editingId ? "Editar mascota" : "Nueva mascota"}
         </h2>
         <p className="card-subtitle">
-          Asociá la mascota con su dueño para reportes y servicios.
+          Registrá datos básicos para identificar a la mascota y su duenio.
         </p>
 
         <div className="form-grid">
           <div className="form-field">
-            <label htmlFor="customer_id">Cliente</label>
-            <select
-              id="customer_id"
-              name="customer_id"
-              value={form.customer_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="name">Nombre</label>
+            <label htmlFor="name">Nombre mascota</label>
             <input
               id="name"
               name="name"
@@ -265,18 +229,30 @@ export default function PetsPage() {
           </div>
 
           <div className="form-field">
-            <label htmlFor="size">Tamaño</label>
+            <label htmlFor="owner_name">Dueño</label>
             <input
-              id="size"
-              name="size"
+              id="owner_name"
+              name="owner_name"
               type="text"
-              value={form.size}
+              value={form.owner_name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="owner_phone">Celular</label>
+            <input
+              id="owner_phone"
+              name="owner_phone"
+              type="text"
+              value={form.owner_phone}
               onChange={handleChange}
             />
           </div>
 
           <div className="form-field form-field--full">
-            <label htmlFor="notes">Notas</label>
+            <label htmlFor="notes">Observaciones</label>
             <textarea
               id="notes"
               name="notes"
@@ -326,14 +302,9 @@ export default function PetsPage() {
                   <div className="list-item__title">{pet.name}</div>
                 </div>
                 <div className="list-item__meta">
-                  <span>
-                    Cliente:{" "}
-                    {pet.customer?.name ||
-                      customerById.get(pet.customer_id) ||
-                      "-"}
-                  </span>
+                  <span>Dueño: {pet.owner_name || "-"}</span>
+                  <span>Celular: {pet.owner_phone || "-"}</span>
                   <span>Raza: {pet.breed || "-"}</span>
-                  <span>Tamaño: {pet.size || "-"}</span>
                 </div>
                 {pet.notes && (
                   <div className="list-item__meta">
@@ -369,25 +340,6 @@ export default function PetsPage() {
                   />
                 </label>
                 <label className="form-field">
-                  <span>Cliente</span>
-                  <select
-                    value={modalForm.customer_id}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        customer_id: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Seleccioná</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
                   <span>Raza</span>
                   <input
                     type="text"
@@ -401,20 +353,33 @@ export default function PetsPage() {
                   />
                 </label>
                 <label className="form-field">
-                  <span>Tamaño</span>
+                  <span>Dueño</span>
                   <input
                     type="text"
-                    value={modalForm.size}
+                    value={modalForm.owner_name}
                     onChange={(e) =>
                       setModalForm((prev) => ({
                         ...prev,
-                        size: e.target.value,
+                        owner_name: e.target.value,
                       }))
                     }
                   />
                 </label>
                 <label className="form-field">
-                  <span>Notas</span>
+                  <span>Celular</span>
+                  <input
+                    type="text"
+                    value={modalForm.owner_phone}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        owner_phone: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Observaciones</span>
                   <textarea
                     rows={3}
                     value={modalForm.notes}
@@ -433,16 +398,13 @@ export default function PetsPage() {
                   <strong>Nombre:</strong> {selectedPet.name || "-"}
                 </div>
                 <div>
-                  <strong>Cliente:</strong>{" "}
-                  {selectedPet.customer?.name ||
-                    customerById.get(selectedPet.customer_id) ||
-                    "-"}
+                  <strong>Dueño:</strong> {selectedPet.owner_name || "-"}
                 </div>
                 <div>
                   <strong>Raza:</strong> {selectedPet.breed || "-"}
                 </div>
                 <div>
-                  <strong>Tamaño:</strong> {selectedPet.size || "-"}
+                  <strong>Celular:</strong> {selectedPet.owner_phone || "-"}
                 </div>
                 <div>
                   <strong>Notas:</strong> {selectedPet.notes || "-"}

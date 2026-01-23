@@ -119,11 +119,10 @@ export default function PetDetailPage() {
           <div className="card" style={{ marginBottom: 16 }}>
             <h2 className="card-title">{pet?.name || "Mascota"}</h2>
             <p className="card-subtitle">
-              Cliente: {pet?.customer?.name || "-"}
+              Dueño: {pet?.owner_name || "-"} · Celular: {pet?.owner_phone || "-"}
             </p>
             <div className="list-item__meta" style={{ marginTop: 8 }}>
               <span>Raza: {pet?.breed || "-"}</span>
-              <span>Tamaño: {pet?.size || "-"}</span>
             </div>
             <div className="list-item__meta" style={{ marginTop: 6 }}>
               <span>Notas: {pet?.notes || "-"}</span>
