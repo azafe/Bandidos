@@ -43,6 +43,16 @@ function formatDateDisplay(value) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+function addDays(dateStr, delta) {
+  const [yyyy, mm, dd] = dateStr.split("-").map(Number);
+  if (!yyyy || !mm || !dd) return dateStr;
+  const d = new Date(yyyy, mm - 1, dd + delta);
+  const nextY = d.getFullYear();
+  const nextM = String(d.getMonth() + 1).padStart(2, "0");
+  const nextD = String(d.getDate()).padStart(2, "0");
+  return `${nextY}-${nextM}-${nextD}`;
+}
+
 function formatTime(value) {
   if (!value) return "-";
   return value.slice(0, 5);
@@ -371,14 +381,33 @@ export default function AgendaPage() {
 
       <div className="agenda-summary card">
         <div className="agenda-summary__main">
-          <label className="agenda-date">
+          <div className="agenda-date">
             <span>Fecha</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-            />
-          </label>
+            <div className="agenda-date__controls">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+              >
+                ←
+              </button>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+              >
+                →
+              </button>
+            </div>
+            <span className="agenda-date__label">
+              {formatDateDisplay(selectedDate)}
+            </span>
+          </div>
           <div className="agenda-metrics">
             <div>
               <span>Total</span>
