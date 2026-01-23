@@ -47,6 +47,22 @@
   outline-offset: 3px;
 }
 
+.card .btn-secondary,
+.form-card .btn-secondary,
+.modal-card .btn-secondary {
+  background: var(--color-surface-strong);
+  border-color: var(--color-border-soft);
+  color: var(--color-text);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card .btn-secondary:hover,
+.form-card .btn-secondary:hover,
+.modal-card .btn-secondary:hover {
+  box-shadow: 0 10px 20px rgba(16, 19, 31, 0.12);
+  transform: translateY(-1px);
+}
+
 /* ===== Cards genéricas ===== */
 .card {
   background: var(--color-surface);
