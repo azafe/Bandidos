@@ -5,6 +5,7 @@ import MainLayout from "./layouts/MainLayout";
 import DashboardHome from "./pages/DashboardHome";
 import ServicesListPage from "./pages/services/ServicesListPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
+import AgendaPage from "./pages/agenda/AgendaPage";
 import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
 import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
@@ -40,6 +41,7 @@ function App() {
                   <Route path="/services" element={<ServicesListPage />} />
                   <Route path="/services/new" element={<ServiceFormPage />} />
                   <Route path="/services/:id" element={<ServiceFormPage />} />
+                  <Route path="/agenda" element={<AgendaPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
                   <Route path="/pets/:id" element={<PetDetailPage />} />
