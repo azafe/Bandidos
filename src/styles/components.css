@@ -505,7 +505,10 @@
 
 .modal-card {
   position: relative;
-  width: min(560px, 92vw);
+  width: min(640px, 95vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   border-radius: 18px;
   padding: 20px 22px;
   background: var(--color-surface-strong);
@@ -515,6 +518,7 @@
 }
 
 .modal-header {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -546,6 +550,9 @@
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
   gap: 8px;
   color: #2b2f3f;
@@ -561,6 +568,11 @@
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
+  position: sticky;
+  bottom: -1px;
+  background: var(--color-surface-strong);
+  padding: 12px 0 2px;
+  border-top: 1px solid rgba(16, 19, 31, 0.08);
 }
 
 /* Resumen de totales en formularios (gastos diarios / fijos) */
