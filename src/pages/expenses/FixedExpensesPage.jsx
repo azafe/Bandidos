@@ -554,7 +554,7 @@ export default function FixedExpensesPage() {
                 <div>
                   <strong>Categoría:</strong>{" "}
                   {selectedExpense.category?.name ||
-                    selectedExpense.category_id ||
+                    getNameById(categories, selectedExpense.category_id) ||
                     "-"}
                 </div>
                 <div>
@@ -567,13 +567,13 @@ export default function FixedExpensesPage() {
                 <div>
                   <strong>Método de pago:</strong>{" "}
                   {selectedExpense.payment_method?.name ||
-                    selectedExpense.payment_method_id ||
+                    getNameById(paymentMethods, selectedExpense.payment_method_id) ||
                     "-"}
                 </div>
                 <div>
                   <strong>Proveedor:</strong>{" "}
                   {selectedExpense.supplier?.name ||
-                    selectedExpense.supplier_id ||
+                    getNameById(suppliers, selectedExpense.supplier_id) ||
                     "-"}
                 </div>
                 <div>
