@@ -1043,6 +1043,9 @@ export default function ServicesListPage() {
                 <div>
                   <strong>Groomer:</strong> {resolveGroomerName(selectedService)}
                 </div>
+                <div>
+                  <strong>Notas:</strong> {selectedService.notes || "-"}
+                </div>
               </>
             )}
             <div className="modal-actions">
