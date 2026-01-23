@@ -26,6 +26,7 @@ export default function ServiceFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [options, setOptions] = useState({
     customers: [],
     pets: [],
@@ -49,6 +50,16 @@ export default function ServiceFormPage() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+
+  useEffect(() => {
+    if (!form.customer_id) return;
+    const match = options.customers.find(
+      (c) => String(c.id) === String(form.customer_id)
+    );
+    if (match) {
+      setCustomerSearch(match.name || "");
+    }
+  }, [form.customer_id, options.customers]);
 
   const filteredCustomers = options.customers.filter((c) =>
     c.name?.toLowerCase().includes(customerSearch.trim().toLowerCase())
@@ -213,35 +224,50 @@ export default function ServiceFormPage() {
 
           <div className="form-field">
             <label htmlFor="customer_id">Cliente</label>
-            <input
-              id="customer_search"
-              name="customer_search"
-              type="text"
-              placeholder="Escribí para buscar..."
-              value={customerSearch}
-              onChange={(e) => setCustomerSearch(e.target.value)}
-              disabled={loading}
-            />
-            <select
-              id="customer_id"
-              name="customer_id"
-              value={form.customer_id}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            >
-              <option value="">Seleccioná cliente</option>
-              {filteredCustomers.length === 0 ? (
-                <option value="" disabled>
-                  Sin resultados
-                </option>
+            <div className="combo-field">
+              <input
+                id="customer_search"
+                name="customer_search"
+                type="text"
+                placeholder="Buscá por nombre..."
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setIsCustomerOpen(true);
+                  setForm((prev) => ({ ...prev, customer_id: "" }));
+                }}
+                onFocus={() => setIsCustomerOpen(true)}
+                onBlur={() => setTimeout(() => setIsCustomerOpen(false), 120)}
+                disabled={loading}
+                required
+                autoComplete="off"
+              />
+              {isCustomerOpen && !loading ? (
+                <div className="combo-field__list" role="listbox">
+                  {filteredCustomers.length === 0 ? (
+                    <div className="combo-field__empty">Sin resultados</div>
+                  ) : (
+                    filteredCustomers.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="combo-field__option"
+                        onMouseDown={() => {
+                          setForm((prev) => ({
+                            ...prev,
+                            customer_id: c.id,
+                          }));
+                          setCustomerSearch(c.name || "");
+                          setIsCustomerOpen(false);
+                        }}
+                      >
+                        {c.name}
+                      </button>
+                    ))
+                  )}
+                </div>
               ) : null}
-              {filteredCustomers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            </div>
           </div>
 
           <div className="form-field">

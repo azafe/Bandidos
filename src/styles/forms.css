@@ -55,6 +55,44 @@
   color: #1b1f2f;
 }
 
+.combo-field {
+  position: relative;
+}
+
+.combo-field__list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  z-index: 10;
+}
+
+.combo-field__option {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.combo-field__option:hover {
+  background: rgba(217, 72, 239, 0.12);
+}
+
+.combo-field__empty {
+  padding: 8px 10px;
+  color: var(--color-text-soft);
+  font-size: 0.85rem;
+}
+
 .date-field__control {
   position: relative;
 }
