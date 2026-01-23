@@ -17,7 +17,8 @@ function parseSheetDate(dateStr) {
 
   // Caso ISO o con guiones: 2024-07-29
   if (raw.includes("-")) {
-    const parts = raw.split("-");
+    const datePart = raw.split("T")[0];
+    const parts = datePart.split("-");
     if (parts.length === 3 && parts[0].length === 4) {
       const [y, m, d] = parts.map(Number);
       return new Date(y, m - 1, d);
