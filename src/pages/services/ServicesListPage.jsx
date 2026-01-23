@@ -481,34 +481,27 @@ export default function ServicesListPage() {
         {selectedService && (
           <>
             <div>
-              <strong>Fecha:</strong> {selectedService.date || "-"}
+              <strong>Fecha:</strong> {formatDateDisplay(selectedService.date)}
             </div>
             <div>
               <strong>Perro:</strong>{" "}
               {resolvePetName(selectedService)}
             </div>
             <div>
-              <strong>Dueño:</strong>{" "}
-              {selectedService.ownerName || selectedService.customer?.name || "-"}
+              <strong>Dueño:</strong> {resolveOwnerName(selectedService)}
             </div>
             <div>
-              <strong>Servicio:</strong>{" "}
-              {selectedService.type ||
-                selectedService.service_type?.name ||
-                "-"}
+              <strong>Servicio:</strong> {resolveServiceTypeName(selectedService)}
             </div>
             <div>
               <strong>Precio:</strong> {formatPrice(selectedService.price)}
             </div>
             <div>
               <strong>Método de pago:</strong>{" "}
-              {selectedService.paymentMethod ||
-                selectedService.payment_method?.name ||
-                "-"}
+              {resolvePaymentMethodName(selectedService)}
             </div>
             <div>
-              <strong>Groomer:</strong>{" "}
-              {selectedService.groomer?.name || selectedService.groomer || "-"}
+              <strong>Groomer:</strong> {resolveGroomerName(selectedService)}
             </div>
             <div className="modal-actions">
               <Link
