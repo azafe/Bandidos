@@ -189,12 +189,12 @@ export default function ServicesListPage() {
 
   function formatDateDisplay(value) {
     if (!value) return "-";
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return value;
-    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const parsed = parseSheetDate(value);
+    if (!parsed || Number.isNaN(parsed.getTime())) return value;
     const dd = String(parsed.getDate()).padStart(2, "0");
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
     const yyyy = parsed.getFullYear();
-    return `${mm}-${dd}-${yyyy}`;
+    return `${dd}-${mm}-${yyyy}`;
   }
 
   async function handleDelete(service) {
