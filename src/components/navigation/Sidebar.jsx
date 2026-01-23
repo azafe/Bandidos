@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       <div className="sidebar__nav" style={{ marginTop: "auto" }}>
         <button
           type="button"
-          className="sidebar__nav-link"
+          className="sidebar__nav-link sidebar__nav-link--logout"
           onClick={() => {
             logout();
             handleNavigate();
