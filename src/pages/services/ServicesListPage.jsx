@@ -63,6 +63,17 @@ export default function ServicesListPage() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [selectedService, setSelectedService] = useState(null);
+  const [isEditingModal, setIsEditingModal] = useState(false);
+  const [modalForm, setModalForm] = useState({
+    date: "",
+    customer_id: "",
+    pet_id: "",
+    service_type_id: "",
+    price: "",
+    payment_method_id: "",
+    groomer_id: "",
+    notes: "",
+  });
   const [filters, setFilters] = useState(() => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -181,6 +192,10 @@ export default function ServicesListPage() {
       .some((field) => field.toLowerCase().includes(searchTerm));
   });
 
+  const modalPets = pets.filter((p) =>
+    modalForm.customer_id ? p.customer_id === modalForm.customer_id : true
+  );
+
   const periodLabel = `${filters.from} → ${filters.to}`;
 
   function formatPrice(value) {
@@ -196,6 +211,101 @@ export default function ServicesListPage() {
     const mm = String(parsed.getMonth() + 1).padStart(2, "0");
     const yyyy = parsed.getFullYear();
     return `${dd}-${mm}-${yyyy}`;
+  }
+
+  function toISODate(value) {
+    if (!value) return "";
+    const raw = String(value).trim();
+    if (raw.includes("T")) return raw.slice(0, 10);
+    if (raw.includes("-") && raw.split("-")[0].length === 4) {
+      return raw.slice(0, 10);
+    }
+    const parsed = parseSheetDate(raw);
+    if (!parsed || Number.isNaN(parsed.getTime())) return "";
+    const dd = String(parsed.getDate()).padStart(2, "0");
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const yyyy = parsed.getFullYear();
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function buildModalForm(service) {
+    return {
+      date: toISODate(service?.date),
+      customer_id: service?.customer_id || service?.customer?.id || "",
+      pet_id: service?.pet_id || service?.pet?.id || "",
+      service_type_id:
+        service?.service_type_id || service?.service_type?.id || "",
+      price:
+        service?.price !== null && service?.price !== undefined
+          ? String(service.price)
+          : "",
+      payment_method_id:
+        service?.payment_method_id || service?.payment_method?.id || "",
+      groomer_id: service?.groomer_id || service?.groomer?.id || "",
+      notes: service?.notes || "",
+    };
+  }
+
+  useEffect(() => {
+    if (!selectedService) return;
+    setModalForm(buildModalForm(selectedService));
+    setIsEditingModal(false);
+  }, [selectedService]);
+
+  function handleModalChange(e) {
+    const { name, value } = e.target;
+    setModalForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleModalSave() {
+    if (!selectedService) return;
+    const amountNumber = Number(modalForm.price || 0);
+    if (!modalForm.customer_id) {
+      alert("Seleccioná un cliente.");
+      return;
+    }
+    if (!modalForm.pet_id) {
+      alert("Seleccioná una mascota.");
+      return;
+    }
+    if (!modalForm.service_type_id) {
+      alert("Seleccioná un tipo de servicio.");
+      return;
+    }
+    if (!modalForm.payment_method_id) {
+      alert("Seleccioná un método de pago.");
+      return;
+    }
+    if (!amountNumber || amountNumber <= 0) {
+      alert("Ingresá un precio válido.");
+      return;
+    }
+
+    const payload = {
+      date: modalForm.date,
+      customer_id: modalForm.customer_id,
+      pet_id: modalForm.pet_id,
+      service_type_id: modalForm.service_type_id,
+      price: amountNumber,
+      payment_method_id: modalForm.payment_method_id,
+      groomer_id: modalForm.groomer_id || null,
+      notes: modalForm.notes?.trim() || "",
+    };
+
+    try {
+      await apiRequest(`/v2/services/${selectedService.id}`, {
+        method: "PUT",
+        body: payload,
+      });
+      const data = await apiRequest("/v2/services", { params: filters });
+      const items = Array.isArray(data) ? data : data?.items || [];
+      setServices(items);
+      const updated = items.find((item) => item.id === selectedService.id);
+      if (updated) setSelectedService(updated);
+      setIsEditingModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo actualizar el servicio.");
+    }
   }
 
   async function handleDelete(service) {
@@ -481,47 +591,195 @@ export default function ServicesListPage() {
       >
         {selectedService && (
           <>
-            <div>
-              <strong>Fecha:</strong> {formatDateDisplay(selectedService.date)}
-            </div>
-            <div>
-              <strong>Perro:</strong>{" "}
-              {resolvePetName(selectedService)}
-            </div>
-            <div>
-              <strong>Dueño:</strong> {resolveOwnerName(selectedService)}
-            </div>
-            <div>
-              <strong>Servicio:</strong> {resolveServiceTypeName(selectedService)}
-            </div>
-            <div>
-              <strong>Precio:</strong> {formatPrice(selectedService.price)}
-            </div>
-            <div>
-              <strong>Método de pago:</strong>{" "}
-              {resolvePaymentMethodName(selectedService)}
-            </div>
-            <div>
-              <strong>Groomer:</strong> {resolveGroomerName(selectedService)}
-            </div>
+            {isEditingModal ? (
+              <>
+                <label className="form-field">
+                  <span>Fecha</span>
+                  <input
+                    type="date"
+                    name="date"
+                    value={modalForm.date}
+                    onChange={handleModalChange}
+                    required
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Cliente</span>
+                  <select
+                    name="customer_id"
+                    value={modalForm.customer_id}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        customer_id: e.target.value,
+                        pet_id: "",
+                      }))
+                    }
+                    required
+                  >
+                    <option value="">Seleccioná cliente</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Mascota</span>
+                  <select
+                    name="pet_id"
+                    value={modalForm.pet_id}
+                    onChange={handleModalChange}
+                    required
+                    disabled={!modalForm.customer_id}
+                  >
+                    <option value="">Seleccioná mascota</option>
+                    {modalPets.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Tipo de servicio</span>
+                  <select
+                    name="service_type_id"
+                    value={modalForm.service_type_id}
+                    onChange={handleModalChange}
+                    required
+                  >
+                    <option value="">Seleccioná servicio</option>
+                    {serviceTypes.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Precio</span>
+                  <input
+                    type="number"
+                    name="price"
+                    min="0"
+                    step="100"
+                    value={modalForm.price}
+                    onChange={handleModalChange}
+                    required
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Método de pago</span>
+                  <select
+                    name="payment_method_id"
+                    value={modalForm.payment_method_id}
+                    onChange={handleModalChange}
+                    required
+                  >
+                    <option value="">Seleccioná método</option>
+                    {paymentMethods.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Groomer</span>
+                  <select
+                    name="groomer_id"
+                    value={modalForm.groomer_id}
+                    onChange={handleModalChange}
+                  >
+                    <option value="">Seleccioná</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Notas</span>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    value={modalForm.notes}
+                    onChange={handleModalChange}
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <div>
+                  <strong>Fecha:</strong> {formatDateDisplay(selectedService.date)}
+                </div>
+                <div>
+                  <strong>Perro:</strong> {resolvePetName(selectedService)}
+                </div>
+                <div>
+                  <strong>Dueño:</strong> {resolveOwnerName(selectedService)}
+                </div>
+                <div>
+                  <strong>Servicio:</strong>{" "}
+                  {resolveServiceTypeName(selectedService)}
+                </div>
+                <div>
+                  <strong>Precio:</strong> {formatPrice(selectedService.price)}
+                </div>
+                <div>
+                  <strong>Método de pago:</strong>{" "}
+                  {resolvePaymentMethodName(selectedService)}
+                </div>
+                <div>
+                  <strong>Groomer:</strong> {resolveGroomerName(selectedService)}
+                </div>
+              </>
+            )}
             <div className="modal-actions">
-              <Link
-                to={`/services/${selectedService.id}`}
-                className="btn-primary"
-                onClick={() => setSelectedService(null)}
-              >
-                Editar
-              </Link>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={async () => {
-                  const removed = await handleDelete(selectedService);
-                  if (removed) setSelectedService(null);
-                }}
-              >
-                Eliminar
-              </button>
+              {isEditingModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setModalForm(buildModalForm(selectedService));
+                      setIsEditingModal(false);
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setIsEditingModal(true)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      const removed = await handleDelete(selectedService);
+                      if (removed) setSelectedService(null);
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </div>
           </>
         )}
