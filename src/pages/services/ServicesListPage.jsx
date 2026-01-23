@@ -403,7 +403,7 @@ export default function ServicesListPage() {
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card filters-card" style={{ marginBottom: 16 }}>
         <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
           Filtros de período
         </h3>
