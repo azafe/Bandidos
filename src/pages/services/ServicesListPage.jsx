@@ -62,6 +62,8 @@ export default function ServicesListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("period");
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
   const [filterCustomerSearch, setFilterCustomerSearch] = useState("");
   const [filterPetSearch, setFilterPetSearch] = useState("");
@@ -184,21 +186,25 @@ export default function ServicesListPage() {
 
   // Filtro de búsqueda sobre los servicios
   const searchTerm = search.trim().toLowerCase();
-  const filteredServices = servicesWithDate.filter((s) => {
+  const serviceMatchesSearch = (service) => {
     if (!searchTerm) return true;
-
     return [
-      s.dogName,
-      s.pet?.name,
-      resolvePetName(s),
-      resolveOwnerName(s),
-      resolveServiceTypeName(s),
-      resolvePaymentMethodName(s),
-      resolveGroomerName(s),
+      service.dogName,
+      service.pet?.name,
+      resolvePetName(service),
+      resolveOwnerName(service),
+      resolveServiceTypeName(service),
+      resolvePaymentMethodName(service),
+      resolveGroomerName(service),
     ]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(searchTerm));
-  });
+  };
+
+  const filteredPeriod = servicesWithDate.filter(serviceMatchesSearch);
+  const filteredToday = servicesToday.filter(serviceMatchesSearch);
+
+  const listItems = activeTab === "today" ? filteredToday : filteredPeriod;
 
   const normalizedFilterCustomerSearch = filterCustomerSearch.trim().toLowerCase();
   const normalizedFilterPetSearch = filterPetSearch.trim().toLowerCase();
@@ -219,6 +225,60 @@ export default function ServicesListPage() {
   const filteredFilterGroomers = employees.filter((e) =>
     e.name?.toLowerCase().includes(normalizedFilterGroomerSearch)
   );
+
+  const activeFilterChips = [
+    filters.customer_id
+      ? {
+          key: "customer",
+          label: `Cliente: ${getNameById(customers, filters.customer_id)}`,
+          onRemove: () =>
+            setFilters((prev) => ({ ...prev, customer_id: "", pet_id: "" })),
+        }
+      : null,
+    filters.pet_id
+      ? {
+          key: "pet",
+          label: `Mascota: ${getNameById(pets, filters.pet_id)}`,
+          onRemove: () => setFilters((prev) => ({ ...prev, pet_id: "" })),
+        }
+      : null,
+    filters.service_type_id
+      ? {
+          key: "service",
+          label: `Servicio: ${getNameById(serviceTypes, filters.service_type_id)}`,
+          onRemove: () =>
+            setFilters((prev) => ({ ...prev, service_type_id: "" })),
+        }
+      : null,
+    filters.groomer_id
+      ? {
+          key: "groomer",
+          label: `Groomer: ${getNameById(employees, filters.groomer_id)}`,
+          onRemove: () => setFilters((prev) => ({ ...prev, groomer_id: "" })),
+        }
+      : null,
+    searchTerm
+      ? {
+          key: "search",
+          label: `Buscar: ${search}`,
+          onRemove: () => setSearch(""),
+        }
+      : null,
+  ].filter(Boolean);
+
+  function clearFilters() {
+    setFilters((prev) => ({
+      ...prev,
+      customer_id: "",
+      pet_id: "",
+      service_type_id: "",
+      groomer_id: "",
+    }));
+    setFilterCustomerSearch("");
+    setFilterPetSearch("");
+    setFilterServiceSearch("");
+    setFilterGroomerSearch("");
+  }
 
   const modalPets = pets.filter((p) =>
     modalForm.customer_id ? p.customer_id === modalForm.customer_id : true
@@ -396,7 +456,6 @@ export default function ServicesListPage() {
         </Link>
       </header>
 
-      {loading && <div className="card">Cargando servicios...</div>}
       {error && (
         <div className="card" style={{ color: "#f37b7b" }}>
           {error}
@@ -404,271 +463,312 @@ export default function ServicesListPage() {
       )}
 
       <div className="card filters-card" style={{ marginBottom: 16 }}>
-        <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
-          Filtros de período
-        </h3>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <div className="form-field">
-            <label htmlFor="from">Desde</label>
-            <input
-              id="from"
-              type="date"
-              value={filters.from}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, from: e.target.value }))
-              }
-            />
+        <div className="filters-header">
+          <div>
+            <h3 className="card-title">Filtros</h3>
+            <p className="card-subtitle">Acotá por período o por persona.</p>
           </div>
-          <div className="form-field">
-            <label htmlFor="to">Hasta</label>
-            <input
-              id="to"
-              type="date"
-              value={filters.to}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, to: e.target.value }))
-              }
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor="customer_id">Cliente</label>
-            <div className="combo-field">
-              <input
-                id="customer_filter"
-                type="text"
-                placeholder="Todos"
-                value={filterCustomerSearch}
-                onChange={(e) => {
-                  setFilterCustomerSearch(e.target.value);
-                  setIsFilterCustomerOpen(true);
-                  setFilters((prev) => ({
-                    ...prev,
-                    customer_id: "",
-                    pet_id: "",
-                  }));
-                  setFilterPetSearch("");
-                }}
-                onFocus={() => setIsFilterCustomerOpen(true)}
-                onBlur={() => setTimeout(() => setIsFilterCustomerOpen(false), 120)}
-                autoComplete="off"
-              />
-              {isFilterCustomerOpen ? (
-                <div className="combo-field__list" role="listbox">
-                  <button
-                    type="button"
-                    className="combo-field__option"
-                    onMouseDown={() => {
-                      setFilters((prev) => ({
-                        ...prev,
-                        customer_id: "",
-                        pet_id: "",
-                      }));
-                      setFilterCustomerSearch("");
-                      setFilterPetSearch("");
-                      setIsFilterCustomerOpen(false);
-                    }}
-                  >
-                    Todos
-                  </button>
-                  {filteredFilterCustomers.length === 0 ? (
-                    <div className="combo-field__empty">Sin resultados</div>
-                  ) : (
-                    filteredFilterCustomers.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="combo-field__option"
-                        onMouseDown={() => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            customer_id: c.id,
-                            pet_id: "",
-                          }));
-                          setFilterCustomerSearch(c.name || "");
-                          setFilterPetSearch("");
-                          setIsFilterCustomerOpen(false);
-                        }}
-                      >
-                        {c.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div className="form-field">
-            <label htmlFor="pet_id">Mascota</label>
-            <div className="combo-field">
-              <input
-                id="pet_filter"
-                type="text"
-                placeholder="Todas"
-                value={filterPetSearch}
-                onChange={(e) => {
-                  setFilterPetSearch(e.target.value);
-                  setIsFilterPetOpen(true);
-                  setFilters((prev) => ({ ...prev, pet_id: "" }));
-                }}
-                onFocus={() => setIsFilterPetOpen(true)}
-                onBlur={() => setTimeout(() => setIsFilterPetOpen(false), 120)}
-                autoComplete="off"
-                disabled={!filters.customer_id}
-              />
-              {isFilterPetOpen ? (
-                <div className="combo-field__list" role="listbox">
-                  {!filters.customer_id ? (
-                    <div className="combo-field__empty">
-                      Seleccioná un cliente primero
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="combo-field__option"
-                        onMouseDown={() => {
-                          setFilters((prev) => ({ ...prev, pet_id: "" }));
-                          setFilterPetSearch("");
-                          setIsFilterPetOpen(false);
-                        }}
-                      >
-                        Todas
-                      </button>
-                      {filteredFilterPets.length === 0 ? (
-                        <div className="combo-field__empty">Sin resultados</div>
-                      ) : (
-                        filteredFilterPets.map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className="combo-field__option"
-                            onMouseDown={() => {
-                              setFilters((prev) => ({ ...prev, pet_id: p.id }));
-                              setFilterPetSearch(p.name || "");
-                              setIsFilterPetOpen(false);
-                            }}
-                          >
-                            {p.name}
-                          </button>
-                        ))
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div className="form-field">
-            <label htmlFor="service_type_id">Servicio</label>
-            <div className="combo-field">
-              <input
-                id="service_filter"
-                type="text"
-                placeholder="Todos"
-                value={filterServiceSearch}
-                onChange={(e) => {
-                  setFilterServiceSearch(e.target.value);
-                  setIsFilterServiceOpen(true);
-                  setFilters((prev) => ({ ...prev, service_type_id: "" }));
-                }}
-                onFocus={() => setIsFilterServiceOpen(true)}
-                onBlur={() => setTimeout(() => setIsFilterServiceOpen(false), 120)}
-                autoComplete="off"
-              />
-              {isFilterServiceOpen ? (
-                <div className="combo-field__list" role="listbox">
-                  <button
-                    type="button"
-                    className="combo-field__option"
-                    onMouseDown={() => {
-                      setFilters((prev) => ({ ...prev, service_type_id: "" }));
-                      setFilterServiceSearch("");
-                      setIsFilterServiceOpen(false);
-                    }}
-                  >
-                    Todos
-                  </button>
-                  {filteredFilterServiceTypes.length === 0 ? (
-                    <div className="combo-field__empty">Sin resultados</div>
-                  ) : (
-                    filteredFilterServiceTypes.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className="combo-field__option"
-                        onMouseDown={() => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            service_type_id: t.id,
-                          }));
-                          setFilterServiceSearch(t.name || "");
-                          setIsFilterServiceOpen(false);
-                        }}
-                      >
-                        {t.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-            </div>
-          </div>
-          <div className="form-field">
-            <label htmlFor="groomer_id">Groomer</label>
-            <div className="combo-field">
-              <input
-                id="groomer_filter"
-                type="text"
-                placeholder="Todos"
-                value={filterGroomerSearch}
-                onChange={(e) => {
-                  setFilterGroomerSearch(e.target.value);
-                  setIsFilterGroomerOpen(true);
-                  setFilters((prev) => ({ ...prev, groomer_id: "" }));
-                }}
-                onFocus={() => setIsFilterGroomerOpen(true)}
-                onBlur={() => setTimeout(() => setIsFilterGroomerOpen(false), 120)}
-                autoComplete="off"
-              />
-              {isFilterGroomerOpen ? (
-                <div className="combo-field__list" role="listbox">
-                  <button
-                    type="button"
-                    className="combo-field__option"
-                    onMouseDown={() => {
-                      setFilters((prev) => ({ ...prev, groomer_id: "" }));
-                      setFilterGroomerSearch("");
-                      setIsFilterGroomerOpen(false);
-                    }}
-                  >
-                    Todos
-                  </button>
-                  {filteredFilterGroomers.length === 0 ? (
-                    <div className="combo-field__empty">Sin resultados</div>
-                  ) : (
-                    filteredFilterGroomers.map((emp) => (
-                      <button
-                        key={emp.id}
-                        type="button"
-                        className="combo-field__option"
-                        onMouseDown={() => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            groomer_id: emp.id,
-                          }));
-                          setFilterGroomerSearch(emp.name || "");
-                          setIsFilterGroomerOpen(false);
-                        }}
-                      >
-                        {emp.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-            </div>
+          <div className="filters-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+            >
+              {filtersOpen ? "Ocultar filtros" : "Mostrar filtros"}
+            </button>
+            {activeFilterChips.length > 0 ? (
+              <button type="button" className="btn-secondary" onClick={clearFilters}>
+                Limpiar
+              </button>
+            ) : null}
           </div>
         </div>
+
+        {activeFilterChips.length > 0 ? (
+          <div className="filters-chips">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                className="filter-chip"
+                onClick={chip.onRemove}
+              >
+                {chip.label} <span aria-hidden="true">×</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {filtersOpen ? (
+          <div className="filters-grid">
+            <div className="form-field">
+              <label htmlFor="from">Desde</label>
+              <input
+                id="from"
+                type="date"
+                value={filters.from}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, from: e.target.value }))
+                }
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="to">Hasta</label>
+              <input
+                id="to"
+                type="date"
+                value={filters.to}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, to: e.target.value }))
+                }
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="customer_id">Cliente</label>
+              <div className="combo-field">
+                <input
+                  id="customer_filter"
+                  type="text"
+                  placeholder="Todos"
+                  value={filterCustomerSearch}
+                  onChange={(e) => {
+                    setFilterCustomerSearch(e.target.value);
+                    setIsFilterCustomerOpen(true);
+                    setFilters((prev) => ({
+                      ...prev,
+                      customer_id: "",
+                      pet_id: "",
+                    }));
+                    setFilterPetSearch("");
+                  }}
+                  onFocus={() => setIsFilterCustomerOpen(true)}
+                  onBlur={() =>
+                    setTimeout(() => setIsFilterCustomerOpen(false), 120)
+                  }
+                  autoComplete="off"
+                />
+                {isFilterCustomerOpen ? (
+                  <div className="combo-field__list" role="listbox">
+                    <button
+                      type="button"
+                      className="combo-field__option"
+                      onMouseDown={() => {
+                        setFilters((prev) => ({
+                          ...prev,
+                          customer_id: "",
+                          pet_id: "",
+                        }));
+                        setFilterCustomerSearch("");
+                        setFilterPetSearch("");
+                        setIsFilterCustomerOpen(false);
+                      }}
+                    >
+                      Todos
+                    </button>
+                    {filteredFilterCustomers.length === 0 ? (
+                      <div className="combo-field__empty">Sin resultados</div>
+                    ) : (
+                      filteredFilterCustomers.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className="combo-field__option"
+                          onMouseDown={() => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              customer_id: c.id,
+                              pet_id: "",
+                            }));
+                            setFilterCustomerSearch(c.name || "");
+                            setFilterPetSearch("");
+                            setIsFilterCustomerOpen(false);
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="form-field">
+              <label htmlFor="pet_id">Mascota</label>
+              <div className="combo-field">
+                <input
+                  id="pet_filter"
+                  type="text"
+                  placeholder="Todas"
+                  value={filterPetSearch}
+                  onChange={(e) => {
+                    setFilterPetSearch(e.target.value);
+                    setIsFilterPetOpen(true);
+                    setFilters((prev) => ({ ...prev, pet_id: "" }));
+                  }}
+                  onFocus={() => setIsFilterPetOpen(true)}
+                  onBlur={() => setTimeout(() => setIsFilterPetOpen(false), 120)}
+                  autoComplete="off"
+                  disabled={!filters.customer_id}
+                />
+                {isFilterPetOpen ? (
+                  <div className="combo-field__list" role="listbox">
+                    {!filters.customer_id ? (
+                      <div className="combo-field__empty">
+                        Seleccioná un cliente primero
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="combo-field__option"
+                          onMouseDown={() => {
+                            setFilters((prev) => ({ ...prev, pet_id: "" }));
+                            setFilterPetSearch("");
+                            setIsFilterPetOpen(false);
+                          }}
+                        >
+                          Todas
+                        </button>
+                        {filteredFilterPets.length === 0 ? (
+                          <div className="combo-field__empty">Sin resultados</div>
+                        ) : (
+                          filteredFilterPets.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="combo-field__option"
+                              onMouseDown={() => {
+                                setFilters((prev) => ({ ...prev, pet_id: p.id }));
+                                setFilterPetSearch(p.name || "");
+                                setIsFilterPetOpen(false);
+                              }}
+                            >
+                              {p.name}
+                            </button>
+                          ))
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="form-field">
+              <label htmlFor="service_type_id">Servicio</label>
+              <div className="combo-field">
+                <input
+                  id="service_filter"
+                  type="text"
+                  placeholder="Todos"
+                  value={filterServiceSearch}
+                  onChange={(e) => {
+                    setFilterServiceSearch(e.target.value);
+                    setIsFilterServiceOpen(true);
+                    setFilters((prev) => ({ ...prev, service_type_id: "" }));
+                  }}
+                  onFocus={() => setIsFilterServiceOpen(true)}
+                  onBlur={() =>
+                    setTimeout(() => setIsFilterServiceOpen(false), 120)
+                  }
+                  autoComplete="off"
+                />
+                {isFilterServiceOpen ? (
+                  <div className="combo-field__list" role="listbox">
+                    <button
+                      type="button"
+                      className="combo-field__option"
+                      onMouseDown={() => {
+                        setFilters((prev) => ({ ...prev, service_type_id: "" }));
+                        setFilterServiceSearch("");
+                        setIsFilterServiceOpen(false);
+                      }}
+                    >
+                      Todos
+                    </button>
+                    {filteredFilterServiceTypes.length === 0 ? (
+                      <div className="combo-field__empty">Sin resultados</div>
+                    ) : (
+                      filteredFilterServiceTypes.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="combo-field__option"
+                          onMouseDown={() => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              service_type_id: t.id,
+                            }));
+                            setFilterServiceSearch(t.name || "");
+                            setIsFilterServiceOpen(false);
+                          }}
+                        >
+                          {t.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <div className="form-field">
+              <label htmlFor="groomer_id">Groomer</label>
+              <div className="combo-field">
+                <input
+                  id="groomer_filter"
+                  type="text"
+                  placeholder="Todos"
+                  value={filterGroomerSearch}
+                  onChange={(e) => {
+                    setFilterGroomerSearch(e.target.value);
+                    setIsFilterGroomerOpen(true);
+                    setFilters((prev) => ({ ...prev, groomer_id: "" }));
+                  }}
+                  onFocus={() => setIsFilterGroomerOpen(true)}
+                  onBlur={() =>
+                    setTimeout(() => setIsFilterGroomerOpen(false), 120)
+                  }
+                  autoComplete="off"
+                />
+                {isFilterGroomerOpen ? (
+                  <div className="combo-field__list" role="listbox">
+                    <button
+                      type="button"
+                      className="combo-field__option"
+                      onMouseDown={() => {
+                        setFilters((prev) => ({ ...prev, groomer_id: "" }));
+                        setFilterGroomerSearch("");
+                        setIsFilterGroomerOpen(false);
+                      }}
+                    >
+                      Todos
+                    </button>
+                    {filteredFilterGroomers.length === 0 ? (
+                      <div className="combo-field__empty">Sin resultados</div>
+                    ) : (
+                      filteredFilterGroomers.map((emp) => (
+                        <button
+                          key={emp.id}
+                          type="button"
+                          className="combo-field__option"
+                          onMouseDown={() => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              groomer_id: emp.id,
+                            }));
+                            setFilterGroomerSearch(emp.name || "");
+                            setIsFilterGroomerOpen(false);
+                          }}
+                        >
+                          {emp.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Cards resumen */}
@@ -694,102 +794,139 @@ export default function ServicesListPage() {
         </div>
       </div>
 
-      {/* Lista: servicios de hoy */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>Servicios de hoy</h2>
-        <p style={{ fontSize: "0.85rem", color: "#888", marginBottom: 12 }}>
-          Turnos registrados en la fecha actual.
-        </p>
-
-        <div className="list-wrapper">
-          {servicesToday.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Hoy todavía no se registraron servicios.
-            </div>
-          ) : (
-            servicesToday.map((s) => (
-              <div
-                key={s.id}
-                className="list-item"
-                onClick={() => setSelectedService(s)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">
-                    {resolvePetName(s)} - {resolveServiceTypeName(s)}
-                  </div>
-                </div>
-                <div className="list-item__meta">
-                  <span>Fecha: {formatDateDisplay(s.date)}</span>
-                  <span>Dueño: {resolveOwnerName(s)}</span>
-                  <span>Precio: {formatPrice(s.price)}</span>
-                  <span>Método: {resolvePaymentMethodName(s)}</span>
-                  <span>Groomer: {resolveGroomerName(s)}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Lista: servicios del período + buscador */}
-      <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
+      <div className="card services-panel">
+        <div className="services-panel__header">
           <div>
-            <h2 style={{ fontSize: "1.1rem", marginBottom: 4 }}>
-              Servicios del período
-            </h2>
-            <p style={{ fontSize: "0.85rem", color: "#888" }}>
-              Historial de servicios del período mostrado. Usá el buscador para
-              filtrar por perro, dueño, servicio, método o groomer.
+            <h2 className="card-title">Listado de servicios</h2>
+            <p className="card-subtitle">
+              Navegá por hoy o por el período filtrado.
             </p>
           </div>
-
-          <input
-            type="text"
-            placeholder="Buscar por perro, dueño, servicio..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              borderRadius: 999,
-              border: "1px solid rgba(255,255,255,0.12)",
-              padding: "8px 14px",
-              background: "#12131a",
-              color: "#fff",
-              minWidth: 260,
-            }}
-          />
+          <div className="services-panel__controls">
+            <div className="services-tabs">
+              <button
+                type="button"
+                className={activeTab === "today" ? "tab tab--active" : "tab"}
+                onClick={() => setActiveTab("today")}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                className={activeTab === "period" ? "tab tab--active" : "tab"}
+                onClick={() => setActiveTab("period")}
+              >
+                Período
+              </button>
+            </div>
+            <div className="services-search">
+              <span className="services-search__icon" aria-hidden="true">⌕</span>
+              <input
+                type="text"
+                placeholder="Buscar por mascota, dueño, servicio..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="list-wrapper">
-          {filteredServices.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              No hay servicios que coincidan con la búsqueda en este período.
-            </div>
-          ) : (
-            filteredServices.map((s) => (
-              <div
-                key={s.id}
-                className="list-item"
-                onClick={() => setSelectedService(s)}
-              >
-                <div className="list-item__header">
-                  <div className="list-item__title">
-                    {resolvePetName(s)} - {resolveServiceTypeName(s)}
+        <div className="services-list">
+          {loading ? (
+            <div className="services-skeleton">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="service-item service-item--skeleton">
+                  <div className="service-item__body">
+                    <div className="skeleton skeleton-line" />
+                    <div className="skeleton skeleton-line short" />
+                    <div className="skeleton skeleton-pill" />
+                  </div>
+                  <div className="service-item__side">
+                    <div className="skeleton skeleton-price" />
                   </div>
                 </div>
-                <div className="list-item__meta">
-                  <span>Fecha: {formatDateDisplay(s.date)}</span>
-                  <span>Dueño: {resolveOwnerName(s)}</span>
-                  <span>Precio: {formatPrice(s.price)}</span>
-                  <span>Método: {resolvePaymentMethodName(s)}</span>
-                  <span>Groomer: {resolveGroomerName(s)}</span>
+              ))}
+            </div>
+          ) : listItems.length === 0 ? (
+            <div className="services-empty">
+              {activeTab === "today" && servicesToday.length === 0
+                ? "Todavía no hay servicios cargados para hoy."
+                : activeTab === "period" && servicesWithDate.length === 0
+                ? "No hay servicios cargados en este período."
+                : "No hay resultados para la búsqueda o filtros actuales."}
+            </div>
+          ) : (
+            listItems.map((s) => (
+              <div
+                key={s.id}
+                className="service-item"
+                onClick={() => {
+                  setSelectedService(s);
+                  setIsEditingModal(false);
+                }}
+              >
+                <div className="service-item__body">
+                  <div className="service-item__title">
+                    {resolvePetName(s)} - {resolveServiceTypeName(s)}
+                  </div>
+                  <div className="service-item__meta">
+                    <span>{formatDateDisplay(s.date)}</span>
+                    <span>{resolveOwnerName(s)}</span>
+                    <span>{resolveGroomerName(s)}</span>
+                  </div>
+                  <div className="service-item__badges">
+                    <span className="service-badge">
+                      {resolvePaymentMethodName(s)}
+                    </span>
+                  </div>
+                </div>
+                <div className="service-item__side">
+                  <div className="service-item__price">
+                    {formatPrice(s.price)}
+                  </div>
+                  <div className="service-actions">
+                    <button
+                      type="button"
+                      className="service-actions__trigger"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label="Acciones"
+                    >
+                      ⋮
+                    </button>
+                    <div className="service-actions__menu">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedService(s);
+                          setIsEditingModal(false);
+                        }}
+                      >
+                        Ver detalle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedService(s);
+                          setIsEditingModal(true);
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const removed = await handleDelete(s);
+                          if (removed) setSelectedService(null);
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))
