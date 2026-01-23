@@ -1,19 +1,24 @@
 // src/hooks/useAgendaDay.js
 import { useCallback, useEffect, useState } from "react";
-import { apiRequest } from "../services/apiClient";
+import { listAgendaDay } from "../services/agendaApi";
 
 export function useAgendaDay(date) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
 
   const fetchDay = useCallback(async () => {
     if (!date) return;
     try {
       setLoading(true);
       setError(null);
-      const data = await apiRequest("/v2/agenda", { params: { date } });
-      setItems(Array.isArray(data) ? data : data?.items || []);
+      setWarning(null);
+      const { items: dayItems, fallback } = await listAgendaDay(date);
+      setItems(dayItems);
+      if (fallback) {
+        setWarning("Endpoint de agenda no encontrado. Usando datos locales.");
+      }
     } catch (err) {
       setError(err.message || "No se pudo cargar la agenda.");
     } finally {
@@ -25,5 +30,5 @@ export function useAgendaDay(date) {
     fetchDay();
   }, [fetchDay]);
 
-  return { items, loading, error, refetch: fetchDay };
+  return { items, loading, error, warning, refetch: fetchDay };
 }
