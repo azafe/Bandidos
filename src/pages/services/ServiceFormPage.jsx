@@ -25,6 +25,7 @@ export default function ServiceFormPage() {
   const { id } = useParams();
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [customerSearch, setCustomerSearch] = useState("");
   const [options, setOptions] = useState({
     customers: [],
     pets: [],
@@ -48,6 +49,10 @@ export default function ServiceFormPage() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+
+  const filteredCustomers = options.customers.filter((c) =>
+    c.name?.toLowerCase().includes(customerSearch.trim().toLowerCase())
+  );
 
   useEffect(() => {
     let active = true;
@@ -208,6 +213,15 @@ export default function ServiceFormPage() {
 
           <div className="form-field">
             <label htmlFor="customer_id">Cliente</label>
+            <input
+              id="customer_search"
+              name="customer_search"
+              type="text"
+              placeholder="Escribí para buscar..."
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              disabled={loading}
+            />
             <select
               id="customer_id"
               name="customer_id"
@@ -217,7 +231,12 @@ export default function ServiceFormPage() {
               disabled={loading}
             >
               <option value="">Seleccioná cliente</option>
-              {options.customers.map((c) => (
+              {filteredCustomers.length === 0 ? (
+                <option value="" disabled>
+                  Sin resultados
+                </option>
+              ) : null}
+              {filteredCustomers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
