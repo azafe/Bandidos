@@ -884,49 +884,6 @@ export default function ServicesListPage() {
                   <div className="service-item__price">
                     {formatPrice(s.price)}
                   </div>
-                  <div className="service-actions">
-                    <button
-                      type="button"
-                      className="service-actions__trigger"
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label="Acciones"
-                    >
-                      ⋮
-                    </button>
-                    <div className="service-actions__menu">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedService(s);
-                          setIsEditingModal(false);
-                        }}
-                      >
-                        Ver detalle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedService(s);
-                          setIsEditingModal(true);
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          const removed = await handleDelete(s);
-                          if (removed) setSelectedService(null);
-                        }}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             ))

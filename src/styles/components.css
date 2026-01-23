@@ -262,68 +262,6 @@
   color: #16a34a;
 }
 
-.service-actions {
-  position: relative;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.service-item:hover .service-actions {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.service-actions__trigger {
-  border: none;
-  background: rgba(17, 24, 39, 0.08);
-  border-radius: 10px;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-
-.service-actions__menu {
-  position: absolute;
-  right: 0;
-  top: 28px;
-  min-width: 160px;
-  background: var(--color-surface-strong);
-  border: 1px solid var(--color-border-soft);
-  border-radius: 12px;
-  box-shadow: var(--shadow-soft);
-  display: grid;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(6px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  z-index: 20;
-}
-
-.service-actions:hover .service-actions__menu,
-.service-item:hover .service-actions__menu {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-.service-actions__menu button {
-  border: none;
-  background: transparent;
-  text-align: left;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  color: var(--color-text);
-}
-
-.service-actions__menu button:hover {
-  background: rgba(17, 24, 39, 0.08);
-}
-
-.service-actions__menu .danger {
-  color: #b91c1c;
-}
 
 .services-empty {
   padding: 20px;
