@@ -385,13 +385,12 @@ export default function ServicesListPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">
-                    {s.dogName || s.pet?.name || "Servicio"}
+                    {resolveServiceTypeName(s)} - {s.dogName || s.pet?.name || "-"}
                   </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {formatDateDisplay(s.date)}</span>
                   <span>Dueño: {resolveOwnerName(s)}</span>
-                  <span>Servicio: {resolveServiceTypeName(s)}</span>
                   <span>Precio: {formatPrice(s.price)}</span>
                   <span>Método: {resolvePaymentMethodName(s)}</span>
                   <span>Groomer: {resolveGroomerName(s)}</span>
@@ -452,13 +451,12 @@ export default function ServicesListPage() {
               >
                 <div className="list-item__header">
                   <div className="list-item__title">
-                    {s.dogName || s.pet?.name || "Servicio"}
+                    {resolveServiceTypeName(s)} - {s.dogName || s.pet?.name || "-"}
                   </div>
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {formatDateDisplay(s.date)}</span>
                   <span>Dueño: {resolveOwnerName(s)}</span>
-                  <span>Servicio: {resolveServiceTypeName(s)}</span>
                   <span>Precio: {formatPrice(s.price)}</span>
                   <span>Método: {resolvePaymentMethodName(s)}</span>
                   <span>Groomer: {resolveGroomerName(s)}</span>
