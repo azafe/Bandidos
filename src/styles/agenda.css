@@ -53,6 +53,44 @@
   gap: 12px;
 }
 
+.agenda-reminder {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.agenda-reminder__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.agenda-reminder textarea {
+  resize: vertical;
+  min-height: 58px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #1b1f2f;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.agenda-warning {
+  background: rgba(251, 191, 36, 0.2);
+  color: #92400e;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
 .agenda-search input {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.12);

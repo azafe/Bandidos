@@ -1,9 +1,13 @@
 // src/pages/agenda/AgendaPage.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAgendaDay } from "../../hooks/useAgendaDay";
 import { useApiResource } from "../../hooks/useApiResource";
-import { apiRequest } from "../../services/apiClient";
+import {
+  createAgendaTurno,
+  deleteAgendaTurno,
+  updateAgendaTurno,
+} from "../../services/agendaApi";
 import Modal from "../../components/ui/Modal";
 import "../../styles/agenda.css";
 
@@ -53,6 +57,10 @@ function normalize(text) {
   return (text || "").toLowerCase();
 }
 
+function reminderKey(date) {
+  return `bandidos_agenda_reminder_${date}`;
+}
+
 export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [search, setSearch] = useState("");
@@ -66,6 +74,8 @@ export default function AgendaPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
+  const [reminder, setReminder] = useState("");
+  const [reminderSaved, setReminderSaved] = useState(false);
   const [form, setForm] = useState({
     date: selectedDate,
     time: "",
@@ -86,7 +96,17 @@ export default function AgendaPage() {
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const { items: employees } = useApiResource("/v2/employees");
   const { items: pets } = useApiResource("/v2/pets");
-  const { items, loading, error, refetch } = useAgendaDay(selectedDate);
+  const { items, loading, error, warning, refetch } = useAgendaDay(selectedDate);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(reminderKey(selectedDate));
+      setReminder(stored || "");
+      setReminderSaved(false);
+    } catch {
+      setReminder("");
+    }
+  }, [selectedDate]);
 
   const summary = useMemo(() => {
     const total = items.length;
@@ -190,6 +210,16 @@ export default function AgendaPage() {
     }));
   }
 
+  function saveReminder() {
+    try {
+      window.localStorage.setItem(reminderKey(selectedDate), reminder.trim());
+      setReminderSaved(true);
+      setTimeout(() => setReminderSaved(false), 1200);
+    } catch {
+      setReminderSaved(false);
+    }
+  }
+
   function validateForm() {
     if (!form.date) return "Seleccioná la fecha.";
     if (!form.time) return "Ingresá la hora.";
@@ -243,18 +273,23 @@ export default function AgendaPage() {
         status: form.status,
       };
       if (isEditing && selectedTurno) {
-        await apiRequest(`/v2/agenda/${selectedTurno.id}`, {
-          method: "PUT",
-          body: payload,
-        });
+        await updateAgendaTurno(selectedTurno.id, payload);
       } else {
-        await apiRequest("/v2/agenda", { method: "POST", body: payload });
+        await createAgendaTurno(payload);
       }
       await refetch();
       setIsCreating(false);
       setIsEditing(false);
     } catch (err) {
-      setFormError(err.message || "No se pudo guardar el turno.");
+      const details =
+        err?.status && err?.payload
+          ? ` (${err.status})`
+          : err?.status
+          ? ` (${err.status})`
+          : "";
+      setFormError(
+        `${err.message || "No se pudo guardar el turno."}${details}`
+      );
     } finally {
       setFormLoading(false);
     }
@@ -262,14 +297,12 @@ export default function AgendaPage() {
 
   async function updateStatus(turno, status) {
     try {
-      await apiRequest(`/v2/agenda/${turno.id}`, {
-        method: "PUT",
-        body: { status },
-      });
+      await updateAgendaTurno(turno.id, { status });
       await refetch();
       setSelectedTurno((prev) => (prev ? { ...prev, status } : prev));
     } catch (err) {
-      alert(err.message || "No se pudo actualizar el estado.");
+      const details = err?.status ? ` (${err.status})` : "";
+      alert(`${err.message || "No se pudo actualizar el estado."}${details}`);
     }
   }
 
@@ -277,11 +310,12 @@ export default function AgendaPage() {
     const ok = window.confirm("¿Eliminar este turno?");
     if (!ok) return;
     try {
-      await apiRequest(`/v2/agenda/${turno.id}`, { method: "DELETE" });
+      await deleteAgendaTurno(turno.id);
       await refetch();
       setSelectedTurno(null);
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el turno.");
+      const details = err?.status ? ` (${err.status})` : "";
+      alert(`${err.message || "No se pudo eliminar el turno."}${details}`);
     }
   }
 
@@ -361,6 +395,26 @@ export default function AgendaPage() {
           </div>
         </div>
         <div className="agenda-summary__filters">
+          {warning ? <div className="agenda-warning">{warning}</div> : null}
+          <div className="agenda-reminder">
+            <div className="agenda-reminder__header">
+              <span>Recordatorio del día</span>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={saveReminder}
+              >
+                {reminderSaved ? "Guardado" : "Guardar"}
+              </button>
+            </div>
+            <textarea
+              rows={2}
+              placeholder="Notas internas del día..."
+              value={reminder}
+              onChange={(e) => setReminder(e.target.value)}
+              onBlur={saveReminder}
+            />
+          </div>
           <div className="agenda-search">
             <input
               type="text"
