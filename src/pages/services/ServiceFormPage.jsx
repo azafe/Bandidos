@@ -26,7 +26,15 @@ export default function ServiceFormPage() {
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [petSearch, setPetSearch] = useState("");
+  const [serviceTypeSearch, setServiceTypeSearch] = useState("");
+  const [paymentMethodSearch, setPaymentMethodSearch] = useState("");
+  const [groomerSearch, setGroomerSearch] = useState("");
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
+  const [isPetOpen, setIsPetOpen] = useState(false);
+  const [isServiceTypeOpen, setIsServiceTypeOpen] = useState(false);
+  const [isPaymentMethodOpen, setIsPaymentMethodOpen] = useState(false);
+  const [isGroomerOpen, setIsGroomerOpen] = useState(false);
   const [options, setOptions] = useState({
     customers: [],
     pets: [],
@@ -61,8 +69,68 @@ export default function ServiceFormPage() {
     }
   }, [form.customer_id, options.customers]);
 
+  useEffect(() => {
+    if (!form.pet_id) return;
+    const match = options.pets.find(
+      (p) => String(p.id) === String(form.pet_id)
+    );
+    if (match) {
+      setPetSearch(match.name || "");
+    }
+  }, [form.pet_id, options.pets]);
+
+  useEffect(() => {
+    if (!form.service_type_id) return;
+    const match = options.serviceTypes.find(
+      (t) => String(t.id) === String(form.service_type_id)
+    );
+    if (match) {
+      setServiceTypeSearch(match.name || "");
+    }
+  }, [form.service_type_id, options.serviceTypes]);
+
+  useEffect(() => {
+    if (!form.payment_method_id) return;
+    const match = options.paymentMethods.find(
+      (m) => String(m.id) === String(form.payment_method_id)
+    );
+    if (match) {
+      setPaymentMethodSearch(match.name || "");
+    }
+  }, [form.payment_method_id, options.paymentMethods]);
+
+  useEffect(() => {
+    if (!form.groomer_id) return;
+    const match = options.employees.find(
+      (e) => String(e.id) === String(form.groomer_id)
+    );
+    if (match) {
+      setGroomerSearch(match.name || "");
+    }
+  }, [form.groomer_id, options.employees]);
+
+  const normalizedCustomerSearch = customerSearch.trim().toLowerCase();
+  const normalizedPetSearch = petSearch.trim().toLowerCase();
+  const normalizedServiceTypeSearch = serviceTypeSearch.trim().toLowerCase();
+  const normalizedPaymentMethodSearch = paymentMethodSearch.trim().toLowerCase();
+  const normalizedGroomerSearch = groomerSearch.trim().toLowerCase();
+
   const filteredCustomers = options.customers.filter((c) =>
-    c.name?.toLowerCase().includes(customerSearch.trim().toLowerCase())
+    c.name?.toLowerCase().includes(normalizedCustomerSearch)
+  );
+  const filteredPets = options.pets
+    .filter((p) =>
+      form.customer_id ? p.customer_id === form.customer_id : true
+    )
+    .filter((p) => p.name?.toLowerCase().includes(normalizedPetSearch));
+  const filteredServiceTypes = options.serviceTypes.filter((t) =>
+    t.name?.toLowerCase().includes(normalizedServiceTypeSearch)
+  );
+  const filteredPaymentMethods = options.paymentMethods.filter((m) =>
+    m.name?.toLowerCase().includes(normalizedPaymentMethodSearch)
+  );
+  const filteredGroomers = options.employees.filter((e) =>
+    e.name?.toLowerCase().includes(normalizedGroomerSearch)
   );
 
   useEffect(() => {
@@ -146,6 +214,27 @@ export default function ServiceFormPage() {
     if (submitting) return;
 
     setSubmitting(true);
+
+    if (!form.customer_id) {
+      alert("Seleccioná un cliente.");
+      setSubmitting(false);
+      return;
+    }
+    if (!form.pet_id) {
+      alert("Seleccioná una mascota.");
+      setSubmitting(false);
+      return;
+    }
+    if (!form.service_type_id) {
+      alert("Seleccioná un tipo de servicio.");
+      setSubmitting(false);
+      return;
+    }
+    if (!form.payment_method_id) {
+      alert("Seleccioná un método de pago.");
+      setSubmitting(false);
+      return;
+    }
 
     const payload = {
       date: form.date,
@@ -234,7 +323,8 @@ export default function ServiceFormPage() {
                 onChange={(e) => {
                   setCustomerSearch(e.target.value);
                   setIsCustomerOpen(true);
-                  setForm((prev) => ({ ...prev, customer_id: "" }));
+                  setForm((prev) => ({ ...prev, customer_id: "", pet_id: "" }));
+                  setPetSearch("");
                 }}
                 onFocus={() => setIsCustomerOpen(true)}
                 onBlur={() => setTimeout(() => setIsCustomerOpen(false), 120)}
@@ -256,8 +346,10 @@ export default function ServiceFormPage() {
                           setForm((prev) => ({
                             ...prev,
                             customer_id: c.id,
+                            pet_id: "",
                           }));
                           setCustomerSearch(c.name || "");
+                          setPetSearch("");
                           setIsCustomerOpen(false);
                         }}
                       >
@@ -272,44 +364,99 @@ export default function ServiceFormPage() {
 
           <div className="form-field">
             <label htmlFor="pet_id">Mascota</label>
-            <select
-              id="pet_id"
-              name="pet_id"
-              value={form.pet_id}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            >
-              <option value="">Seleccioná mascota</option>
-              {options.pets
-                .filter((p) =>
-                  form.customer_id ? p.customer_id === form.customer_id : true
-                )
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-            </select>
+            <div className="combo-field">
+              <input
+                id="pet_search"
+                name="pet_search"
+                type="text"
+                placeholder="Buscá por nombre..."
+                value={petSearch}
+                onChange={(e) => {
+                  setPetSearch(e.target.value);
+                  setIsPetOpen(true);
+                  setForm((prev) => ({ ...prev, pet_id: "" }));
+                }}
+                onFocus={() => setIsPetOpen(true)}
+                onBlur={() => setTimeout(() => setIsPetOpen(false), 120)}
+                disabled={loading || !form.customer_id}
+                required
+                autoComplete="off"
+              />
+              {isPetOpen && !loading ? (
+                <div className="combo-field__list" role="listbox">
+                  {!form.customer_id ? (
+                    <div className="combo-field__empty">
+                      Seleccioná un cliente primero
+                    </div>
+                  ) : filteredPets.length === 0 ? (
+                    <div className="combo-field__empty">Sin resultados</div>
+                  ) : (
+                    filteredPets.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="combo-field__option"
+                        onMouseDown={() => {
+                          setForm((prev) => ({ ...prev, pet_id: p.id }));
+                          setPetSearch(p.name || "");
+                          setIsPetOpen(false);
+                        }}
+                      >
+                        {p.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="form-field">
             <label htmlFor="service_type_id">Tipo de servicio</label>
-            <select
-              id="service_type_id"
-              name="service_type_id"
-              value={form.service_type_id}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            >
-              <option value="">Seleccioná servicio</option>
-              {options.serviceTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <div className="combo-field">
+              <input
+                id="service_type_search"
+                name="service_type_search"
+                type="text"
+                placeholder="Buscá por nombre..."
+                value={serviceTypeSearch}
+                onChange={(e) => {
+                  setServiceTypeSearch(e.target.value);
+                  setIsServiceTypeOpen(true);
+                  setForm((prev) => ({ ...prev, service_type_id: "" }));
+                }}
+                onFocus={() => setIsServiceTypeOpen(true)}
+                onBlur={() => setTimeout(() => setIsServiceTypeOpen(false), 120)}
+                disabled={loading}
+                required
+                autoComplete="off"
+              />
+              {isServiceTypeOpen && !loading ? (
+                <div className="combo-field__list" role="listbox">
+                  {filteredServiceTypes.length === 0 ? (
+                    <div className="combo-field__empty">Sin resultados</div>
+                  ) : (
+                    filteredServiceTypes.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className="combo-field__option"
+                        onMouseDown={() => {
+                          setForm((prev) => ({
+                            ...prev,
+                            service_type_id: t.id,
+                          }));
+                          setServiceTypeSearch(t.name || "");
+                          setIsServiceTypeOpen(false);
+                        }}
+                      >
+                        {t.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="form-field">
@@ -329,39 +476,94 @@ export default function ServiceFormPage() {
 
           <div className="form-field">
             <label htmlFor="payment_method_id">Método de pago</label>
-            <select
-              id="payment_method_id"
-              name="payment_method_id"
-              value={form.payment_method_id}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            >
-              <option value="">Seleccioná método</option>
-              {options.paymentMethods.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
+            <div className="combo-field">
+              <input
+                id="payment_method_search"
+                name="payment_method_search"
+                type="text"
+                placeholder="Buscá por nombre..."
+                value={paymentMethodSearch}
+                onChange={(e) => {
+                  setPaymentMethodSearch(e.target.value);
+                  setIsPaymentMethodOpen(true);
+                  setForm((prev) => ({ ...prev, payment_method_id: "" }));
+                }}
+                onFocus={() => setIsPaymentMethodOpen(true)}
+                onBlur={() => setTimeout(() => setIsPaymentMethodOpen(false), 120)}
+                disabled={loading}
+                required
+                autoComplete="off"
+              />
+              {isPaymentMethodOpen && !loading ? (
+                <div className="combo-field__list" role="listbox">
+                  {filteredPaymentMethods.length === 0 ? (
+                    <div className="combo-field__empty">Sin resultados</div>
+                  ) : (
+                    filteredPaymentMethods.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="combo-field__option"
+                        onMouseDown={() => {
+                          setForm((prev) => ({
+                            ...prev,
+                            payment_method_id: m.id,
+                          }));
+                          setPaymentMethodSearch(m.name || "");
+                          setIsPaymentMethodOpen(false);
+                        }}
+                      >
+                        {m.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="form-field">
             <label htmlFor="groomer_id">Groomer</label>
-            <select
-              id="groomer_id"
-              name="groomer_id"
-              value={form.groomer_id}
-              onChange={handleChange}
-              disabled={loading}
-            >
-              <option value="">Seleccioná</option>
-              {options.employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-            </select>
+            <div className="combo-field">
+              <input
+                id="groomer_search"
+                name="groomer_search"
+                type="text"
+                placeholder="Buscá por nombre..."
+                value={groomerSearch}
+                onChange={(e) => {
+                  setGroomerSearch(e.target.value);
+                  setIsGroomerOpen(true);
+                  setForm((prev) => ({ ...prev, groomer_id: "" }));
+                }}
+                onFocus={() => setIsGroomerOpen(true)}
+                onBlur={() => setTimeout(() => setIsGroomerOpen(false), 120)}
+                disabled={loading}
+                autoComplete="off"
+              />
+              {isGroomerOpen && !loading ? (
+                <div className="combo-field__list" role="listbox">
+                  {filteredGroomers.length === 0 ? (
+                    <div className="combo-field__empty">Sin resultados</div>
+                  ) : (
+                    filteredGroomers.map((emp) => (
+                      <button
+                        key={emp.id}
+                        type="button"
+                        className="combo-field__option"
+                        onMouseDown={() => {
+                          setForm((prev) => ({ ...prev, groomer_id: emp.id }));
+                          setGroomerSearch(emp.name || "");
+                          setIsGroomerOpen(false);
+                        }}
+                      >
+                        {emp.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {/* Notas: ocupa todo el ancho */}
