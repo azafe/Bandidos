@@ -78,6 +78,7 @@ export default function ServicesListPage() {
   const { items: customers } = useApiResource("/v2/customers");
   const { items: pets } = useApiResource("/v2/pets");
   const { items: serviceTypes } = useApiResource("/v2/service-types");
+  const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const { items: employees } = useApiResource("/v2/employees");
 
   useEffect(() => {
@@ -129,6 +130,33 @@ export default function ServicesListPage() {
     0
   );
 
+  function getNameById(list, id) {
+    if (!id) return "";
+    const match = list.find((item) => String(item.id) === String(id));
+    return match?.name || "";
+  }
+
+  const resolveOwnerName = (service) =>
+    service.ownerName ||
+    service.customer?.name ||
+    getNameById(customers, service.customer_id) ||
+    "-";
+  const resolveServiceTypeName = (service) =>
+    service.type ||
+    service.service_type?.name ||
+    getNameById(serviceTypes, service.service_type_id) ||
+    "-";
+  const resolvePaymentMethodName = (service) =>
+    service.paymentMethod ||
+    service.payment_method?.name ||
+    getNameById(paymentMethods, service.payment_method_id) ||
+    "-";
+  const resolveGroomerName = (service) =>
+    service.groomer?.name ||
+    service.groomer ||
+    getNameById(employees, service.groomer_id) ||
+    "-";
+
   // Filtro de búsqueda sobre los servicios
   const searchTerm = search.trim().toLowerCase();
   const filteredServices = servicesWithDate.filter((s) => {
@@ -137,13 +165,10 @@ export default function ServicesListPage() {
     return [
       s.dogName,
       s.pet?.name,
-      s.ownerName,
-      s.customer?.name,
-      s.type,
-      s.service_type?.name,
-      s.paymentMethod,
-      s.payment_method?.name,
-      s.groomer?.name || s.groomer,
+      resolveOwnerName(s),
+      resolveServiceTypeName(s),
+      resolvePaymentMethodName(s),
+      resolveGroomerName(s),
     ]
       .filter(Boolean)
       .some((field) => field.toLowerCase().includes(searchTerm));
@@ -365,13 +390,11 @@ export default function ServicesListPage() {
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {formatDateDisplay(s.date)}</span>
-                  <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
-                  <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
+                  <span>Dueño: {resolveOwnerName(s)}</span>
+                  <span>Servicio: {resolveServiceTypeName(s)}</span>
                   <span>Precio: {formatPrice(s.price)}</span>
-                  <span>
-                    Método: {s.paymentMethod || s.payment_method?.name || "-"}
-                  </span>
-                  <span>Groomer: {s.groomer?.name || s.groomer || "-"}</span>
+                  <span>Método: {resolvePaymentMethodName(s)}</span>
+                  <span>Groomer: {resolveGroomerName(s)}</span>
                 </div>
               </div>
             ))
@@ -434,13 +457,11 @@ export default function ServicesListPage() {
                 </div>
                 <div className="list-item__meta">
                   <span>Fecha: {formatDateDisplay(s.date)}</span>
-                  <span>Dueño: {s.ownerName || s.customer?.name || "-"}</span>
-                  <span>Servicio: {s.type || s.service_type?.name || "-"}</span>
+                  <span>Dueño: {resolveOwnerName(s)}</span>
+                  <span>Servicio: {resolveServiceTypeName(s)}</span>
                   <span>Precio: {formatPrice(s.price)}</span>
-                  <span>
-                    Método: {s.paymentMethod || s.payment_method?.name || "-"}
-                  </span>
-                  <span>Groomer: {s.groomer?.name || s.groomer || "-"}</span>
+                  <span>Método: {resolvePaymentMethodName(s)}</span>
+                  <span>Groomer: {resolveGroomerName(s)}</span>
                 </div>
               </div>
             ))
