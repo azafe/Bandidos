@@ -58,6 +58,16 @@ function formatTime(value) {
   return value.slice(0, 5);
 }
 
+function getEndTime(startTime, duration) {
+  if (!startTime) return "-";
+  const [h, m] = startTime.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return "-";
+  const total = h * 60 + m + Number(duration || 0);
+  const endH = Math.floor((total % (24 * 60)) / 60);
+  const endM = total % 60;
+  return `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+}
+
 function formatCurrency(value) {
   if (value === null || value === undefined || value === "") return "-";
   return `$${Number(value).toLocaleString("es-AR")}`;
@@ -564,6 +574,8 @@ export default function AgendaPage() {
                     {turno.service_type?.name || "Servicio"}
                   </div>
                   <div className="agenda-card__meta">
+                    {formatTime(turno.time)} -{" "}
+                    {getEndTime(turno.time, turno.duration || 60)} ·{" "}
                     {turno.owner_name || "-"} · {turno.breed || "-"}
                   </div>
                   {turno.payment_method?.name ? (
@@ -604,7 +616,9 @@ export default function AgendaPage() {
                 <strong>Fecha:</strong> {formatDateDisplay(selectedTurno.date)}
               </div>
               <div>
-                <strong>Hora:</strong> {formatTime(selectedTurno.time)}
+                <strong>Hora:</strong>{" "}
+                {formatTime(selectedTurno.time)} -{" "}
+                {getEndTime(selectedTurno.time, selectedTurno.duration || 60)}
               </div>
               <div>
                 <strong>Mascota:</strong> {selectedTurno.pet_name || "-"}
@@ -726,6 +740,9 @@ export default function AgendaPage() {
               value={form.duration}
               onChange={handleFormChange}
             />
+            <small className="agenda-helper">
+              Termina {getEndTime(form.time, form.duration || 60)}
+            </small>
           </label>
           <label className="form-field">
             <span>Mascota</span>

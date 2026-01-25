@@ -264,6 +264,11 @@
   gap: 10px;
 }
 
+.agenda-helper {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+}
+
 .agenda-form__error {
   background: rgba(248, 113, 113, 0.15);
   color: #b91c1c;
