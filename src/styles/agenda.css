@@ -36,13 +36,8 @@
   gap: 8px;
 }
 
-.agenda-date__controls input[type="date"] {
+.agenda-date__controls .date-field__control {
   min-width: 150px;
-}
-
-.agenda-date__label {
-  font-size: 0.8rem;
-  color: #1b1f2f;
 }
 
 .agenda-metrics {

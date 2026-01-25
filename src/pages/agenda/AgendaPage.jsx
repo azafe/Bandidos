@@ -40,7 +40,7 @@ function formatDateDisplay(value) {
   const raw = String(value).split("T")[0];
   const [yyyy, mm, dd] = raw.split("-");
   if (!yyyy || !mm || !dd) return value;
-  return `${dd}/${mm}/${yyyy}`;
+  return `${dd}-${mm}-${yyyy}`;
 }
 
 function addDays(dateStr, delta) {
@@ -391,11 +391,23 @@ export default function AgendaPage() {
               >
                 ←
               </button>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
+              <div className="date-field__control">
+                <input
+                  type="text"
+                  className="date-field__display"
+                  value={formatDateDisplay(selectedDate)}
+                  placeholder="DD-MM-AAAA"
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+                <input
+                  type="date"
+                  className="date-field__native"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+              </div>
               <button
                 type="button"
                 className="btn-secondary"
@@ -404,9 +416,6 @@ export default function AgendaPage() {
                 →
               </button>
             </div>
-            <span className="agenda-date__label">
-              {formatDateDisplay(selectedDate)}
-            </span>
           </div>
           <div className="agenda-metrics">
             <div>
@@ -684,7 +693,24 @@ export default function AgendaPage() {
           {formError ? <div className="agenda-form__error">{formError}</div> : null}
           <label className="form-field">
             <span>Fecha</span>
-            <input type="date" name="date" value={form.date} onChange={handleFormChange} />
+            <div className="date-field__control">
+              <input
+                type="text"
+                className="date-field__display"
+                value={formatDateDisplay(form.date)}
+                placeholder="DD-MM-AAAA"
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <input
+                type="date"
+                name="date"
+                className="date-field__native"
+                value={form.date}
+                onChange={handleFormChange}
+              />
+            </div>
           </label>
           <label className="form-field">
             <span>Hora</span>
