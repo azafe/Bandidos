@@ -567,7 +567,12 @@ export default function AgendaPage() {
                   setIsEditing(false);
                 }}
               >
-                <div className="agenda-card__time">{formatTime(turno.time)}</div>
+                <div className="agenda-card__time">
+                  <span>{formatTime(turno.time)}</span>
+                  <span className="agenda-card__time-end">
+                    {getEndTime(turno.time, turno.duration || 60)}
+                  </span>
+                </div>
                 <div className="agenda-card__body">
                   <div className="agenda-card__title">
                     {turno.pet_name || "Mascota"} -{" "}

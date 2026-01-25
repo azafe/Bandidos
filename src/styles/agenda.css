@@ -170,6 +170,14 @@
   font-weight: 700;
   color: #111827;
   font-size: 1rem;
+  display: grid;
+  gap: 2px;
+}
+
+.agenda-card__time-end {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  font-weight: 500;
 }
 
 .agenda-card__title {
