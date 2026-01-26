@@ -150,6 +150,12 @@ export default function AgendaPage() {
   const [reminderSaved, setReminderSaved] = useState(false);
   const [petSearch, setPetSearch] = useState("");
   const [isPetOpen, setIsPetOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState("reserved");
+  const [finishForm, setFinishForm] = useState({
+    groomer_id: "",
+    service_type_id: "",
+    price: "",
+  });
   const [form, setForm] = useState({
     date: selectedDate,
     time: "",
@@ -189,6 +195,20 @@ export default function AgendaPage() {
     }
   }, [selectedDate]);
 
+  useEffect(() => {
+    if (!selectedTurno) return;
+    const status = normalizeStatus(selectedTurno.status);
+    setPendingStatus(status);
+    setFinishForm({
+      groomer_id: selectedTurno.groomer_id || "",
+      service_type_id: selectedTurno.service_type_id || "",
+      price:
+        selectedTurno.price !== null && selectedTurno.price !== undefined
+          ? String(selectedTurno.price)
+          : "",
+    });
+  }, [selectedTurno]);
+
   const getServicePrice = useCallback(
     (turno) => {
       const fromCatalog = serviceTypes.find(
@@ -226,6 +246,11 @@ export default function AgendaPage() {
     const deposit = summaryTotals?.totalDeposit ?? computedDeposit;
     return { total, income, deposit, reserved, finished, cancelled };
   }, [items, getServicePrice, summaryTotals]);
+
+  const dailySummaryItems = useMemo(
+    () => [...items].sort((a, b) => (a.time || "").localeCompare(b.time || "")),
+    [items]
+  );
 
   const filteredTurnos = useMemo(() => {
     const term = normalize(search);
@@ -456,14 +481,19 @@ export default function AgendaPage() {
   }
 
   async function updateStatus(turno, status) {
+    return updateStatusWithDetails(turno, status, null);
+  }
+
+  async function updateStatusWithDetails(turno, status, extra) {
     try {
       const previousStatus = normalizeStatus(turno.status);
-      await updateAgendaTurno(turno.id, { status });
+      await updateAgendaTurno(turno.id, { status, ...(extra || {}) });
+      const updatedTurno = { ...turno, ...(extra || {}), status };
       if (status === "finished" && previousStatus !== "finished") {
-        await createServiceFromTurno({ ...turno, status });
+        await createServiceFromTurno(updatedTurno);
       }
       await refetch();
-      setSelectedTurno((prev) => (prev ? { ...prev, status } : prev));
+      setSelectedTurno((prev) => (prev ? { ...prev, ...(extra || {}), status } : prev));
     } catch (err) {
       const details = err?.status ? ` (${err.status})` : "";
       alert(`${err.message || "No se pudo actualizar el estado."}${details}`);
@@ -472,12 +502,16 @@ export default function AgendaPage() {
 
   async function createServiceFromTurno(turno) {
     try {
+      const price =
+        turno.price !== null && turno.price !== undefined
+          ? Number(turno.price)
+          : getServicePrice(turno);
       const payload = {
         date: normalizeDate(turno.date),
         customer_id: normalizeId(turno.customer_id || turno.owner_id || null),
         pet_id: normalizeId(turno.pet_id),
         service_type_id: normalizeId(turno.service_type_id),
-        price: getServicePrice(turno),
+        price,
         payment_method_id: normalizeId(turno.payment_method_id),
         groomer_id: normalizeId(turno.groomer_id),
         notes: (turno.notes || "").trim(),
@@ -504,6 +538,30 @@ export default function AgendaPage() {
       const details = err?.status ? ` (${err.status})` : "";
       alert(`${err.message || "No se pudo eliminar el turno."}${details}`);
     }
+  }
+
+  async function handleFinishSubmit() {
+    if (!selectedTurno) return;
+    const groomerId = normalizeId(finishForm.groomer_id);
+    const serviceTypeId = normalizeId(finishForm.service_type_id);
+    const price = Number(finishForm.price || 0);
+    if (!groomerId) {
+      alert("Seleccioná el groomer.");
+      return;
+    }
+    if (!serviceTypeId) {
+      alert("Seleccioná el tipo de servicio.");
+      return;
+    }
+    if (!price || Number.isNaN(price) || price < 0) {
+      alert("Ingresá un monto válido.");
+      return;
+    }
+    await updateStatusWithDetails(selectedTurno, "finished", {
+      groomer_id: groomerId,
+      service_type_id: serviceTypeId,
+      price,
+    });
   }
 
   const activeFilterChips = [
@@ -620,6 +678,34 @@ export default function AgendaPage() {
             <span>Ingresos estimados</span>
             <strong>{formatCurrency(summary.income)}</strong>
           </div>
+        </div>
+        <div className="agenda-summary">
+          <div className="agenda-summary__header">
+            <span>Resumen diario</span>
+            <strong>{summary.total} perros</strong>
+          </div>
+          {dailySummaryItems.length === 0 ? (
+            <div className="agenda-summary__empty">Sin turnos para el día.</div>
+          ) : (
+            <ul className="agenda-summary__list">
+              {dailySummaryItems.map((turno) => (
+                <li key={turno.id} className="agenda-summary__item">
+                  <span className="agenda-summary__time">
+                    {formatTime(turno.time)}
+                  </span>
+                  <span className="agenda-summary__name">
+                    {turno.pet_name || "Mascota"}
+                  </span>
+                  <span className="agenda-summary__detail">
+                    {turno.owner_name || "-"} ·{" "}
+                    {getServiceName(turno, serviceTypes)} ·{" "}
+                    {STATUS_LABELS[normalizeStatus(turno.status)]} ·{" "}
+                    {formatCurrency(getServicePrice(turno))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
@@ -908,8 +994,14 @@ export default function AgendaPage() {
               <label className="form-field">
                 <span>Estado</span>
                 <select
-                  value={normalizeStatus(selectedTurno.status)}
-                  onChange={(event) => updateStatus(selectedTurno, event.target.value)}
+                  value={pendingStatus}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setPendingStatus(next);
+                    if (next !== "finished") {
+                      updateStatus(selectedTurno, next);
+                    }
+                  }}
                 >
                   {STATUS_OPTIONS.map((status) => (
                     <option key={status.value} value={status.value}>
@@ -918,6 +1010,67 @@ export default function AgendaPage() {
                   ))}
                 </select>
               </label>
+              {pendingStatus === "finished" ? (
+                <div className="agenda-finish">
+                  <label className="form-field">
+                    <span>Groomer</span>
+                    <select
+                      value={finishForm.groomer_id}
+                      onChange={(e) =>
+                        setFinishForm((prev) => ({
+                          ...prev,
+                          groomer_id: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Seleccioná</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="form-field">
+                    <span>Tipo de servicio</span>
+                    <select
+                      value={finishForm.service_type_id}
+                      onChange={(e) =>
+                        setFinishForm((prev) => ({
+                          ...prev,
+                          service_type_id: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Seleccioná</option>
+                      {serviceTypes.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="form-field">
+                    <span>Monto pagado</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={finishForm.price}
+                      onChange={(e) =>
+                        setFinishForm((prev) => ({ ...prev, price: e.target.value }))
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleFinishSubmit}
+                  >
+                    Guardar finalización
+                  </button>
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="btn-secondary"
