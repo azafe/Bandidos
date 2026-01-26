@@ -107,6 +107,7 @@ export default function AgendaPage() {
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
@@ -145,6 +146,8 @@ export default function AgendaPage() {
 
   const summary = useMemo(() => {
     const total = items.length;
+    const confirmed = items.filter((turno) => turno.status === "confirmed").length;
+    const pending = items.filter((turno) => turno.status === "reserved").length;
     const income = items.reduce(
       (sum, turno) => sum + (Number(turno.amount || turno.price || 0) || 0),
       0
@@ -153,7 +156,7 @@ export default function AgendaPage() {
       (sum, turno) => sum + (Number(turno.deposit_amount || 0) || 0),
       0
     );
-    return { total, income, deposits };
+    return { total, income, deposits, confirmed, pending };
   }, [items]);
 
   const filteredTurnos = useMemo(() => {
@@ -391,7 +394,7 @@ export default function AgendaPage() {
   ].filter(Boolean);
 
   return (
-    <div className="page-content agenda-page">
+    <div className={`page-content agenda-page${isCompact ? " agenda-page--compact" : ""}`}>
       <div className="agenda-header">
         <div>
           <h1 className="page-title">Agenda</h1>
@@ -452,6 +455,14 @@ export default function AgendaPage() {
           <div className="agenda-metric agenda-metric--count">
             <span>Total turnos</span>
             <strong>{summary.total}</strong>
+            <div className="agenda-metric__sub">
+              <span className="agenda-chip agenda-chip--ok">
+                Confirmados {summary.confirmed}
+              </span>
+              <span className="agenda-chip agenda-chip--pending">
+                Pendientes {summary.pending}
+              </span>
+            </div>
           </div>
           <div className="agenda-metric agenda-metric--income">
             <span>Ingresos estimados</span>
@@ -471,19 +482,28 @@ export default function AgendaPage() {
               <h2 className="card-title">Busqueda y filtros</h2>
               <p className="card-subtitle">Encontrá turnos en segundos.</p>
             </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setFilters({ service_type_id: "", groomer_id: "", status: "" });
-                setSearch("");
-              }}
-            >
-              Limpiar filtros
-            </button>
+            <div className="agenda-filters__actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setIsCompact((prev) => !prev)}
+              >
+                {isCompact ? "Modo normal" : "Modo compacto"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setFilters({ service_type_id: "", groomer_id: "", status: "" });
+                  setSearch("");
+                }}
+              >
+                Limpiar filtros
+              </button>
+            </div>
           </div>
           {warning ? <div className="agenda-warning">{warning}</div> : null}
-          <div className="agenda-search">
+          <div className="agenda-search agenda-search--primary">
             <input
               type="text"
               placeholder="Buscar por mascota o dueno..."
@@ -532,9 +552,9 @@ export default function AgendaPage() {
               ))}
             </select>
           </div>
-          {activeFilterChips.length > 0 ? (
-            <div className="agenda-filter-chips">
-              {activeFilterChips.map((chip) => (
+          <div className="agenda-filter-chips">
+            {activeFilterChips.length > 0 ? (
+              activeFilterChips.map((chip) => (
                 <button
                   key={chip.key}
                   type="button"
@@ -543,9 +563,11 @@ export default function AgendaPage() {
                 >
                   {chip.label} <span aria-hidden="true">×</span>
                 </button>
-              ))}
-            </div>
-          ) : null}
+              ))
+            ) : (
+              <span className="agenda-filter-chips__empty">Sin filtros activos</span>
+            )}
+          </div>
         </div>
 
         <div className="agenda-reminder card">
@@ -621,7 +643,12 @@ export default function AgendaPage() {
         ) : (
           <div className="agenda-timeline">
             {filteredTurnos.map((turno) => (
-              <div key={turno.id} className="agenda-timeline__row">
+              <div
+                key={turno.id}
+                className={`agenda-timeline__row agenda-timeline__row--${
+                  turno.status || "reserved"
+                }`}
+              >
                 <div className="agenda-timeline__time">
                   <span className="agenda-time-range">
                     {formatTime(turno.time)} -{" "}
@@ -646,11 +673,18 @@ export default function AgendaPage() {
                     <div className="agenda-card__meta">
                       {turno.owner_name || "-"} · {turno.breed || "-"}
                     </div>
-                    {turno.payment_method?.name ? (
-                      <div className="agenda-card__pill">
-                        {turno.payment_method.name}
-                      </div>
-                    ) : null}
+                    <div className="agenda-card__pills">
+                      {turno.groomer?.name ? (
+                        <span className="agenda-card__pill agenda-card__pill--groomer">
+                          {turno.groomer.name}
+                        </span>
+                      ) : null}
+                      {turno.payment_method?.name ? (
+                        <span className="agenda-card__pill">
+                          {turno.payment_method.name}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="agenda-card__side">
                     <span
