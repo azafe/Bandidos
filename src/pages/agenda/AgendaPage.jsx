@@ -188,6 +188,28 @@ export default function AgendaPage() {
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
   }, [items, search, filters]);
 
+  const selectedService = useMemo(
+    () => serviceTypes.find((service) => service.id === form.service_type_id),
+    [serviceTypes, form.service_type_id]
+  );
+  const servicePrice = Number(selectedService?.price || selectedService?.amount || 0);
+  const depositAmount = Number(form.deposit_amount || 0);
+  const remainingAmount = Math.max(servicePrice - depositAmount, 0);
+
+  function getServicePrice(turno) {
+    const fromCatalog = serviceTypes.find(
+      (service) => service.id === turno.service_type_id
+    );
+    return Number(
+      fromCatalog?.price ||
+        fromCatalog?.amount ||
+        turno.service_price ||
+        turno.amount ||
+        turno.price ||
+        0
+    );
+  }
+
   const filteredPets = useMemo(() => {
     const term = petSearch.trim().toLowerCase();
     if (!term) return pets;
@@ -734,13 +756,9 @@ export default function AgendaPage() {
                     >
                       {STATUS_LABELS[turno.status] || "Reservado"}
                     </span>
-                    {turno.deposit_amount || turno.amount || turno.price ? (
-                      <div className="agenda-card__amount">
-                        {formatCurrency(
-                          turno.deposit_amount || turno.amount || turno.price
-                        )}
-                      </div>
-                    ) : null}
+                    <div className="agenda-card__amount">
+                      {formatCurrency(getServicePrice(turno))}
+                    </div>
                     <div className="agenda-card__actions">
                       {getPrimaryAction(turno) ? (
                         <button
@@ -860,8 +878,21 @@ export default function AgendaPage() {
                 {selectedTurno.service_type?.name || "-"}
               </div>
               <div>
-                <strong>Pago/Seña:</strong>{" "}
-                {formatCurrency(selectedTurno.deposit_amount)}
+                <strong>Precio del servicio:</strong>{" "}
+                {formatCurrency(getServicePrice(selectedTurno))}
+              </div>
+              <div>
+                <strong>Seña:</strong> {formatCurrency(selectedTurno.deposit_amount)}
+              </div>
+              <div>
+                <strong>Saldo:</strong>{" "}
+                {formatCurrency(
+                  Math.max(
+                    getServicePrice(selectedTurno) -
+                      Number(selectedTurno.deposit_amount || 0),
+                    0
+                  )
+                )}
               </div>
               <div>
                 <strong>Notas:</strong> {selectedTurno.notes || "-"}
@@ -1049,6 +1080,22 @@ export default function AgendaPage() {
               ))}
             </select>
           </label>
+          <div className="agenda-price-card">
+            <div>
+              <span>Precio del servicio</span>
+              <strong>
+                {servicePrice ? formatCurrency(servicePrice) : "Sin definir"}
+              </strong>
+            </div>
+            <div>
+              <span>Seña recibida</span>
+              <strong>{formatCurrency(depositAmount)}</strong>
+            </div>
+            <div>
+              <span>Saldo a cobrar</span>
+              <strong>{formatCurrency(remainingAmount)}</strong>
+            </div>
+          </div>
           <label className="form-field">
             <span>Metodo de pago</span>
             <select
