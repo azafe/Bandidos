@@ -39,6 +39,13 @@ function formatDateDisplay(value) {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+function normalizeDate(value) {
+  if (!value) return "";
+  const raw = String(value).trim();
+  if (raw.includes("T")) return raw.slice(0, 10);
+  return raw;
+}
+
 function formatDateLong(value) {
   if (!value) return "-";
   const raw = String(value).split("T")[0];
@@ -267,7 +274,7 @@ export default function AgendaPage() {
   function openEdit(turno) {
     setSelectedTurno(turno);
     setForm({
-      date: turno.date || selectedDate,
+      date: normalizeDate(turno.date || selectedDate),
       time: turno.time || "",
       duration: turno.duration || 60,
       pet_id: turno.pet_id || "",
@@ -389,7 +396,7 @@ export default function AgendaPage() {
         : null;
       const groomerId = form.groomer_id ? Number(form.groomer_id) : null;
       const payload = {
-        date: form.date,
+        date: normalizeDate(form.date),
         time: form.time,
         duration: Number(form.duration || 60),
         pet_id: Number.isNaN(petId) ? null : petId,
