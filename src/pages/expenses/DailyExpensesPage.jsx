@@ -118,18 +118,6 @@ export default function DailyExpensesPage() {
     }
   }
 
-  function startEdit(expense) {
-    setEditingId(expense.id);
-    setForm({
-      date: expense.date || today,
-      category: expense.category_id || "",
-      description: expense.description || "",
-      amount: expense.amount ? String(expense.amount) : "",
-      paymentMethod: expense.payment_method_id || "",
-      supplier: expense.supplier_id || "",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({

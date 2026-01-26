@@ -43,11 +43,6 @@ export default function PaymentMethodsPage() {
     }
   }
 
-  function startEdit(item) {
-    setEditingId(item.id);
-    setName(item.name || "");
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setName("");

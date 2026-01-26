@@ -92,18 +92,6 @@ export default function EmployeesPage() {
     }
   }
 
-  function startEdit(emp) {
-    setEditingId(emp.id);
-    setForm({
-      name: emp.name || "",
-      role: emp.role || "Groomer",
-      phone: emp.phone || "",
-      email: emp.email || "",
-      status: emp.status || "active",
-      notes: emp.notes || "",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({

@@ -54,14 +54,6 @@ export default function ServiceTypesPage() {
     }
   }
 
-  function startEdit(item) {
-    setEditingId(item.id);
-    setForm({
-      name: item.name || "",
-      default_price: item.default_price ? String(item.default_price) : "",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({ name: "", default_price: "" });

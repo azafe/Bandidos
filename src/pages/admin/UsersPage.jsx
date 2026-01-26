@@ -68,15 +68,6 @@ export default function UsersPage() {
     }
   }
 
-  function startEdit(item) {
-    setEditingId(item.id);
-    setForm({
-      email: item.email || "",
-      password: "",
-      role: item.role || "staff",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({ email: "", password: "", role: "staff" });

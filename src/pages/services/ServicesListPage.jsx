@@ -57,6 +57,37 @@ function parseSheetDate(dateStr) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function toISODate(value) {
+  if (!value) return "";
+  const raw = String(value).trim();
+  if (raw.includes("T")) return raw.slice(0, 10);
+  if (raw.includes("-") && raw.split("-")[0].length === 4) {
+    return raw.slice(0, 10);
+  }
+  const parsed = parseSheetDate(raw);
+  if (!parsed || Number.isNaN(parsed.getTime())) return "";
+  const dd = String(parsed.getDate()).padStart(2, "0");
+  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+  const yyyy = parsed.getFullYear();
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function buildModalForm(service) {
+  return {
+    date: toISODate(service?.date),
+    customer_id: service?.customer_id || service?.customer?.id || "",
+    pet_id: service?.pet_id || service?.pet?.id || "",
+    service_type_id: service?.service_type_id || service?.service_type?.id || "",
+    price:
+      service?.price !== null && service?.price !== undefined
+        ? String(service.price)
+        : "",
+    payment_method_id: service?.payment_method_id || service?.payment_method?.id || "",
+    groomer_id: service?.groomer_id || service?.groomer?.id || "",
+    notes: service?.notes || "",
+  };
+}
+
 export default function ServicesListPage() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -299,39 +330,6 @@ export default function ServicesListPage() {
     const mm = String(parsed.getMonth() + 1).padStart(2, "0");
     const yyyy = parsed.getFullYear();
     return `${dd}-${mm}-${yyyy}`;
-  }
-
-  function toISODate(value) {
-    if (!value) return "";
-    const raw = String(value).trim();
-    if (raw.includes("T")) return raw.slice(0, 10);
-    if (raw.includes("-") && raw.split("-")[0].length === 4) {
-      return raw.slice(0, 10);
-    }
-    const parsed = parseSheetDate(raw);
-    if (!parsed || Number.isNaN(parsed.getTime())) return "";
-    const dd = String(parsed.getDate()).padStart(2, "0");
-    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
-    const yyyy = parsed.getFullYear();
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  function buildModalForm(service) {
-    return {
-      date: toISODate(service?.date),
-      customer_id: service?.customer_id || service?.customer?.id || "",
-      pet_id: service?.pet_id || service?.pet?.id || "",
-      service_type_id:
-        service?.service_type_id || service?.service_type?.id || "",
-      price:
-        service?.price !== null && service?.price !== undefined
-          ? String(service.price)
-          : "",
-      payment_method_id:
-        service?.payment_method_id || service?.payment_method?.id || "",
-      groomer_id: service?.groomer_id || service?.groomer?.id || "",
-      notes: service?.notes || "",
-    };
   }
 
   useEffect(() => {

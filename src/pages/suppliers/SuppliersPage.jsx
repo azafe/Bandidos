@@ -94,17 +94,6 @@ export default function SuppliersPage() {
     }
   }
 
-  function startEdit(supplier) {
-    setEditingId(supplier.id);
-    setForm({
-      name: supplier.name || "",
-      category: supplier.category || "",
-      phone: supplier.phone || "",
-      payment: supplier.payment_method_id || "",
-      notes: supplier.notes || "",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({

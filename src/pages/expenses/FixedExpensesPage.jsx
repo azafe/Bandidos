@@ -107,19 +107,6 @@ export default function FixedExpensesPage() {
     }
   }
 
-  function startEdit(expense) {
-    setEditingId(expense.id);
-    setForm({
-      name: expense.name || "",
-      category: expense.category_id || "",
-      amount: expense.amount ? String(expense.amount) : "",
-      dueDay: expense.due_day || expense.dueDay || 1,
-      paymentMethod: expense.payment_method_id || "",
-      supplier: expense.supplier_id || "",
-      status: expense.status || "active",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({

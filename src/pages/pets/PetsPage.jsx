@@ -145,17 +145,6 @@ export default function PetsPage() {
     setIsEditingModal(false);
   }
 
-  function startEdit(pet) {
-    setEditingId(pet.id);
-    setForm({
-      name: pet.name || "",
-      breed: pet.breed || "",
-      owner_name: pet.owner_name || "",
-      owner_phone: pet.owner_phone || "",
-      notes: pet.notes || "",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({

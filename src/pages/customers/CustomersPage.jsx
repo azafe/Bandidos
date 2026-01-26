@@ -88,16 +88,6 @@ export default function CustomersPage() {
     }
   }
 
-  function startEdit(customer) {
-    setEditingId(customer.id);
-    setForm({
-      name: customer.name || "",
-      phone: customer.phone || "",
-      email: customer.email || "",
-      notes: customer.notes || "",
-    });
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setForm({

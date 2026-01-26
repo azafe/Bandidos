@@ -130,6 +130,11 @@
   color: #1d4ed8;
 }
 
+.agenda-chip--danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #b91c1c;
+}
+
 .agenda-controls {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

@@ -43,11 +43,6 @@ export default function ExpenseCategoriesPage() {
     }
   }
 
-  function startEdit(item) {
-    setEditingId(item.id);
-    setName(item.name || "");
-  }
-
   function cancelEdit() {
     setEditingId(null);
     setName("");

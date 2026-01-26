@@ -13,18 +13,14 @@ import "../../styles/agenda.css";
 
 const STATUS_OPTIONS = [
   { value: "reserved", label: "Reservado" },
-  { value: "confirmed", label: "Confirmado" },
   { value: "finished", label: "Finalizado" },
   { value: "cancelled", label: "Cancelado" },
-  { value: "no_show", label: "No-show" },
 ];
 
 const STATUS_LABELS = {
   reserved: "Reservado",
-  confirmed: "Confirmado",
   finished: "Finalizado",
   cancelled: "Cancelado",
-  no_show: "No-show",
 };
 
 function todayISO() {
@@ -96,9 +92,13 @@ function reminderKey(date) {
   return `bandidos_agenda_reminder_${date}`;
 }
 
+function normalizeStatus(status) {
+  return STATUS_LABELS[status] ? status : "reserved";
+}
+
 function getPrimaryAction(turno) {
-  if (turno.status === "confirmed") return { label: "Finalizar", status: "finished" };
-  if (turno.status === "reserved") return { label: "Confirmar", status: "confirmed" };
+  if (normalizeStatus(turno.status) === "reserved")
+    return { label: "Finalizar", status: "finished" };
   return null;
 }
 
@@ -178,8 +178,15 @@ export default function AgendaPage() {
 
   const summary = useMemo(() => {
     const total = items.length;
-    const confirmed = items.filter((turno) => turno.status === "confirmed").length;
-    const pending = items.filter((turno) => turno.status === "reserved").length;
+    const reserved = items.filter(
+      (turno) => normalizeStatus(turno.status) === "reserved"
+    ).length;
+    const finished = items.filter(
+      (turno) => normalizeStatus(turno.status) === "finished"
+    ).length;
+    const cancelled = items.filter(
+      (turno) => normalizeStatus(turno.status) === "cancelled"
+    ).length;
     const computedIncome = items.reduce((sum, turno) => sum + getServicePrice(turno), 0);
     const computedDeposit = items.reduce(
       (sum, turno) => sum + (Number(turno.deposit_amount || 0) || 0),
@@ -187,7 +194,7 @@ export default function AgendaPage() {
     );
     const income = summaryTotals?.totalEstimated ?? computedIncome;
     const deposit = summaryTotals?.totalDeposit ?? computedDeposit;
-    return { total, income, deposit, confirmed, pending };
+    return { total, income, deposit, reserved, finished, cancelled };
   }, [items, getServicePrice, summaryTotals]);
 
   const filteredTurnos = useMemo(() => {
@@ -267,7 +274,7 @@ export default function AgendaPage() {
           : "",
       notes: turno.notes || "",
       groomer_id: turno.groomer_id || "",
-      status: turno.status || "reserved",
+      status: normalizeStatus(turno.status),
     });
     setPetSearch(turno.pet_name || "");
     setFormError("");
@@ -529,10 +536,13 @@ export default function AgendaPage() {
             <strong>{summary.total}</strong>
             <div className="agenda-metric__sub">
               <span className="agenda-chip agenda-chip--ok">
-                Confirmados {summary.confirmed}
+                Finalizados {summary.finished}
               </span>
               <span className="agenda-chip agenda-chip--pending">
-                Pendientes {summary.pending}
+                Reservados {summary.reserved}
+              </span>
+              <span className="agenda-chip agenda-chip--danger">
+                Cancelados {summary.cancelled}
               </span>
             </div>
           </div>
@@ -717,9 +727,9 @@ export default function AgendaPage() {
             {filteredTurnos.map((turno) => (
               <div
                 key={turno.id}
-                className={`agenda-timeline__row agenda-timeline__row--${
-                  turno.status || "reserved"
-                }`}
+                className={`agenda-timeline__row agenda-timeline__row--${normalizeStatus(
+                  turno.status
+                )}`}
               >
                 <div className="agenda-timeline__time">
                   <span className="agenda-time-range">
@@ -760,10 +770,12 @@ export default function AgendaPage() {
                   </div>
                   <div className="agenda-card__side">
                     <span
-                      className={`agenda-badge agenda-badge--${turno.status || "reserved"}`}
-                      title={STATUS_LABELS[turno.status] || "Reservado"}
+                      className={`agenda-badge agenda-badge--${normalizeStatus(
+                        turno.status
+                      )}`}
+                      title={STATUS_LABELS[normalizeStatus(turno.status)]}
                     >
-                      {STATUS_LABELS[turno.status] || "Reservado"}
+                      {STATUS_LABELS[normalizeStatus(turno.status)]}
                     </span>
                     <div className="agenda-card__amount">
                       {formatCurrency(getServicePrice(turno))}
@@ -813,10 +825,10 @@ export default function AgendaPage() {
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              updateStatus(turno, "confirmed");
+                              updateStatus(turno, "reserved");
                             }}
                           >
-                            Confirmar
+                            Reservar
                           </button>
                           <button
                             type="button"
@@ -927,9 +939,9 @@ export default function AgendaPage() {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => updateStatus(selectedTurno, "confirmed")}
+                onClick={() => updateStatus(selectedTurno, "reserved")}
               >
-                Confirmar
+                Reservar
               </button>
               <button
                 type="button"
@@ -937,13 +949,6 @@ export default function AgendaPage() {
                 onClick={() => updateStatus(selectedTurno, "finished")}
               >
                 Finalizar
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => updateStatus(selectedTurno, "no_show")}
-              >
-                No-show
               </button>
               <button
                 type="button"
