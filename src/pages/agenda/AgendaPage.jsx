@@ -789,27 +789,6 @@ export default function AgendaPage() {
                       {formatCurrency(getServicePrice(turno))}
                     </div>
                     <div className="agenda-card__actions">
-                      {getPrimaryAction(turno) ? (
-                        <button
-                          type="button"
-                          className="agenda-action-primary"
-                          title={getPrimaryAction(turno).label}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            updateStatus(turno, getPrimaryAction(turno).status);
-                          }}
-                        >
-                          {getPrimaryAction(turno).label}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="agenda-action-primary"
-                          disabled
-                        >
-                          {STATUS_LABELS[turno.status] || "Reservado"}
-                        </button>
-                      )}
                       <div className="agenda-action-menu">
                         <button
                           type="button"
