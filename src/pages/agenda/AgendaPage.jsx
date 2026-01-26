@@ -96,6 +96,14 @@ function normalizeStatus(status) {
   return STATUS_LABELS[status] ? status : "reserved";
 }
 
+function getServiceName(turno, serviceTypes) {
+  if (turno?.service_type?.name) return turno.service_type.name;
+  const match = serviceTypes.find(
+    (service) => String(service.id) === String(turno?.service_type_id)
+  );
+  return match?.name || "-";
+}
+
 function getPrimaryAction(turno) {
   if (normalizeStatus(turno.status) === "reserved")
     return { label: "Finalizar", status: "finished" };
@@ -896,7 +904,7 @@ export default function AgendaPage() {
               </div>
               <div>
                 <strong>Servicio:</strong>{" "}
-                {selectedTurno.service_type?.name || "-"}
+                {getServiceName(selectedTurno, serviceTypes)}
               </div>
               <div>
                 <strong>Precio del servicio:</strong>{" "}
