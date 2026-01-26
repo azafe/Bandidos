@@ -39,13 +39,6 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
-          to="/services"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Servicios
-        </NavLink>
-        <NavLink
           to="/agenda"
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
@@ -62,11 +55,19 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
+          to="/services"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Servicios
+        </NavLink>
+
+        <NavLink
           to="/expenses/daily"
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
-          Gastos diarios
+          Gastos Diarios
         </NavLink>
 
         <NavLink
@@ -74,7 +75,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
-          Gastos fijos
+          Gastos Fijos
         </NavLink>
 
         <NavLink
@@ -82,7 +83,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
-          Tipos de servicio
+          Tipos de Servicio
         </NavLink>
 
         <NavLink
@@ -90,7 +91,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
-          Métodos de pago
+          Método de Pago
         </NavLink>
 
         <NavLink
@@ -98,15 +99,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
         >
-          Categorías gastos
-        </NavLink>
-
-        <NavLink
-          to="/employees"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Empleados
+          Categoría Gastos
         </NavLink>
 
         <NavLink
@@ -115,6 +108,14 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           onClick={handleNavigate}
         >
           Proveedores
+        </NavLink>
+
+        <NavLink
+          to="/employees"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Estilista
         </NavLink>
 
         {user?.role === "admin" && (
