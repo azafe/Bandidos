@@ -118,6 +118,8 @@ export default function AgendaPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
   const [reminderSaved, setReminderSaved] = useState(false);
+  const [petSearch, setPetSearch] = useState("");
+  const [isPetOpen, setIsPetOpen] = useState(false);
   const [form, setForm] = useState({
     date: selectedDate,
     time: "",
@@ -186,6 +188,14 @@ export default function AgendaPage() {
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
   }, [items, search, filters]);
 
+  const filteredPets = useMemo(() => {
+    const term = petSearch.trim().toLowerCase();
+    if (!term) return pets;
+    return pets.filter((pet) =>
+      pet.name?.toLowerCase().includes(term)
+    );
+  }, [pets, petSearch]);
+
   function openCreate() {
     setForm({
       date: selectedDate,
@@ -202,6 +212,7 @@ export default function AgendaPage() {
       groomer_id: "",
       status: "reserved",
     });
+    setPetSearch("");
     setFormError("");
     setIsCreating(true);
     setIsEditing(false);
@@ -227,6 +238,7 @@ export default function AgendaPage() {
       groomer_id: turno.groomer_id || "",
       status: turno.status || "reserved",
     });
+    setPetSearch(turno.pet_name || "");
     setFormError("");
     setIsCreating(true);
     setIsEditing(true);
@@ -252,6 +264,8 @@ export default function AgendaPage() {
       breed: pet?.breed || prev.breed,
       owner_name: pet?.owner_name || prev.owner_name,
     }));
+    setPetSearch(pet?.name || "");
+    setIsPetOpen(false);
   }
 
   function saveReminder() {
@@ -937,24 +951,41 @@ export default function AgendaPage() {
           </label>
           <label className="form-field">
             <span>Mascota</span>
-            <select
-              value={form.pet_id}
-              onChange={(e) => handlePetSelect(e.target.value)}
-            >
-              <option value="">Seleccionar</option>
-              {pets.map((pet) => (
-                <option key={pet.id} value={pet.id}>
-                  {pet.name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              name="pet_name"
-              placeholder="Mascota (manual)"
-              value={form.pet_name}
-              onChange={handleFormChange}
-            />
+            <div className="combo-field">
+              <input
+                type="text"
+                name="pet_name"
+                placeholder="Buscá por nombre..."
+                value={petSearch}
+                onChange={(e) => {
+                  setPetSearch(e.target.value);
+                  setIsPetOpen(true);
+                  setForm((prev) => ({ ...prev, pet_id: "", pet_name: e.target.value }));
+                }}
+                onFocus={() => setIsPetOpen(true)}
+                onBlur={() => setTimeout(() => setIsPetOpen(false), 120)}
+                autoComplete="off"
+                required
+              />
+              {isPetOpen ? (
+                <div className="combo-field__list" role="listbox">
+                  {filteredPets.length === 0 ? (
+                    <div className="combo-field__empty">Sin resultados</div>
+                  ) : (
+                    filteredPets.map((pet) => (
+                      <button
+                        key={pet.id}
+                        type="button"
+                        className="combo-field__option"
+                        onMouseDown={() => handlePetSelect(pet.id)}
+                      >
+                        {pet.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
             <Link className="agenda-link" to="/pets">
               Crear nueva mascota
             </Link>
