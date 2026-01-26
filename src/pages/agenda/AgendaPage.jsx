@@ -419,6 +419,13 @@ export default function AgendaPage() {
       setIsCreating(false);
       setIsEditing(false);
     } catch (err) {
+      if (!isEditing) {
+        console.error("[agenda] Error creando turno", {
+          message: err?.message,
+          status: err?.status,
+          payload: err?.payload,
+        });
+      }
       const details =
         err?.status && err?.payload
           ? ` (${err.status})`
