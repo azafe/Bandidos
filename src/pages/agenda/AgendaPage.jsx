@@ -151,6 +151,7 @@ export default function AgendaPage() {
   const [petSearch, setPetSearch] = useState("");
   const [isPetOpen, setIsPetOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("reserved");
+  const [showFinishForm, setShowFinishForm] = useState(false);
   const [finishForm, setFinishForm] = useState({
     groomer_id: "",
     service_type_id: "",
@@ -199,6 +200,7 @@ export default function AgendaPage() {
     if (!selectedTurno) return;
     const status = normalizeStatus(selectedTurno.status);
     setPendingStatus(status);
+    setShowFinishForm(false);
     setFinishForm({
       groomer_id: selectedTurno.groomer_id || "",
       service_type_id: selectedTurno.service_type_id || "",
@@ -246,6 +248,11 @@ export default function AgendaPage() {
     const deposit = summaryTotals?.totalDeposit ?? computedDeposit;
     return { total, income, deposit, reserved, finished, cancelled };
   }, [items, getServicePrice, summaryTotals]);
+
+  const statusOptions = useMemo(
+    () => STATUS_OPTIONS.filter((status) => status.value !== "finished"),
+    []
+  );
 
   const dailySummaryItems = useMemo(
     () => [...items].sort((a, b) => (a.time || "").localeCompare(b.time || "")),
@@ -998,19 +1005,26 @@ export default function AgendaPage() {
                   onChange={(event) => {
                     const next = event.target.value;
                     setPendingStatus(next);
-                    if (next !== "finished") {
-                      updateStatus(selectedTurno, next);
-                    }
+                    updateStatus(selectedTurno, next);
                   }}
                 >
-                  {STATUS_OPTIONS.map((status) => (
+                  {statusOptions.map((status) => (
                     <option key={status.value} value={status.value}>
                       {status.label}
                     </option>
                   ))}
                 </select>
               </label>
-              {pendingStatus === "finished" ? (
+              {!showFinishForm && normalizeStatus(selectedTurno.status) !== "finished" ? (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowFinishForm(true)}
+                >
+                  Dar por finalizado
+                </button>
+              ) : null}
+              {showFinishForm ? (
                 <div className="agenda-finish">
                   <label className="form-field">
                     <span>Groomer</span>
@@ -1062,6 +1076,13 @@ export default function AgendaPage() {
                       }
                     />
                   </label>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowFinishForm(false)}
+                  >
+                    Cancelar
+                  </button>
                   <button
                     type="button"
                     className="btn-primary"
