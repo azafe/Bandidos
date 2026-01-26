@@ -43,6 +43,21 @@ function formatDateDisplay(value) {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+function formatDateLong(value) {
+  if (!value) return "-";
+  const raw = String(value).split("T")[0];
+  const [yyyy, mm, dd] = raw.split("-");
+  if (!yyyy || !mm || !dd) return value;
+  const d = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  const label = d.toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function addDays(dateStr, delta) {
   const [yyyy, mm, dd] = dateStr.split("-").map(Number);
   if (!yyyy || !mm || !dd) return dateStr;
@@ -384,89 +399,94 @@ export default function AgendaPage() {
             Turnos diarios y control rapido del dia.
           </p>
         </div>
-        <button type="button" className="btn-primary" onClick={openCreate}>
+        <button type="button" className="btn-primary agenda-cta" onClick={openCreate}>
           + Nuevo turno
         </button>
       </div>
 
-      <div className="agenda-summary card">
-        <div className="agenda-summary__main">
-          <div className="agenda-date">
-            <span>Fecha</span>
-            <div className="agenda-date__controls">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
-              >
-                ←
-              </button>
-              <div className="date-field__control">
-                <input
-                  type="text"
-                  className="date-field__display"
-                  value={formatDateDisplay(selectedDate)}
-                  placeholder="DD-MM-AAAA"
-                  readOnly
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
-                <input
-                  type="date"
-                  className="date-field__native"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                />
-              </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
-              >
-                →
-              </button>
+      <div className="agenda-daybar card">
+        <div className="agenda-daybar__left">
+          <span className="agenda-daybar__label">{formatDateLong(selectedDate)}</span>
+          <div className="agenda-date__controls">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setSelectedDate(todayISO())}
+            >
+              Hoy
+            </button>
+            <div className="date-field__control">
+              <input
+                type="text"
+                className="date-field__display"
+                value={formatDateDisplay(selectedDate)}
+                placeholder="DD-MM-AAAA"
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <input
+                type="date"
+                className="date-field__native"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
             </div>
-          </div>
-          <div className="agenda-metrics">
-            <div>
-              <span>Total</span>
-              <strong>{summary.total}</strong>
-            </div>
-            <div>
-              <span>Ingresos estimados</span>
-              <strong>{formatCurrency(summary.income)}</strong>
-            </div>
-            <div>
-              <span>Senas</span>
-              <strong>{formatCurrency(summary.deposits)}</strong>
-            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+            >
+              →
+            </button>
           </div>
         </div>
-        <div className="agenda-summary__filters">
-          {warning ? <div className="agenda-warning">{warning}</div> : null}
-          <div className="agenda-reminder">
-            <div className="agenda-reminder__header">
-              <span>Recordatorio del día</span>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={saveReminder}
-              >
-                {reminderSaved ? "Guardado" : "Guardar"}
-              </button>
-            </div>
-            <textarea
-              rows={2}
-              placeholder="Notas internas del día..."
-              value={reminder}
-              onChange={(e) => setReminder(e.target.value)}
-              onBlur={saveReminder}
-            />
+        <div className="agenda-metrics">
+          <div className="agenda-metric agenda-metric--count">
+            <span>Total turnos</span>
+            <strong>{summary.total}</strong>
           </div>
+          <div className="agenda-metric agenda-metric--income">
+            <span>Ingresos estimados</span>
+            <strong>{formatCurrency(summary.income)}</strong>
+          </div>
+          <div className="agenda-metric agenda-metric--deposit">
+            <span>Senas cobradas</span>
+            <strong>{formatCurrency(summary.deposits)}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="agenda-controls">
+        <div className="agenda-filters card">
+          <div className="agenda-filters__header">
+            <div>
+              <h2 className="card-title">Busqueda y filtros</h2>
+              <p className="card-subtitle">Encontrá turnos en segundos.</p>
+            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setFilters({ service_type_id: "", groomer_id: "", status: "" });
+                setSearch("");
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+          {warning ? <div className="agenda-warning">{warning}</div> : null}
           <div className="agenda-search">
             <input
               type="text"
-              placeholder="Buscar mascota o dueno..."
+              placeholder="Buscar por mascota o dueno..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -527,6 +547,34 @@ export default function AgendaPage() {
             </div>
           ) : null}
         </div>
+
+        <div className="agenda-reminder card">
+          <div className="agenda-reminder__header">
+            <div>
+              <h2 className="card-title">
+                <span className="agenda-reminder__icon" aria-hidden="true">
+                  📝
+                </span>{" "}
+                Recordatorio del dia
+              </h2>
+              <p className="card-subtitle">Nota interna para el equipo.</p>
+            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={saveReminder}
+            >
+              {reminderSaved ? "Guardado" : "Guardar nota del dia"}
+            </button>
+          </div>
+          <textarea
+            rows={4}
+            placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
+            value={reminder}
+            onChange={(e) => setReminder(e.target.value)}
+            onBlur={saveReminder}
+          />
+        </div>
       </div>
 
       <div className="agenda-day card">
@@ -550,60 +598,124 @@ export default function AgendaPage() {
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="agenda-empty">No hay turnos cargados para este dia.</div>
+          <div className="agenda-empty">
+            <p>No hay turnos cargados para este dia.</p>
+            <button type="button" className="btn-primary" onClick={openCreate}>
+              Agregar primer turno
+            </button>
+          </div>
         ) : filteredTurnos.length === 0 ? (
           <div className="agenda-empty">
-            No hay resultados para la busqueda o filtros actuales.
+            <p>No hay resultados para la busqueda o filtros actuales.</p>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setFilters({ service_type_id: "", groomer_id: "", status: "" });
+                setSearch("");
+              }}
+            >
+              Limpiar filtros
+            </button>
           </div>
         ) : (
-          <div className="agenda-list">
+          <div className="agenda-timeline">
             {filteredTurnos.map((turno) => (
-              <button
-                key={turno.id}
-                type="button"
-                className="agenda-card"
-                onClick={() => {
-                  setSelectedTurno(turno);
-                  setIsEditing(false);
-                }}
-              >
-                <div className="agenda-card__time">
-                  <span>{formatTime(turno.time)}</span>
-                  <span className="agenda-card__time-end">
+              <div key={turno.id} className="agenda-timeline__row">
+                <div className="agenda-timeline__time">
+                  <span className="agenda-time-range">
+                    {formatTime(turno.time)} -{" "}
                     {getEndTime(turno.time, turno.duration || 60)}
                   </span>
+                  <span className="agenda-time-dot" aria-hidden="true" />
+                  <span className="agenda-time-line" aria-hidden="true" />
                 </div>
-                <div className="agenda-card__body">
-                  <div className="agenda-card__title">
-                    {turno.pet_name || "Mascota"} -{" "}
-                    {turno.service_type?.name || "Servicio"}
-                  </div>
-                  <div className="agenda-card__meta">
-                    {formatTime(turno.time)} -{" "}
-                    {getEndTime(turno.time, turno.duration || 60)} ·{" "}
-                    {turno.owner_name || "-"} · {turno.breed || "-"}
-                  </div>
-                  {turno.payment_method?.name ? (
-                    <div className="agenda-card__pill">
-                      {turno.payment_method.name}
+                <button
+                  type="button"
+                  className="agenda-card agenda-card--timeline"
+                  onClick={() => {
+                    setSelectedTurno(turno);
+                    setIsEditing(false);
+                  }}
+                >
+                  <div className="agenda-card__body">
+                    <div className="agenda-card__title">
+                      {turno.pet_name || "Mascota"} -{" "}
+                      {turno.service_type?.name || "Servicio"}
                     </div>
-                  ) : null}
-                </div>
-                <div className="agenda-card__side">
-                  <span
-                    className={`agenda-badge agenda-badge--${turno.status || "reserved"}`}
-                  >
-                    {STATUS_LABELS[turno.status] || "Reservado"}
-                  </span>
-                  {turno.deposit_amount || turno.amount || turno.price ? (
-                    <div className="agenda-card__amount">
-                      {formatCurrency(
-                        turno.deposit_amount || turno.amount || turno.price
-                      )}
+                    <div className="agenda-card__meta">
+                      {turno.owner_name || "-"} · {turno.breed || "-"}
                     </div>
-                  ) : null}
-                </div>
-              </button>
+                    {turno.payment_method?.name ? (
+                      <div className="agenda-card__pill">
+                        {turno.payment_method.name}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="agenda-card__side">
+                    <span
+                      className={`agenda-badge agenda-badge--${turno.status || "reserved"}`}
+                    >
+                      {STATUS_LABELS[turno.status] || "Reservado"}
+                    </span>
+                    {turno.deposit_amount || turno.amount || turno.price ? (
+                      <div className="agenda-card__amount">
+                        {formatCurrency(
+                          turno.deposit_amount || turno.amount || turno.price
+                        )}
+                      </div>
+                    ) : null}
+                    <div className="agenda-card__actions">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openEdit(turno);
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          updateStatus(turno, "confirmed");
+                        }}
+                      >
+                        Confirmar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          updateStatus(turno, "finished");
+                        }}
+                      >
+                        Finalizar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          updateStatus(turno, "cancelled");
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="agenda-card__actions--danger"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(turno);
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
         )}
