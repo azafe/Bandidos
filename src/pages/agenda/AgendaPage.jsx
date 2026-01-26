@@ -558,10 +558,6 @@ export default function AgendaPage() {
             <span>Ingresos estimados</span>
             <strong>{formatCurrency(summary.income)}</strong>
           </div>
-          <div className="agenda-metric agenda-metric--deposit">
-            <span>Señas cobradas</span>
-            <strong>{formatCurrency(summary.deposit)}</strong>
-          </div>
         </div>
       </div>
 
@@ -788,66 +784,6 @@ export default function AgendaPage() {
                     <div className="agenda-card__amount">
                       {formatCurrency(getServicePrice(turno))}
                     </div>
-                    <div className="agenda-card__actions">
-                      <div className="agenda-action-menu">
-                        <button
-                          type="button"
-                          className="agenda-action-trigger"
-                          onClick={(event) => event.stopPropagation()}
-                          aria-label="Mas acciones"
-                        >
-                          ⋮
-                        </button>
-                        <div className="agenda-action-list">
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openEdit(turno);
-                            }}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              updateStatus(turno, "reserved");
-                            }}
-                          >
-                            Reservar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              updateStatus(turno, "finished");
-                            }}
-                          >
-                            Finalizar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              updateStatus(turno, "cancelled");
-                            }}
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            type="button"
-                            className="agenda-action-danger"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleDelete(turno);
-                            }}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </button>
               </div>
@@ -926,15 +862,6 @@ export default function AgendaPage() {
                 onClick={() => openEdit(selectedTurno)}
               >
                 Editar
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  openEdit(selectedTurno);
-                }}
-              >
-                Registrar pago
               </button>
               <button
                 type="button"
