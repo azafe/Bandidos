@@ -382,20 +382,26 @@ export default function AgendaPage() {
 
     setFormLoading(true);
     try {
+      const petId = form.pet_id ? Number(form.pet_id) : null;
+      const serviceTypeId = form.service_type_id ? Number(form.service_type_id) : null;
+      const paymentMethodId = form.payment_method_id
+        ? Number(form.payment_method_id)
+        : null;
+      const groomerId = form.groomer_id ? Number(form.groomer_id) : null;
       const payload = {
         date: form.date,
         time: form.time,
         duration: Number(form.duration || 60),
-        pet_id: form.pet_id || null,
+        pet_id: Number.isNaN(petId) ? null : petId,
         pet_name: form.pet_name.trim(),
         breed: form.breed.trim(),
         owner_name: form.owner_name.trim(),
-        service_type_id: form.service_type_id,
-        payment_method_id: form.payment_method_id || null,
+        service_type_id: Number.isNaN(serviceTypeId) ? null : serviceTypeId,
+        payment_method_id: Number.isNaN(paymentMethodId) ? null : paymentMethodId,
         deposit_amount: Number(form.deposit_amount || 0),
         notes: form.notes.trim(),
-        groomer_id: form.groomer_id || null,
-        status: form.status,
+        groomer_id: Number.isNaN(groomerId) ? null : groomerId,
+        status: normalizeStatus(form.status),
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
