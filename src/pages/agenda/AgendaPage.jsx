@@ -96,6 +96,12 @@ function reminderKey(date) {
   return `bandidos_agenda_reminder_${date}`;
 }
 
+function getPrimaryAction(turno) {
+  if (turno.status === "confirmed") return { label: "Finalizar", status: "finished" };
+  if (turno.status === "reserved") return { label: "Confirmar", status: "confirmed" };
+  return null;
+}
+
 export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [search, setSearch] = useState("");
@@ -689,6 +695,7 @@ export default function AgendaPage() {
                   <div className="agenda-card__side">
                     <span
                       className={`agenda-badge agenda-badge--${turno.status || "reserved"}`}
+                      title={STATUS_LABELS[turno.status] || "Reservado"}
                     >
                       {STATUS_LABELS[turno.status] || "Reservado"}
                     </span>
@@ -700,52 +707,85 @@ export default function AgendaPage() {
                       </div>
                     ) : null}
                     <div className="agenda-card__actions">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEdit(turno);
-                        }}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          updateStatus(turno, "confirmed");
-                        }}
-                      >
-                        Confirmar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          updateStatus(turno, "finished");
-                        }}
-                      >
-                        Finalizar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          updateStatus(turno, "cancelled");
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        className="agenda-card__actions--danger"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleDelete(turno);
-                        }}
-                      >
-                        Eliminar
-                      </button>
+                      {getPrimaryAction(turno) ? (
+                        <button
+                          type="button"
+                          className="agenda-action-primary"
+                          title={getPrimaryAction(turno).label}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            updateStatus(turno, getPrimaryAction(turno).status);
+                          }}
+                        >
+                          {getPrimaryAction(turno).label}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="agenda-action-primary"
+                          disabled
+                        >
+                          {STATUS_LABELS[turno.status] || "Reservado"}
+                        </button>
+                      )}
+                      <div className="agenda-action-menu">
+                        <button
+                          type="button"
+                          className="agenda-action-trigger"
+                          onClick={(event) => event.stopPropagation()}
+                          aria-label="Mas acciones"
+                        >
+                          ⋮
+                        </button>
+                        <div className="agenda-action-list">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEdit(turno);
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateStatus(turno, "confirmed");
+                            }}
+                          >
+                            Confirmar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateStatus(turno, "finished");
+                            }}
+                          >
+                            Finalizar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateStatus(turno, "cancelled");
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            className="agenda-action-danger"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleDelete(turno);
+                            }}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </button>
