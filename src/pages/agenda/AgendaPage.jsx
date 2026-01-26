@@ -160,11 +160,7 @@ export default function AgendaPage() {
       (sum, turno) => sum + (Number(turno.amount || turno.price || 0) || 0),
       0
     );
-    const deposits = items.reduce(
-      (sum, turno) => sum + (Number(turno.deposit_amount || 0) || 0),
-      0
-    );
-    return { total, income, deposits, confirmed, pending };
+    return { total, income, confirmed, pending };
   }, [items]);
 
   const filteredTurnos = useMemo(() => {
@@ -530,10 +526,6 @@ export default function AgendaPage() {
           <div className="agenda-metric agenda-metric--income">
             <span>Ingresos estimados</span>
             <strong>{formatCurrency(summary.income)}</strong>
-          </div>
-          <div className="agenda-metric agenda-metric--deposit">
-            <span>Senas cobradas</span>
-            <strong>{formatCurrency(summary.deposits)}</strong>
           </div>
         </div>
       </div>
