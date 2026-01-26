@@ -198,10 +198,11 @@ export default function AgendaPage() {
 
   function getServicePrice(turno) {
     const fromCatalog = serviceTypes.find(
-      (service) => service.id === turno.service_type_id
+      (service) => String(service.id) === String(turno.service_type_id)
     );
     return Number(
       fromCatalog?.default_price ||
+        turno.service_type?.default_price ||
         turno.service_price ||
         turno.amount ||
         turno.price ||
