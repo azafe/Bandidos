@@ -920,6 +920,19 @@ export default function AgendaPage() {
               </div>
             </div>
             <div className="modal-actions">
+              <label className="form-field">
+                <span>Estado</span>
+                <select
+                  value={normalizeStatus(selectedTurno.status)}
+                  onChange={(event) => updateStatus(selectedTurno, event.target.value)}
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button
                 type="button"
                 className="btn-secondary"
@@ -935,27 +948,6 @@ export default function AgendaPage() {
                 }}
               >
                 Registrar pago
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => updateStatus(selectedTurno, "reserved")}
-              >
-                Reservar
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => updateStatus(selectedTurno, "finished")}
-              >
-                Finalizar
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => updateStatus(selectedTurno, "cancelled")}
-              >
-                Cancelar
               </button>
               <button
                 type="button"
