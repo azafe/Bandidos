@@ -25,6 +25,14 @@ export function listByDate(date) {
   return cache.filter((item) => item.date === date);
 }
 
+export function listByRange(from, to) {
+  ensureCache();
+  if (!from && !to) return [...cache];
+  if (!from) return cache.filter((item) => item.date <= to);
+  if (!to) return cache.filter((item) => item.date >= from);
+  return cache.filter((item) => item.date >= from && item.date <= to);
+}
+
 export function createTurno(payload) {
   ensureCache();
   const id = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;

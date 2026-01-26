@@ -1,5 +1,5 @@
 // src/pages/agenda/AgendaPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAgendaDay } from "../../hooks/useAgendaDay";
 import { useApiResource } from "../../hooks/useApiResource";
@@ -140,7 +140,14 @@ export default function AgendaPage() {
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const { items: employees } = useApiResource("/v2/employees");
   const { items: pets } = useApiResource("/v2/pets");
-  const { items, loading, error, warning, refetch } = useAgendaDay(selectedDate);
+  const {
+    items,
+    loading,
+    error,
+    warning,
+    summaryTotals,
+    refetch,
+  } = useAgendaDay(selectedDate);
 
   useEffect(() => {
     try {
@@ -152,16 +159,36 @@ export default function AgendaPage() {
     }
   }, [selectedDate]);
 
+  const getServicePrice = useCallback(
+    (turno) => {
+      const fromCatalog = serviceTypes.find(
+        (service) => String(service.id) === String(turno.service_type_id)
+      );
+      return Number(
+        fromCatalog?.default_price ||
+          turno.service_type?.default_price ||
+          turno.service_price ||
+          turno.amount ||
+          turno.price ||
+          0
+      );
+    },
+    [serviceTypes]
+  );
+
   const summary = useMemo(() => {
     const total = items.length;
     const confirmed = items.filter((turno) => turno.status === "confirmed").length;
     const pending = items.filter((turno) => turno.status === "reserved").length;
-    const income = items.reduce(
-      (sum, turno) => sum + (Number(turno.amount || turno.price || 0) || 0),
+    const computedIncome = items.reduce((sum, turno) => sum + getServicePrice(turno), 0);
+    const computedDeposit = items.reduce(
+      (sum, turno) => sum + (Number(turno.deposit_amount || 0) || 0),
       0
     );
-    return { total, income, confirmed, pending };
-  }, [items]);
+    const income = summaryTotals?.totalEstimated ?? computedIncome;
+    const deposit = summaryTotals?.totalDeposit ?? computedDeposit;
+    return { total, income, deposit, confirmed, pending };
+  }, [items, getServicePrice, summaryTotals]);
 
   const filteredTurnos = useMemo(() => {
     const term = normalize(search);
@@ -191,20 +218,6 @@ export default function AgendaPage() {
   const servicePrice = Number(selectedService?.default_price || 0);
   const depositAmount = Number(form.deposit_amount || 0);
   const remainingAmount = Math.max(servicePrice - depositAmount, 0);
-
-  function getServicePrice(turno) {
-    const fromCatalog = serviceTypes.find(
-      (service) => String(service.id) === String(turno.service_type_id)
-    );
-    return Number(
-      fromCatalog?.default_price ||
-        turno.service_type?.default_price ||
-        turno.service_price ||
-        turno.amount ||
-        turno.price ||
-        0
-    );
-  }
 
   const filteredPets = useMemo(() => {
     const term = petSearch.trim().toLowerCase();
@@ -526,6 +539,10 @@ export default function AgendaPage() {
           <div className="agenda-metric agenda-metric--income">
             <span>Ingresos estimados</span>
             <strong>{formatCurrency(summary.income)}</strong>
+          </div>
+          <div className="agenda-metric agenda-metric--deposit">
+            <span>Señas cobradas</span>
+            <strong>{formatCurrency(summary.deposit)}</strong>
           </div>
         </div>
       </div>

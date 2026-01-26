@@ -548,6 +548,25 @@
   gap: 10px;
 }
 
+.agenda-price-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.agenda-price-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
 .agenda-helper {
   font-size: 0.75rem;
   color: var(--color-text-soft);

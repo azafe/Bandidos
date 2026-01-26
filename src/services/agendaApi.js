@@ -4,6 +4,7 @@ import * as agendaMock from "./agendaMock";
 
 export const AGENDA_CONTRACT = {
   listDay: "/agenda",
+  summary: "/agenda/summary",
   create: "/agenda",
   update: (id) => `/agenda/${id}`,
   remove: (id) => `/agenda/${id}`,
@@ -30,6 +31,41 @@ export async function listAgendaDay(date) {
     if (isNotFound(err)) {
       const items = agendaMock.listByDate(date);
       return { items, fallback: true, error: err };
+    }
+    throw err;
+  }
+}
+
+export async function listAgendaSummary({ from, to }) {
+  try {
+    const params = { from, to };
+    debugLog("[agenda] GET", { url: AGENDA_CONTRACT.summary, params });
+    const data = await apiRequest(AGENDA_CONTRACT.summary, { params });
+    return {
+      totalEstimated: Number(data?.total_estimated ?? data?.totalEstimated ?? 0),
+      totalDeposit: Number(data?.total_deposit ?? data?.totalDeposit ?? 0),
+      fallback: false,
+    };
+  } catch (err) {
+    if (isNotFound(err)) {
+      const items = agendaMock.listByRange(from, to);
+      const totalEstimated = items.reduce(
+        (sum, turno) =>
+          sum +
+          Number(
+            turno.service_type?.default_price ||
+              turno.service_price ||
+              turno.amount ||
+              turno.price ||
+              0
+          ),
+        0
+      );
+      const totalDeposit = items.reduce(
+        (sum, turno) => sum + (Number(turno.deposit_amount || 0) || 0),
+        0
+      );
+      return { totalEstimated, totalDeposit, fallback: true, error: err };
     }
     throw err;
   }
