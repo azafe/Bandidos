@@ -55,6 +55,12 @@ function normalizeId(value) {
   return raw;
 }
 
+function formatPetLabel(pet) {
+  const name = pet?.name || "Mascota";
+  const owner = pet?.owner_name ? ` (${pet.owner_name})` : "";
+  return `${name}${owner}`;
+}
+
 function formatDateLong(value) {
   if (!value) return "-";
   const raw = String(value).split("T")[0];
@@ -254,7 +260,9 @@ export default function AgendaPage() {
     const term = petSearch.trim().toLowerCase();
     if (!term) return pets;
     return pets.filter((pet) =>
-      pet.name?.toLowerCase().includes(term)
+      [pet.name, pet.owner_name]
+        .filter(Boolean)
+        .some((field) => field.toLowerCase().includes(term))
     );
   }, [pets, petSearch]);
 
@@ -1013,7 +1021,7 @@ export default function AgendaPage() {
                         className="combo-field__option"
                         onMouseDown={() => handlePetSelect(pet.id)}
                       >
-                        {pet.name}
+                        {formatPetLabel(pet)}
                       </button>
                     ))
                   )}

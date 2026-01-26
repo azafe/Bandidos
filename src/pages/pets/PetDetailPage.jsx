@@ -123,6 +123,12 @@ export default function PetDetailPage() {
             </p>
             <div className="list-item__meta" style={{ marginTop: 8 }}>
               <span>Raza: {pet?.breed || "-"}</span>
+              <span style={{ marginLeft: 12 }}>
+                Castrado: {pet?.neutered ? "Sí" : "No"}
+              </span>
+            </div>
+            <div className="list-item__meta" style={{ marginTop: 6 }}>
+              <span>Comportamiento: {pet?.behavior || "-"}</span>
             </div>
             <div className="list-item__meta" style={{ marginTop: 6 }}>
               <span>Notas: {pet?.notes || "-"}</span>

@@ -24,6 +24,8 @@ export default function PetsPage() {
     owner_name: "",
     owner_phone: "",
     notes: "",
+    neutered: false,
+    behavior: "",
   });
   const isAdmin = user?.role === "admin";
 
@@ -38,6 +40,8 @@ export default function PetsPage() {
     owner_name: "",
     owner_phone: "",
     notes: "",
+    neutered: false,
+    behavior: "",
   });
 
   function handleChange(e) {
@@ -60,6 +64,8 @@ export default function PetsPage() {
           owner_name: form.owner_name.trim(),
           owner_phone: form.owner_phone.trim(),
           notes: form.notes.trim(),
+          neutered: Boolean(form.neutered),
+          behavior: form.behavior.trim() || null,
         });
       } else {
         await createItem({
@@ -68,6 +74,8 @@ export default function PetsPage() {
           owner_name: form.owner_name.trim(),
           owner_phone: form.owner_phone.trim(),
           notes: form.notes.trim(),
+          neutered: Boolean(form.neutered),
+          behavior: form.behavior.trim() || null,
         });
       }
     } catch (err) {
@@ -81,6 +89,8 @@ export default function PetsPage() {
       owner_name: "",
       owner_phone: "",
       notes: "",
+      neutered: false,
+      behavior: "",
     });
     setEditingId(null);
   }
@@ -104,6 +114,8 @@ export default function PetsPage() {
       owner_name: pet.owner_name || "",
       owner_phone: pet.owner_phone || "",
       notes: pet.notes || "",
+      neutered: Boolean(pet.neutered),
+      behavior: pet.behavior || "",
     });
     setIsEditingModal(true);
   }
@@ -121,6 +133,8 @@ export default function PetsPage() {
         owner_name: modalForm.owner_name.trim(),
         owner_phone: modalForm.owner_phone.trim(),
         notes: modalForm.notes.trim(),
+        neutered: Boolean(modalForm.neutered),
+        behavior: modalForm.behavior.trim() || null,
       });
       setSelectedPet((prev) =>
         prev
@@ -131,6 +145,8 @@ export default function PetsPage() {
               owner_name: modalForm.owner_name.trim(),
               owner_phone: modalForm.owner_phone.trim(),
               notes: modalForm.notes.trim(),
+              neutered: Boolean(modalForm.neutered),
+              behavior: modalForm.behavior.trim() || null,
             }
           : prev
       );
@@ -153,6 +169,8 @@ export default function PetsPage() {
       owner_name: "",
       owner_phone: "",
       notes: "",
+      neutered: false,
+      behavior: "",
     });
   }
 
@@ -236,6 +254,32 @@ export default function PetsPage() {
               name="owner_phone"
               type="text"
               value={form.owner_phone}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="neutered">Castrado</label>
+            <select
+              id="neutered"
+              name="neutered"
+              value={String(form.neutered)}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, neutered: e.target.value === "true" }))
+              }
+            >
+              <option value="false">No</option>
+              <option value="true">Sí</option>
+            </select>
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="behavior">Comportamiento</label>
+            <input
+              id="behavior"
+              name="behavior"
+              type="text"
+              value={form.behavior}
               onChange={handleChange}
             />
           </div>
@@ -380,6 +424,34 @@ export default function PetsPage() {
                     }
                   />
                 </label>
+                <label className="form-field">
+                  <span>Castrado</span>
+                  <select
+                    value={String(modalForm.neutered)}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        neutered: e.target.value === "true",
+                      }))
+                    }
+                  >
+                    <option value="false">No</option>
+                    <option value="true">Sí</option>
+                  </select>
+                </label>
+                <label className="form-field">
+                  <span>Comportamiento</span>
+                  <input
+                    type="text"
+                    value={modalForm.behavior}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({
+                        ...prev,
+                        behavior: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
               </>
             ) : (
               <>
@@ -394,6 +466,14 @@ export default function PetsPage() {
                 </div>
                 <div>
                   <strong>Celular:</strong> {selectedPet.owner_phone || "-"}
+                </div>
+                <div>
+                  <strong>Castrado:</strong>{" "}
+                  {selectedPet.neutered ? "Sí" : "No"}
+                </div>
+                <div>
+                  <strong>Comportamiento:</strong>{" "}
+                  {selectedPet.behavior || "-"}
                 </div>
                 <div>
                   <strong>Notas:</strong> {selectedPet.notes || "-"}
