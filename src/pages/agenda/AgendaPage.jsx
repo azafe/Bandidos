@@ -8,6 +8,7 @@ import {
   deleteAgendaTurno,
   updateAgendaTurno,
 } from "../../services/agendaApi";
+import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
 import "../../styles/agenda.css";
 
@@ -448,12 +449,39 @@ export default function AgendaPage() {
 
   async function updateStatus(turno, status) {
     try {
+      const previousStatus = normalizeStatus(turno.status);
       await updateAgendaTurno(turno.id, { status });
+      if (status === "finished" && previousStatus !== "finished") {
+        await createServiceFromTurno({ ...turno, status });
+      }
       await refetch();
       setSelectedTurno((prev) => (prev ? { ...prev, status } : prev));
     } catch (err) {
       const details = err?.status ? ` (${err.status})` : "";
       alert(`${err.message || "No se pudo actualizar el estado."}${details}`);
+    }
+  }
+
+  async function createServiceFromTurno(turno) {
+    try {
+      const payload = {
+        date: normalizeDate(turno.date),
+        customer_id: normalizeId(turno.customer_id || turno.owner_id || null),
+        pet_id: normalizeId(turno.pet_id),
+        service_type_id: normalizeId(turno.service_type_id),
+        price: getServicePrice(turno),
+        payment_method_id: normalizeId(turno.payment_method_id),
+        groomer_id: normalizeId(turno.groomer_id),
+        notes: (turno.notes || "").trim(),
+      };
+      await apiRequest("/v2/services", { method: "POST", body: payload });
+    } catch (err) {
+      console.error("[agenda] Error creando servicio desde turno", {
+        message: err?.message,
+        status: err?.status,
+        payload: err?.payload,
+        turno_id: turno?.id,
+      });
     }
   }
 
