@@ -192,7 +192,7 @@ export default function AgendaPage() {
     () => serviceTypes.find((service) => service.id === form.service_type_id),
     [serviceTypes, form.service_type_id]
   );
-  const servicePrice = Number(selectedService?.price || selectedService?.amount || 0);
+  const servicePrice = Number(selectedService?.default_price || 0);
   const depositAmount = Number(form.deposit_amount || 0);
   const remainingAmount = Math.max(servicePrice - depositAmount, 0);
 
@@ -201,8 +201,7 @@ export default function AgendaPage() {
       (service) => service.id === turno.service_type_id
     );
     return Number(
-      fromCatalog?.price ||
-        fromCatalog?.amount ||
+      fromCatalog?.default_price ||
         turno.service_price ||
         turno.amount ||
         turno.price ||
