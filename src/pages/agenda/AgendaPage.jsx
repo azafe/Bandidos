@@ -279,24 +279,45 @@ export default function AgendaPage() {
   }
 
   function validateForm() {
-    if (!form.date) return "Seleccioná la fecha.";
-    if (!form.time) return "Ingresá la hora.";
-    if (!form.pet_name.trim()) return "Ingresá la mascota.";
-    if (!form.owner_name.trim()) return "Ingresá el dueño.";
-    if (!form.service_type_id) return "Seleccioná el servicio.";
+    if (!form.date) return { field: "agenda-date", message: "Seleccioná la fecha." };
+    if (!form.time) return { field: "agenda-time", message: "Ingresá la hora." };
+    if (!form.pet_name.trim())
+      return { field: "agenda-pet", message: "Ingresá la mascota." };
+    if (!form.owner_name.trim())
+      return { field: "agenda-owner", message: "Ingresá el dueño." };
+    if (!form.service_type_id)
+      return { field: "agenda-service", message: "Seleccioná el servicio." };
     const amount = Number(form.deposit_amount || 0);
     if (Number.isNaN(amount) || amount < 0)
-      return "El monto de pago/seña debe ser mayor o igual a 0.";
+      return {
+        field: "agenda-deposit",
+        message: "El monto de pago/seña debe ser mayor o igual a 0.",
+      };
     const [hour, minute] = form.time.split(":").map(Number);
     if (hour < 7 || hour > 22 || minute > 59 || minute < 0)
-      return "La hora debe estar entre 07:00 y 22:00.";
-    return "";
+      return {
+        field: "agenda-time",
+        message: "La hora debe estar entre 07:00 y 22:00.",
+      };
+    return null;
+  }
+
+  function focusField(fieldId) {
+    if (!fieldId) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(fieldId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus({ preventScroll: true });
+      }
+    });
   }
 
   async function handleSubmit() {
     const validationError = validateForm();
     if (validationError) {
-      setFormError(validationError);
+      setFormError(validationError.message);
+      focusField(validationError.field);
       return;
     }
 
@@ -924,6 +945,7 @@ export default function AgendaPage() {
               />
               <input
                 type="date"
+                id="agenda-date"
                 name="date"
                 className="date-field__native"
                 value={form.date}
@@ -933,7 +955,13 @@ export default function AgendaPage() {
           </label>
           <label className="form-field">
             <span>Hora</span>
-            <input type="time" name="time" value={form.time} onChange={handleFormChange} />
+            <input
+              id="agenda-time"
+              type="time"
+              name="time"
+              value={form.time}
+              onChange={handleFormChange}
+            />
           </label>
           <label className="form-field">
             <span>Duracion (min)</span>
@@ -955,6 +983,7 @@ export default function AgendaPage() {
               <input
                 type="text"
                 name="pet_name"
+                id="agenda-pet"
                 placeholder="Buscá por nombre..."
                 value={petSearch}
                 onChange={(e) => {
@@ -997,6 +1026,7 @@ export default function AgendaPage() {
           <label className="form-field">
             <span>Dueño</span>
             <input
+              id="agenda-owner"
               type="text"
               name="owner_name"
               value={form.owner_name}
@@ -1006,6 +1036,7 @@ export default function AgendaPage() {
           <label className="form-field">
             <span>Servicio</span>
             <select
+              id="agenda-service"
               name="service_type_id"
               value={form.service_type_id}
               onChange={handleFormChange}
@@ -1036,6 +1067,7 @@ export default function AgendaPage() {
           <label className="form-field">
             <span>Pago/Seña</span>
             <input
+              id="agenda-deposit"
               type="number"
               name="deposit_amount"
               min="0"
