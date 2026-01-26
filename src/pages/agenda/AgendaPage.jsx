@@ -46,6 +46,14 @@ function normalizeDate(value) {
   return raw;
 }
 
+function normalizeId(value) {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return Number(raw);
+  return raw;
+}
+
 function formatDateLong(value) {
   if (!value) return "-";
   const raw = String(value).split("T")[0];
@@ -389,25 +397,23 @@ export default function AgendaPage() {
 
     setFormLoading(true);
     try {
-      const petId = form.pet_id ? Number(form.pet_id) : null;
-      const serviceTypeId = form.service_type_id ? Number(form.service_type_id) : null;
-      const paymentMethodId = form.payment_method_id
-        ? Number(form.payment_method_id)
-        : null;
-      const groomerId = form.groomer_id ? Number(form.groomer_id) : null;
+      const petId = normalizeId(form.pet_id);
+      const serviceTypeId = normalizeId(form.service_type_id);
+      const paymentMethodId = normalizeId(form.payment_method_id);
+      const groomerId = normalizeId(form.groomer_id);
       const payload = {
         date: normalizeDate(form.date),
         time: form.time,
         duration: Number(form.duration || 60),
-        pet_id: Number.isNaN(petId) ? null : petId,
+        pet_id: petId,
         pet_name: form.pet_name.trim(),
         breed: form.breed.trim(),
         owner_name: form.owner_name.trim(),
-        service_type_id: Number.isNaN(serviceTypeId) ? null : serviceTypeId,
-        payment_method_id: Number.isNaN(paymentMethodId) ? null : paymentMethodId,
+        service_type_id: serviceTypeId,
+        payment_method_id: paymentMethodId,
         deposit_amount: Number(form.deposit_amount || 0),
         notes: form.notes.trim(),
-        groomer_id: Number.isNaN(groomerId) ? null : groomerId,
+        groomer_id: groomerId,
         status: normalizeStatus(form.status),
       };
       if (isEditing && selectedTurno) {
