@@ -54,14 +54,6 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
-          to="/customers"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Clientes
-        </NavLink>
-
-        <NavLink
           to="/pets"
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
