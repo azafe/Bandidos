@@ -57,37 +57,6 @@ function parseSheetDate(dateStr) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-function toISODate(value) {
-  if (!value) return "";
-  const raw = String(value).trim();
-  if (raw.includes("T")) return raw.slice(0, 10);
-  if (raw.includes("-") && raw.split("-")[0].length === 4) {
-    return raw.slice(0, 10);
-  }
-  const parsed = parseSheetDate(raw);
-  if (!parsed || Number.isNaN(parsed.getTime())) return "";
-  const dd = String(parsed.getDate()).padStart(2, "0");
-  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
-  const yyyy = parsed.getFullYear();
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function buildModalForm(service) {
-  return {
-    date: toISODate(service?.date),
-    customer_id: service?.customer_id || service?.customer?.id || "",
-    pet_id: service?.pet_id || service?.pet?.id || "",
-    service_type_id: service?.service_type_id || service?.service_type?.id || "",
-    price:
-      service?.price !== null && service?.price !== undefined
-        ? String(service.price)
-        : "",
-    payment_method_id: service?.payment_method_id || service?.payment_method?.id || "",
-    groomer_id: service?.groomer_id || service?.groomer?.id || "",
-    notes: service?.notes || "",
-  };
-}
-
 export default function ServicesListPage() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,17 +73,6 @@ export default function ServicesListPage() {
   const [isFilterPetOpen, setIsFilterPetOpen] = useState(false);
   const [isFilterServiceOpen, setIsFilterServiceOpen] = useState(false);
   const [isFilterGroomerOpen, setIsFilterGroomerOpen] = useState(false);
-  const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalForm, setModalForm] = useState({
-    date: "",
-    customer_id: "",
-    pet_id: "",
-    service_type_id: "",
-    price: "",
-    payment_method_id: "",
-    groomer_id: "",
-    notes: "",
-  });
   const [filters, setFilters] = useState(() => {
     const now = new Date();
     const yyyy = now.getFullYear();
@@ -141,12 +99,14 @@ export default function ServicesListPage() {
       try {
         setLoading(true);
         setError(null);
-        const data = await apiRequest("/v2/services", { params: filters });
+        const data = await apiRequest("/agenda", {
+          params: { from: filters.from, to: filters.to },
+        });
         if (!active) return;
         setServices(Array.isArray(data) ? data : data?.items || []);
       } catch (err) {
         if (!active) return;
-        setError(err.message || "No se pudieron cargar los servicios.");
+        setError(err.message || "No se pudieron cargar los turnos.");
       } finally {
         if (active) setLoading(false);
       }
@@ -156,7 +116,7 @@ export default function ServicesListPage() {
     return () => {
       active = false;
     };
-  }, [filters]);
+  }, [filters.from, filters.to]);
 
   // Stats
   const servicesWithDate = services.map((s) => ({
@@ -173,13 +133,13 @@ export default function ServicesListPage() {
 
   const countToday = servicesToday.length;
   const totalToday = servicesToday.reduce(
-    (acc, s) => acc + (Number(s.price) || 0),
+    (acc, s) => acc + getServicePrice(s),
     0
   );
 
   const countPeriod = servicesWithDate.length;
   const totalPeriod = servicesWithDate.reduce(
-    (acc, s) => acc + (Number(s.price) || 0),
+    (acc, s) => acc + getServicePrice(s),
     0
   );
 
@@ -189,22 +149,35 @@ export default function ServicesListPage() {
     return match?.name || "";
   }
 
+  const STATUS_LABELS = {
+    reserved: "Reservado",
+    finished: "Finalizado",
+    cancelled: "Cancelado",
+  };
+
+  function normalizeStatus(status) {
+    return STATUS_LABELS[status] ? status : "reserved";
+  }
+
   const resolveOwnerName = (service) =>
+    service.owner_name ||
     service.ownerName ||
     service.customer?.name ||
     getNameById(customers, service.customer_id) ||
     "-";
   const resolvePetName = (service) =>
+    service.pet_name ||
     service.dogName ||
     service.pet?.name ||
     getNameById(pets, service.pet_id) ||
     "-";
   const resolveServiceTypeName = (service) =>
-    service.type ||
     service.service_type?.name ||
+    service.type ||
     getNameById(serviceTypes, service.service_type_id) ||
     "-";
   const resolvePaymentMethodName = (service) =>
+    service.payment_method?.name ||
     service.paymentMethod ||
     service.payment_method?.name ||
     getNameById(paymentMethods, service.payment_method_id) ||
@@ -215,7 +188,21 @@ export default function ServicesListPage() {
     getNameById(employees, service.groomer_id) ||
     "-";
 
-  // Filtro de búsqueda sobre los servicios
+  function getServicePrice(service) {
+    const fromCatalog = serviceTypes.find(
+      (item) => String(item.id) === String(service.service_type_id)
+    );
+    return Number(
+      fromCatalog?.default_price ||
+        service.service_type?.default_price ||
+        service.service_price ||
+        service.amount ||
+        service.price ||
+        0
+    );
+  }
+
+  // Filtro de búsqueda sobre los turnos
   const searchTerm = search.trim().toLowerCase();
   const serviceMatchesSearch = (service) => {
     if (!searchTerm) return true;
@@ -232,8 +219,36 @@ export default function ServicesListPage() {
       .some((field) => field.toLowerCase().includes(searchTerm));
   };
 
-  const filteredPeriod = servicesWithDate.filter(serviceMatchesSearch);
-  const filteredToday = servicesToday.filter(serviceMatchesSearch);
+  const matchesFilters = (service) => {
+    if (filters.customer_id) {
+      const customerName = getNameById(customers, filters.customer_id).toLowerCase();
+      const ownerName = resolveOwnerName(service).toLowerCase();
+      if (!ownerName || !customerName || !ownerName.includes(customerName)) return false;
+    }
+    if (filters.pet_id) {
+      const petName = getNameById(pets, filters.pet_id).toLowerCase();
+      const matchesId = String(service.pet_id) === String(filters.pet_id);
+      const matchesName = resolvePetName(service).toLowerCase() === petName;
+      if (!matchesId && !matchesName) return false;
+    }
+    if (filters.service_type_id) {
+      const serviceName = getNameById(serviceTypes, filters.service_type_id).toLowerCase();
+      const matchesId =
+        String(service.service_type_id) === String(filters.service_type_id);
+      const matchesName = resolveServiceTypeName(service).toLowerCase() === serviceName;
+      if (!matchesId && !matchesName) return false;
+    }
+    if (filters.groomer_id) {
+      const groomerName = getNameById(employees, filters.groomer_id).toLowerCase();
+      const matchesId = String(service.groomer_id) === String(filters.groomer_id);
+      const matchesName = resolveGroomerName(service).toLowerCase() === groomerName;
+      if (!matchesId && !matchesName) return false;
+    }
+    return true;
+  };
+
+  const filteredPeriod = servicesWithDate.filter(matchesFilters).filter(serviceMatchesSearch);
+  const filteredToday = servicesToday.filter(matchesFilters).filter(serviceMatchesSearch);
 
   const listItems = activeTab === "today" ? filteredToday : filteredPeriod;
 
@@ -311,10 +326,6 @@ export default function ServicesListPage() {
     setFilterGroomerSearch("");
   }
 
-  const modalPets = pets.filter((p) =>
-    modalForm.customer_id ? p.customer_id === modalForm.customer_id : true
-  );
-
   const periodLabel = `${filters.from} → ${filters.to}`;
 
   function formatPrice(value) {
@@ -331,12 +342,6 @@ export default function ServicesListPage() {
     const yyyy = parsed.getFullYear();
     return `${dd}-${mm}-${yyyy}`;
   }
-
-  useEffect(() => {
-    if (!selectedService) return;
-    setModalForm(buildModalForm(selectedService));
-    setIsEditingModal(false);
-  }, [selectedService]);
 
   useEffect(() => {
     const match = customers.find(
@@ -364,79 +369,6 @@ export default function ServicesListPage() {
     setFilterGroomerSearch(match?.name || "");
   }, [filters.groomer_id, employees]);
 
-  function handleModalChange(e) {
-    const { name, value } = e.target;
-    setModalForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function handleModalSave() {
-    if (!selectedService) return;
-    const amountNumber = Number(modalForm.price || 0);
-    if (!modalForm.customer_id) {
-      alert("Seleccioná un cliente.");
-      return;
-    }
-    if (!modalForm.pet_id) {
-      alert("Seleccioná una mascota.");
-      return;
-    }
-    if (!modalForm.service_type_id) {
-      alert("Seleccioná un tipo de servicio.");
-      return;
-    }
-    if (!modalForm.payment_method_id) {
-      alert("Seleccioná un método de pago.");
-      return;
-    }
-    if (!amountNumber || amountNumber <= 0) {
-      alert("Ingresá un precio válido.");
-      return;
-    }
-
-    const payload = {
-      date: modalForm.date,
-      customer_id: modalForm.customer_id,
-      pet_id: modalForm.pet_id,
-      service_type_id: modalForm.service_type_id,
-      price: amountNumber,
-      payment_method_id: modalForm.payment_method_id,
-      groomer_id: modalForm.groomer_id || null,
-      notes: modalForm.notes?.trim() || "",
-    };
-
-    try {
-      await apiRequest(`/v2/services/${selectedService.id}`, {
-        method: "PUT",
-        body: payload,
-      });
-      const data = await apiRequest("/v2/services", { params: filters });
-      const items = Array.isArray(data) ? data : data?.items || [];
-      setServices(items);
-      const updated = items.find((item) => item.id === selectedService.id);
-      if (updated) setSelectedService(updated);
-      setIsEditingModal(false);
-    } catch (err) {
-      alert(err.message || "No se pudo actualizar el servicio.");
-    }
-  }
-
-  async function handleDelete(service) {
-    const ok = window.confirm(
-      `¿Eliminar el turno de ${resolvePetName(service)} (${service.date})?`
-    );
-    if (!ok) return false;
-
-    try {
-      await apiRequest(`/v2/services/${service.id}`, { method: "DELETE" });
-      const data = await apiRequest("/v2/services", { params: filters });
-      setServices(Array.isArray(data) ? data : data?.items || []);
-      return true;
-    } catch {
-      alert("No se pudo eliminar el servicio. Revisá la consola.");
-      return false;
-    }
-  }
-
   
 
   return (
@@ -445,12 +377,12 @@ export default function ServicesListPage() {
         <div>
           <h1 className="page-title">Servicios</h1>
           <p className="page-subtitle">
-            Servicios registrados en Bandidos para el período seleccionado.
+            Turnos agendados para el período seleccionado.
           </p>
         </div>
 
-        <Link to="/services/new" className="btn-primary">
-          + Nuevo servicio
+        <Link to="/agenda" className="btn-primary">
+          Ver agenda
         </Link>
       </header>
 
@@ -795,7 +727,7 @@ export default function ServicesListPage() {
       <div className="card services-panel">
         <div className="services-panel__header">
           <div>
-            <h2 className="card-title">Listado de servicios</h2>
+            <h2 className="card-title">Listado de turnos</h2>
             <p className="card-subtitle">
               Navegá por hoy o por el período filtrado.
             </p>
@@ -848,9 +780,9 @@ export default function ServicesListPage() {
           ) : listItems.length === 0 ? (
             <div className="services-empty">
               {activeTab === "today" && servicesToday.length === 0
-                ? "Todavía no hay servicios cargados para hoy."
+                ? "Todavía no hay turnos cargados para hoy."
                 : activeTab === "period" && servicesWithDate.length === 0
-                ? "No hay servicios cargados en este período."
+                ? "No hay turnos cargados en este período."
                 : "No hay resultados para la búsqueda o filtros actuales."}
             </div>
           ) : (
@@ -860,7 +792,6 @@ export default function ServicesListPage() {
                 className="service-item"
                 onClick={() => {
                   setSelectedService(s);
-                  setIsEditingModal(false);
                 }}
               >
                 <div className="service-item__body">
@@ -869,6 +800,7 @@ export default function ServicesListPage() {
                   </div>
                   <div className="service-item__meta">
                     <span>{formatDateDisplay(s.date)}</span>
+                    {s.time ? <span>{s.time}</span> : null}
                     <span>{resolveOwnerName(s)}</span>
                     <span>{resolveGroomerName(s)}</span>
                   </div>
@@ -880,7 +812,7 @@ export default function ServicesListPage() {
                 </div>
                 <div className="service-item__side">
                   <div className="service-item__price">
-                    {formatPrice(s.price)}
+                    {formatPrice(getServicePrice(s))}
                   </div>
                 </div>
               </div>
@@ -892,202 +824,54 @@ export default function ServicesListPage() {
       <Modal
         isOpen={Boolean(selectedService)}
         onClose={() => setSelectedService(null)}
-        title="Detalle del servicio"
+        title="Detalle del turno"
       >
         {selectedService && (
           <>
-            {isEditingModal ? (
-              <>
-                <label className="form-field">
-                  <span>Fecha</span>
-                  <input
-                    type="date"
-                    name="date"
-                    value={modalForm.date}
-                    onChange={handleModalChange}
-                    required
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Cliente</span>
-                  <select
-                    name="customer_id"
-                    value={modalForm.customer_id}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        customer_id: e.target.value,
-                        pet_id: "",
-                      }))
-                    }
-                    required
-                  >
-                    <option value="">Seleccioná cliente</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Mascota</span>
-                  <select
-                    name="pet_id"
-                    value={modalForm.pet_id}
-                    onChange={handleModalChange}
-                    required
-                    disabled={!modalForm.customer_id}
-                  >
-                    <option value="">Seleccioná mascota</option>
-                    {modalPets.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Tipo de servicio</span>
-                  <select
-                    name="service_type_id"
-                    value={modalForm.service_type_id}
-                    onChange={handleModalChange}
-                    required
-                  >
-                    <option value="">Seleccioná servicio</option>
-                    {serviceTypes.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Precio</span>
-                  <input
-                    type="number"
-                    name="price"
-                    min="0"
-                    step="100"
-                    value={modalForm.price}
-                    onChange={handleModalChange}
-                    required
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Método de pago</span>
-                  <select
-                    name="payment_method_id"
-                    value={modalForm.payment_method_id}
-                    onChange={handleModalChange}
-                    required
-                  >
-                    <option value="">Seleccioná método</option>
-                    {paymentMethods.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Groomer</span>
-                  <select
-                    name="groomer_id"
-                    value={modalForm.groomer_id}
-                    onChange={handleModalChange}
-                  >
-                    <option value="">Seleccioná</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Notas</span>
-                  <textarea
-                    name="notes"
-                    rows={3}
-                    value={modalForm.notes}
-                    onChange={handleModalChange}
-                  />
-                </label>
-              </>
-            ) : (
-              <>
+            <>
+              <div>
+                <strong>Fecha:</strong> {formatDateDisplay(selectedService.date)}
+              </div>
+              {selectedService.time ? (
                 <div>
-                  <strong>Fecha:</strong> {formatDateDisplay(selectedService.date)}
+                  <strong>Hora:</strong> {selectedService.time}
                 </div>
-                <div>
-                  <strong>Perro:</strong> {resolvePetName(selectedService)}
-                </div>
-                <div>
-                  <strong>Dueño:</strong> {resolveOwnerName(selectedService)}
-                </div>
-                <div>
-                  <strong>Servicio:</strong>{" "}
-                  {resolveServiceTypeName(selectedService)}
-                </div>
-                <div>
-                  <strong>Precio:</strong> {formatPrice(selectedService.price)}
-                </div>
-                <div>
-                  <strong>Método de pago:</strong>{" "}
-                  {resolvePaymentMethodName(selectedService)}
-                </div>
-                <div>
-                  <strong>Groomer:</strong> {resolveGroomerName(selectedService)}
-                </div>
-                <div>
-                  <strong>Notas:</strong> {selectedService.notes || "-"}
-                </div>
-              </>
-            )}
+              ) : null}
+              <div>
+                <strong>Mascota:</strong> {resolvePetName(selectedService)}
+              </div>
+              <div>
+                <strong>Dueño:</strong> {resolveOwnerName(selectedService)}
+              </div>
+              <div>
+                <strong>Servicio:</strong> {resolveServiceTypeName(selectedService)}
+              </div>
+              <div>
+                <strong>Precio:</strong> {formatPrice(getServicePrice(selectedService))}
+              </div>
+              <div>
+                <strong>Método de pago:</strong>{" "}
+                {resolvePaymentMethodName(selectedService)}
+              </div>
+              <div>
+                <strong>Groomer:</strong> {resolveGroomerName(selectedService)}
+              </div>
+              <div>
+                <strong>Estado:</strong>{" "}
+                {STATUS_LABELS[normalizeStatus(selectedService.status)]}
+              </div>
+              <div>
+                <strong>Notas:</strong> {selectedService.notes || "-"}
+              </div>
+            </>
             <div className="modal-actions">
-              {isEditingModal ? (
-                <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => {
-                      setModalForm(buildModalForm(selectedService));
-                      setIsEditingModal(false);
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
-                  >
-                    Guardar cambios
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => setIsEditingModal(true)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    onClick={async () => {
-                      const removed = await handleDelete(selectedService);
-                      if (removed) setSelectedService(null);
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedService(null)}
+              >
+                Cerrar
+              </button>
             </div>
           </>
         )}
