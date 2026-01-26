@@ -758,7 +758,7 @@ export default function AgendaPage() {
                   <div className="agenda-card__body">
                     <div className="agenda-card__title">
                       {turno.pet_name || "Mascota"} -{" "}
-                      {turno.service_type?.name || "Servicio"}
+                      {getServiceName(turno, serviceTypes) || "Servicio"}
                     </div>
                     <div className="agenda-card__meta">
                       {turno.owner_name || "-"} · {turno.breed || "-"}
