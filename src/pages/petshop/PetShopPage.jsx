@@ -94,30 +94,6 @@ export default function PetShopPage() {
   const [saleSubmitting, setSaleSubmitting] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
 
-  const [stockFilters, setStockFilters] = useState(() => {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    return {
-      from: `${yyyy}-${mm}-01`,
-      to: now.toISOString().slice(0, 10),
-    };
-  });
-  const {
-    items: stockMovements,
-    loading: stockLoading,
-    error: stockError,
-    createItem: createStockMovement,
-    refresh: refreshStock,
-  } = useApiResource("/v2/petshop/stock-movements", stockFilters);
-  const [stockForm, setStockForm] = useState({
-    date: todayISO(),
-    product_id: "",
-    type: "in",
-    quantity: "",
-    note: "",
-  });
-  const [stockSubmitting, setStockSubmitting] = useState(false);
 
   const saleTotal = useMemo(
     () =>
@@ -317,41 +293,6 @@ export default function PetShopPage() {
     }
   }
 
-  async function handleStockSubmit(e) {
-    e.preventDefault();
-    if (!stockForm.product_id) {
-      alert("Seleccioná un producto.");
-      return;
-    }
-    if (!stockForm.quantity || toNumber(stockForm.quantity) <= 0) {
-      alert("Ingresá una cantidad válida.");
-      return;
-    }
-    setStockSubmitting(true);
-    try {
-      const payload = {
-        date: stockForm.date,
-        product_id: stockForm.product_id,
-        type: stockForm.type,
-        quantity: toNumber(stockForm.quantity),
-        note: stockForm.note.trim() || null,
-      };
-      await createStockMovement(payload);
-      setStockForm({
-        date: todayISO(),
-        product_id: "",
-        type: "in",
-        quantity: "",
-        note: "",
-      });
-      await refreshStock();
-      await refreshProducts();
-    } catch (err) {
-      alert(err.message || "No se pudo registrar el movimiento.");
-    } finally {
-      setStockSubmitting(false);
-    }
-  }
 
   function formatProductName(productId) {
     const product = products.find((p) => String(p.id) === String(productId));
@@ -400,13 +341,6 @@ export default function PetShopPage() {
             onClick={() => setActiveTab("products")}
           >
             Productos
-          </button>
-          <button
-            type="button"
-            className={activeTab === "stock" ? "tab tab--active" : "tab"}
-            onClick={() => setActiveTab("stock")}
-          >
-            Stock
           </button>
         </div>
       </div>
@@ -814,153 +748,6 @@ export default function PetShopPage() {
         </>
       ) : null}
 
-      {activeTab === "stock" ? (
-        <>
-          <form className="form-card" onSubmit={handleStockSubmit}>
-            <h2 className="card-title">Movimiento de stock</h2>
-            <p className="card-subtitle">
-              Registrá ingresos, ventas manuales o ajustes.
-            </p>
-            <div className="form-grid">
-              <div className="form-field">
-                <label htmlFor="stock_date">Fecha</label>
-                <input
-                  id="stock_date"
-                  type="date"
-                  value={stockForm.date}
-                  onChange={(e) =>
-                    setStockForm((prev) => ({ ...prev, date: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="stock_product">Producto</label>
-                <select
-                  id="stock_product"
-                  value={stockForm.product_id}
-                  onChange={(e) =>
-                    setStockForm((prev) => ({
-                      ...prev,
-                      product_id: e.target.value,
-                    }))
-                  }
-                  required
-                >
-                  <option value="">Seleccioná</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-field">
-                <label htmlFor="stock_type">Tipo</label>
-                <select
-                  id="stock_type"
-                  value={stockForm.type}
-                  onChange={(e) =>
-                    setStockForm((prev) => ({ ...prev, type: e.target.value }))
-                  }
-                >
-                  <option value="in">Entrada</option>
-                  <option value="out">Salida</option>
-                  <option value="adjust">Ajuste</option>
-                </select>
-              </div>
-              <div className="form-field">
-                <label htmlFor="stock_qty">Cantidad</label>
-                <input
-                  id="stock_qty"
-                  type="number"
-                  min="1"
-                  value={stockForm.quantity}
-                  onChange={(e) =>
-                    setStockForm((prev) => ({
-                      ...prev,
-                      quantity: e.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-              <div className="form-field form-field--full">
-                <label htmlFor="stock_note">Motivo / Nota</label>
-                <input
-                  id="stock_note"
-                  type="text"
-                  value={stockForm.note}
-                  onChange={(e) =>
-                    setStockForm((prev) => ({ ...prev, note: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn-primary" disabled={stockSubmitting}>
-                {stockSubmitting ? "Guardando..." : "Registrar movimiento"}
-              </button>
-            </div>
-          </form>
-
-          <div className="card">
-            <div className="petshop-list__header">
-              <div>
-                <h2 className="card-title">Historial de stock</h2>
-                <p className="card-subtitle">
-                  Período: {stockFilters.from} → {stockFilters.to}
-                </p>
-              </div>
-              <div className="petshop-date-range">
-                <input
-                  type="date"
-                  value={stockFilters.from}
-                  onChange={(e) =>
-                    setStockFilters((prev) => ({ ...prev, from: e.target.value }))
-                  }
-                />
-                <input
-                  type="date"
-                  value={stockFilters.to}
-                  onChange={(e) =>
-                    setStockFilters((prev) => ({ ...prev, to: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-
-            {stockError && <div className="petshop-error">{stockError}</div>}
-            {stockLoading ? (
-              <div className="card-subtitle">Cargando movimientos...</div>
-            ) : (
-              <div className="table-wrapper">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Producto</th>
-                      <th>Tipo</th>
-                      <th>Cantidad</th>
-                      <th>Nota</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stockMovements.map((movement) => (
-                      <tr key={movement.id}>
-                        <td>{movement.date}</td>
-                        <td>{formatProductName(movement.product_id)}</td>
-                        <td>{movement.type}</td>
-                        <td>{movement.quantity}</td>
-                        <td>{movement.note || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </>
-      ) : null}
 
       <Modal
         isOpen={Boolean(selectedProduct)}
