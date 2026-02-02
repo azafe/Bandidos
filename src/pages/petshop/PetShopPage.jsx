@@ -35,7 +35,6 @@ function toNumber(value, fallback = 0) {
 export default function PetShopPage() {
   const [activeTab, setActiveTab] = useState("sales");
 
-  const { items: suppliers } = useApiResource("/v2/suppliers");
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
 
   const {
@@ -51,8 +50,6 @@ export default function PetShopPage() {
   const [productForm, setProductForm] = useState({
     name: "",
     sku: "",
-    category: "",
-    supplier_id: "",
     cost: "",
     price: "",
     stock: "",
@@ -132,8 +129,6 @@ export default function PetShopPage() {
     setProductForm({
       name: "",
       sku: "",
-      category: "",
-      supplier_id: "",
       cost: "",
       price: "",
       stock: "",
@@ -156,8 +151,6 @@ export default function PetShopPage() {
     const payload = {
       name: productForm.name.trim(),
       sku: productForm.sku.trim() || null,
-      category: productForm.category.trim() || null,
-      supplier_id: productForm.supplier_id || null,
       cost: toNumber(productForm.cost, 0),
       price: toNumber(productForm.price, 0),
       stock: toNumber(productForm.stock, 0),
@@ -192,8 +185,6 @@ export default function PetShopPage() {
     setProductForm({
       name: product.name || "",
       sku: product.sku || "",
-      category: product.category || "",
-      supplier_id: product.supplier_id || "",
       cost: product.cost !== null && product.cost !== undefined ? String(product.cost) : "",
       price:
         product.price !== null && product.price !== undefined ? String(product.price) : "",
@@ -309,11 +300,6 @@ export default function PetShopPage() {
   function formatProductName(productId) {
     const product = products.find((p) => String(p.id) === String(productId));
     return product?.name || "-";
-  }
-
-  function formatSupplierName(supplierId) {
-    const supplier = suppliers.find((s) => String(s.id) === String(supplierId));
-    return supplier?.name || "-";
   }
 
   function formatPaymentMethod(id) {
@@ -667,37 +653,6 @@ export default function PetShopPage() {
                 />
               </div>
               <div className="form-field">
-                <label htmlFor="product_category">Categoría</label>
-                <input
-                  id="product_category"
-                  type="text"
-                  value={productForm.category}
-                  onChange={(e) =>
-                    setProductForm((prev) => ({ ...prev, category: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="form-field">
-                <label htmlFor="product_supplier">Proveedor</label>
-                <select
-                  id="product_supplier"
-                  value={productForm.supplier_id}
-                  onChange={(e) =>
-                    setProductForm((prev) => ({
-                      ...prev,
-                      supplier_id: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Sin proveedor</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-field">
                 <label htmlFor="product_cost">Costo</label>
                 <input
                   id="product_cost"
@@ -779,7 +734,6 @@ export default function PetShopPage() {
                     <tr>
                       <th>Producto</th>
                       <th>SKU</th>
-                      <th>Proveedor</th>
                       <th>Stock</th>
                       <th>Min</th>
                       <th>Precio</th>
@@ -791,7 +745,6 @@ export default function PetShopPage() {
                       <tr key={product.id}>
                         <td>{product.name}</td>
                         <td>{product.sku || "-"}</td>
-                        <td>{formatSupplierName(product.supplier_id)}</td>
                         <td>{product.stock ?? 0}</td>
                         <td>{product.stock_min ?? 0}</td>
                         <td>{formatCurrency(product.price)}</td>
