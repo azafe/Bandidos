@@ -63,6 +63,14 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
+          to="/petshop"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          PetShop
+        </NavLink>
+
+        <NavLink
           to="/expenses/daily"
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}

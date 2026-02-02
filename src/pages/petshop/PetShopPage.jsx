@@ -1,0 +1,980 @@
+// src/pages/petshop/PetShopPage.jsx
+import { useMemo, useState } from "react";
+import { useApiResource } from "../../hooks/useApiResource";
+import { apiRequest } from "../../services/apiClient";
+import Modal from "../../components/ui/Modal";
+import "../../styles/petshop.css";
+
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === "") return "-";
+  return `$${Number(value).toLocaleString("es-AR")}`;
+}
+
+function toNumber(value, fallback = 0) {
+  const num = Number(value);
+  if (Number.isNaN(num)) return fallback;
+  return num;
+}
+
+export default function PetShopPage() {
+  const [activeTab, setActiveTab] = useState("sales");
+
+  const { items: customers } = useApiResource("/v2/customers");
+  const { items: suppliers } = useApiResource("/v2/suppliers");
+  const { items: paymentMethods } = useApiResource("/v2/payment-methods");
+
+  const {
+    items: products,
+    loading: productsLoading,
+    error: productsError,
+    createItem: createProduct,
+    updateItem: updateProduct,
+    deleteItem: deleteProduct,
+    refresh: refreshProducts,
+  } = useApiResource("/v2/petshop/products");
+
+  const [productForm, setProductForm] = useState({
+    name: "",
+    sku: "",
+    category: "",
+    supplier_id: "",
+    cost: "",
+    price: "",
+    stock: "",
+    stock_min: "",
+  });
+  const [editingProductId, setEditingProductId] = useState(null);
+
+  const [salesFilters, setSalesFilters] = useState(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    return {
+      from: `${yyyy}-${mm}-01`,
+      to: now.toISOString().slice(0, 10),
+    };
+  });
+  const {
+    items: sales,
+    loading: salesLoading,
+    error: salesError,
+    refresh: refreshSales,
+  } = useApiResource("/v2/petshop/sales", salesFilters);
+
+  const [saleForm, setSaleForm] = useState({
+    date: todayISO(),
+    customer_id: "",
+    payment_method_id: "",
+    notes: "",
+  });
+  const [saleItems, setSaleItems] = useState([
+    { product_id: "", quantity: 1, unit_price: "" },
+  ]);
+  const [saleSubmitting, setSaleSubmitting] = useState(false);
+  const [selectedSale, setSelectedSale] = useState(null);
+
+  const [stockFilters, setStockFilters] = useState(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    return {
+      from: `${yyyy}-${mm}-01`,
+      to: now.toISOString().slice(0, 10),
+    };
+  });
+  const {
+    items: stockMovements,
+    loading: stockLoading,
+    error: stockError,
+    createItem: createStockMovement,
+    refresh: refreshStock,
+  } = useApiResource("/v2/petshop/stock-movements", stockFilters);
+  const [stockForm, setStockForm] = useState({
+    date: todayISO(),
+    product_id: "",
+    type: "in",
+    quantity: "",
+    note: "",
+  });
+  const [stockSubmitting, setStockSubmitting] = useState(false);
+
+  const saleTotal = useMemo(
+    () =>
+      saleItems.reduce(
+        (sum, item) => sum + toNumber(item.quantity) * toNumber(item.unit_price),
+        0
+      ),
+    [saleItems]
+  );
+
+  const salesCount = sales.length;
+  const salesRevenue = sales.reduce((sum, sale) => sum + toNumber(sale.total), 0);
+
+  const lowStockProducts = products.filter(
+    (product) => toNumber(product.stock) <= toNumber(product.stock_min)
+  );
+
+  function resetProductForm() {
+    setProductForm({
+      name: "",
+      sku: "",
+      category: "",
+      supplier_id: "",
+      cost: "",
+      price: "",
+      stock: "",
+      stock_min: "",
+    });
+    setEditingProductId(null);
+  }
+
+  async function handleProductSubmit(e) {
+    e.preventDefault();
+    if (!productForm.name.trim()) {
+      alert("Ingresá el nombre del producto.");
+      return;
+    }
+    if (!productForm.price) {
+      alert("Ingresá el precio de venta.");
+      return;
+    }
+
+    const payload = {
+      name: productForm.name.trim(),
+      sku: productForm.sku.trim() || null,
+      category: productForm.category.trim() || null,
+      supplier_id: productForm.supplier_id || null,
+      cost: toNumber(productForm.cost, 0),
+      price: toNumber(productForm.price, 0),
+      stock: toNumber(productForm.stock, 0),
+      stock_min: toNumber(productForm.stock_min, 0),
+    };
+
+    try {
+      if (editingProductId) {
+        await updateProduct(editingProductId, payload);
+      } else {
+        await createProduct(payload);
+      }
+      resetProductForm();
+      await refreshProducts();
+    } catch (err) {
+      alert(err.message || "No se pudo guardar el producto.");
+    }
+  }
+
+  async function handleProductDelete(productId) {
+    const ok = window.confirm("¿Eliminar este producto?");
+    if (!ok) return;
+    try {
+      await deleteProduct(productId);
+      await refreshProducts();
+    } catch (err) {
+      alert(err.message || "No se pudo eliminar el producto.");
+    }
+  }
+
+  function startEditProduct(product) {
+    setProductForm({
+      name: product.name || "",
+      sku: product.sku || "",
+      category: product.category || "",
+      supplier_id: product.supplier_id || "",
+      cost: product.cost !== null && product.cost !== undefined ? String(product.cost) : "",
+      price:
+        product.price !== null && product.price !== undefined ? String(product.price) : "",
+      stock:
+        product.stock !== null && product.stock !== undefined ? String(product.stock) : "",
+      stock_min:
+        product.stock_min !== null && product.stock_min !== undefined
+          ? String(product.stock_min)
+          : "",
+    });
+    setEditingProductId(product.id);
+  }
+
+  function updateSaleItem(index, next) {
+    setSaleItems((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, ...next } : item))
+    );
+  }
+
+  function handleSaleItemProduct(index, productId) {
+    const product = products.find((p) => String(p.id) === String(productId));
+    updateSaleItem(index, {
+      product_id: productId,
+      unit_price:
+        product && product.price !== null && product.price !== undefined
+          ? String(product.price)
+          : "",
+    });
+  }
+
+  async function handleSaleSubmit(e) {
+    e.preventDefault();
+    if (!saleForm.payment_method_id) {
+      alert("Seleccioná un método de pago.");
+      return;
+    }
+    if (!saleItems.length) {
+      alert("Agregá al menos un producto.");
+      return;
+    }
+    const invalid = saleItems.some(
+      (item) => !item.product_id || toNumber(item.quantity) <= 0
+    );
+    if (invalid) {
+      alert("Completá producto y cantidad en cada ítem.");
+      return;
+    }
+    setSaleSubmitting(true);
+    try {
+      const payload = {
+        date: saleForm.date,
+        customer_id: saleForm.customer_id || null,
+        payment_method_id: saleForm.payment_method_id,
+        notes: saleForm.notes.trim(),
+        total: saleTotal,
+        items: saleItems.map((item) => ({
+          product_id: item.product_id,
+          quantity: toNumber(item.quantity, 1),
+          unit_price: toNumber(item.unit_price, 0),
+        })),
+      };
+      await apiRequest("/v2/petshop/sales", { method: "POST", body: payload });
+      setSaleForm({
+        date: todayISO(),
+        customer_id: "",
+        payment_method_id: "",
+        notes: "",
+      });
+      setSaleItems([{ product_id: "", quantity: 1, unit_price: "" }]);
+      await refreshSales();
+      await refreshProducts();
+    } catch (err) {
+      alert(err.message || "No se pudo registrar la venta.");
+    } finally {
+      setSaleSubmitting(false);
+    }
+  }
+
+  async function handleStockSubmit(e) {
+    e.preventDefault();
+    if (!stockForm.product_id) {
+      alert("Seleccioná un producto.");
+      return;
+    }
+    if (!stockForm.quantity || toNumber(stockForm.quantity) <= 0) {
+      alert("Ingresá una cantidad válida.");
+      return;
+    }
+    setStockSubmitting(true);
+    try {
+      const payload = {
+        date: stockForm.date,
+        product_id: stockForm.product_id,
+        type: stockForm.type,
+        quantity: toNumber(stockForm.quantity),
+        note: stockForm.note.trim() || null,
+      };
+      await createStockMovement(payload);
+      setStockForm({
+        date: todayISO(),
+        product_id: "",
+        type: "in",
+        quantity: "",
+        note: "",
+      });
+      await refreshStock();
+      await refreshProducts();
+    } catch (err) {
+      alert(err.message || "No se pudo registrar el movimiento.");
+    } finally {
+      setStockSubmitting(false);
+    }
+  }
+
+  function formatProductName(productId) {
+    const product = products.find((p) => String(p.id) === String(productId));
+    return product?.name || "-";
+  }
+
+  function formatSupplierName(supplierId) {
+    const supplier = suppliers.find((s) => String(s.id) === String(supplierId));
+    return supplier?.name || "-";
+  }
+
+  function formatCustomerName(customerId) {
+    const customer = customers.find((c) => String(c.id) === String(customerId));
+    return customer?.name || "-";
+  }
+
+  function formatPaymentMethod(id) {
+    const method = paymentMethods.find((m) => String(m.id) === String(id));
+    return method?.name || "-";
+  }
+
+  return (
+    <div className="page-content petshop-page">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">PetShop</h1>
+          <p className="page-subtitle">
+            Ventas, productos y control de stock del local.
+          </p>
+        </div>
+      </header>
+
+      <div className="card petshop-tabs">
+        <div className="services-tabs">
+          <button
+            type="button"
+            className={activeTab === "sales" ? "tab tab--active" : "tab"}
+            onClick={() => setActiveTab("sales")}
+          >
+            Ventas
+          </button>
+          <button
+            type="button"
+            className={activeTab === "products" ? "tab tab--active" : "tab"}
+            onClick={() => setActiveTab("products")}
+          >
+            Productos
+          </button>
+          <button
+            type="button"
+            className={activeTab === "stock" ? "tab tab--active" : "tab"}
+            onClick={() => setActiveTab("stock")}
+          >
+            Stock
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "sales" ? (
+        <>
+          <div className="petshop-summary">
+            <div className="petshop-kpi card">
+              <span>Ventas en período</span>
+              <strong>{salesCount}</strong>
+            </div>
+            <div className="petshop-kpi card">
+              <span>Total vendido</span>
+              <strong>{formatCurrency(salesRevenue)}</strong>
+            </div>
+            <div className="petshop-kpi card">
+              <span>Stock crítico</span>
+              <strong>{lowStockProducts.length}</strong>
+            </div>
+          </div>
+
+          <form className="form-card" onSubmit={handleSaleSubmit}>
+            <h2 className="card-title">Nueva venta</h2>
+            <p className="card-subtitle">
+              Registrá ventas de productos físicos y ajustá el stock.
+            </p>
+            <div className="form-grid">
+              <div className="form-field">
+                <label htmlFor="sale_date">Fecha</label>
+                <input
+                  id="sale_date"
+                  type="date"
+                  value={saleForm.date}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, date: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="sale_customer">Cliente (opcional)</label>
+                <select
+                  id="sale_customer"
+                  value={saleForm.customer_id}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, customer_id: e.target.value }))
+                  }
+                >
+                  <option value="">Sin cliente</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label htmlFor="sale_payment">Método de pago</label>
+                <select
+                  id="sale_payment"
+                  value={saleForm.payment_method_id}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({
+                      ...prev,
+                      payment_method_id: e.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Seleccioná</option>
+                  {paymentMethods.map((method) => (
+                    <option key={method.id} value={method.id}>
+                      {method.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field form-field--full">
+                <label htmlFor="sale_notes">Notas</label>
+                <textarea
+                  id="sale_notes"
+                  rows={3}
+                  value={saleForm.notes}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="petshop-items">
+              <div className="petshop-items__header">
+                <span>Productos</span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() =>
+                    setSaleItems((prev) => [
+                      ...prev,
+                      { product_id: "", quantity: 1, unit_price: "" },
+                    ])
+                  }
+                >
+                  + Agregar item
+                </button>
+              </div>
+              {saleItems.map((item, index) => (
+                <div key={`${index}-${item.product_id}`} className="petshop-item-row">
+                  <select
+                    value={item.product_id}
+                    onChange={(e) => handleSaleItemProduct(index, e.target.value)}
+                  >
+                    <option value="">Producto</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateSaleItem(index, { quantity: e.target.value })
+                    }
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={item.unit_price}
+                    onChange={(e) =>
+                      updateSaleItem(index, { unit_price: e.target.value })
+                    }
+                  />
+                  <span className="petshop-item-row__total">
+                    {formatCurrency(
+                      toNumber(item.quantity) * toNumber(item.unit_price)
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() =>
+                      setSaleItems((prev) => prev.filter((_, idx) => idx !== index))
+                    }
+                  >
+                    Quitar
+                  </button>
+                </div>
+              ))}
+              <div className="petshop-items__footer">
+                <span>Total</span>
+                <strong>{formatCurrency(saleTotal)}</strong>
+              </div>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn-primary" disabled={saleSubmitting}>
+                {saleSubmitting ? "Guardando..." : "Registrar venta"}
+              </button>
+            </div>
+          </form>
+
+          <div className="card">
+            <div className="petshop-list__header">
+              <div>
+                <h2 className="card-title">Ventas registradas</h2>
+                <p className="card-subtitle">
+                  Período: {salesFilters.from} → {salesFilters.to}
+                </p>
+              </div>
+              <div className="petshop-date-range">
+                <input
+                  type="date"
+                  value={salesFilters.from}
+                  onChange={(e) =>
+                    setSalesFilters((prev) => ({ ...prev, from: e.target.value }))
+                  }
+                />
+                <input
+                  type="date"
+                  value={salesFilters.to}
+                  onChange={(e) =>
+                    setSalesFilters((prev) => ({ ...prev, to: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            {salesError && <div className="petshop-error">{salesError}</div>}
+            {salesLoading ? (
+              <div className="card-subtitle">Cargando ventas...</div>
+            ) : (
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Cliente</th>
+                      <th>Items</th>
+                      <th>Método</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale) => (
+                      <tr
+                        key={sale.id}
+                        onClick={() => setSelectedSale(sale)}
+                        className="petshop-clickable"
+                      >
+                        <td>{sale.date}</td>
+                        <td>{formatCustomerName(sale.customer_id)}</td>
+                        <td>{sale.items?.length || 0}</td>
+                        <td>{formatPaymentMethod(sale.payment_method_id)}</td>
+                        <td>{formatCurrency(sale.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <Modal
+            isOpen={Boolean(selectedSale)}
+            onClose={() => setSelectedSale(null)}
+            title="Detalle de venta"
+          >
+            {selectedSale && (
+              <>
+                <div className="petshop-detail">
+                  <div>
+                    <strong>Fecha:</strong> {selectedSale.date}
+                  </div>
+                  <div>
+                    <strong>Cliente:</strong>{" "}
+                    {formatCustomerName(selectedSale.customer_id)}
+                  </div>
+                  <div>
+                    <strong>Método de pago:</strong>{" "}
+                    {formatPaymentMethod(selectedSale.payment_method_id)}
+                  </div>
+                  <div>
+                    <strong>Total:</strong> {formatCurrency(selectedSale.total)}
+                  </div>
+                  <div>
+                    <strong>Notas:</strong> {selectedSale.notes || "-"}
+                  </div>
+                </div>
+                {selectedSale.items?.length ? (
+                  <div className="table-wrapper">
+                    <table className="table table--compact">
+                      <thead>
+                        <tr>
+                          <th>Producto</th>
+                          <th>Cantidad</th>
+                          <th>Precio</th>
+                          <th>Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedSale.items.map((item) => (
+                          <tr key={item.id || `${item.product_id}-${item.quantity}`}>
+                            <td>{formatProductName(item.product_id)}</td>
+                            <td>{item.quantity}</td>
+                            <td>{formatCurrency(item.unit_price)}</td>
+                            <td>
+                              {formatCurrency(
+                                toNumber(item.quantity) * toNumber(item.unit_price)
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </Modal>
+        </>
+      ) : null}
+
+      {activeTab === "products" ? (
+        <>
+          <form className="form-card" onSubmit={handleProductSubmit}>
+            <h2 className="card-title">
+              {editingProductId ? "Editar producto" : "Nuevo producto"}
+            </h2>
+            <p className="card-subtitle">
+              Registrá productos, precios y stock mínimo.
+            </p>
+            <div className="form-grid">
+              <div className="form-field">
+                <label htmlFor="product_name">Nombre</label>
+                <input
+                  id="product_name"
+                  type="text"
+                  value={productForm.name}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_sku">SKU / Código</label>
+                <input
+                  id="product_sku"
+                  type="text"
+                  value={productForm.sku}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, sku: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_category">Categoría</label>
+                <input
+                  id="product_category"
+                  type="text"
+                  value={productForm.category}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, category: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_supplier">Proveedor</label>
+                <select
+                  id="product_supplier"
+                  value={productForm.supplier_id}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      supplier_id: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Sin proveedor</option>
+                  {suppliers.map((supplier) => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_cost">Costo</label>
+                <input
+                  id="product_cost"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={productForm.cost}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, cost: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_price">Precio</label>
+                <input
+                  id="product_price"
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={productForm.price}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, price: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_stock">Stock actual</label>
+                <input
+                  id="product_stock"
+                  type="number"
+                  min="0"
+                  value={productForm.stock}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({ ...prev, stock: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="product_stock_min">Stock mínimo</label>
+                <input
+                  id="product_stock_min"
+                  type="number"
+                  min="0"
+                  value={productForm.stock_min}
+                  onChange={(e) =>
+                    setProductForm((prev) => ({
+                      ...prev,
+                      stock_min: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn-primary">
+                {editingProductId ? "Guardar cambios" : "Guardar producto"}
+              </button>
+              {editingProductId ? (
+                <button type="button" className="btn-secondary" onClick={resetProductForm}>
+                  Cancelar
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          <div className="card">
+            <h2 className="card-title">Productos cargados</h2>
+            <p className="card-subtitle">
+              Stock crítico: {lowStockProducts.length} productos.
+            </p>
+            {productsError && <div className="petshop-error">{productsError}</div>}
+            {productsLoading ? (
+              <div className="card-subtitle">Cargando productos...</div>
+            ) : (
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>SKU</th>
+                      <th>Proveedor</th>
+                      <th>Stock</th>
+                      <th>Min</th>
+                      <th>Precio</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((product) => (
+                      <tr key={product.id}>
+                        <td>{product.name}</td>
+                        <td>{product.sku || "-"}</td>
+                        <td>{formatSupplierName(product.supplier_id)}</td>
+                        <td>{product.stock ?? 0}</td>
+                        <td>{product.stock_min ?? 0}</td>
+                        <td>{formatCurrency(product.price)}</td>
+                        <td className="petshop-actions">
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => startEditProduct(product)}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-danger"
+                            onClick={() => handleProductDelete(product.id)}
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
+
+      {activeTab === "stock" ? (
+        <>
+          <form className="form-card" onSubmit={handleStockSubmit}>
+            <h2 className="card-title">Movimiento de stock</h2>
+            <p className="card-subtitle">
+              Registrá ingresos, ventas manuales o ajustes.
+            </p>
+            <div className="form-grid">
+              <div className="form-field">
+                <label htmlFor="stock_date">Fecha</label>
+                <input
+                  id="stock_date"
+                  type="date"
+                  value={stockForm.date}
+                  onChange={(e) =>
+                    setStockForm((prev) => ({ ...prev, date: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="form-field">
+                <label htmlFor="stock_product">Producto</label>
+                <select
+                  id="stock_product"
+                  value={stockForm.product_id}
+                  onChange={(e) =>
+                    setStockForm((prev) => ({
+                      ...prev,
+                      product_id: e.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Seleccioná</option>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label htmlFor="stock_type">Tipo</label>
+                <select
+                  id="stock_type"
+                  value={stockForm.type}
+                  onChange={(e) =>
+                    setStockForm((prev) => ({ ...prev, type: e.target.value }))
+                  }
+                >
+                  <option value="in">Entrada</option>
+                  <option value="out">Salida</option>
+                  <option value="adjust">Ajuste</option>
+                </select>
+              </div>
+              <div className="form-field">
+                <label htmlFor="stock_qty">Cantidad</label>
+                <input
+                  id="stock_qty"
+                  type="number"
+                  min="1"
+                  value={stockForm.quantity}
+                  onChange={(e) =>
+                    setStockForm((prev) => ({
+                      ...prev,
+                      quantity: e.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="form-field form-field--full">
+                <label htmlFor="stock_note">Motivo / Nota</label>
+                <input
+                  id="stock_note"
+                  type="text"
+                  value={stockForm.note}
+                  onChange={(e) =>
+                    setStockForm((prev) => ({ ...prev, note: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="form-actions">
+              <button type="submit" className="btn-primary" disabled={stockSubmitting}>
+                {stockSubmitting ? "Guardando..." : "Registrar movimiento"}
+              </button>
+            </div>
+          </form>
+
+          <div className="card">
+            <div className="petshop-list__header">
+              <div>
+                <h2 className="card-title">Historial de stock</h2>
+                <p className="card-subtitle">
+                  Período: {stockFilters.from} → {stockFilters.to}
+                </p>
+              </div>
+              <div className="petshop-date-range">
+                <input
+                  type="date"
+                  value={stockFilters.from}
+                  onChange={(e) =>
+                    setStockFilters((prev) => ({ ...prev, from: e.target.value }))
+                  }
+                />
+                <input
+                  type="date"
+                  value={stockFilters.to}
+                  onChange={(e) =>
+                    setStockFilters((prev) => ({ ...prev, to: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            {stockError && <div className="petshop-error">{stockError}</div>}
+            {stockLoading ? (
+              <div className="card-subtitle">Cargando movimientos...</div>
+            ) : (
+              <div className="table-wrapper">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Producto</th>
+                      <th>Tipo</th>
+                      <th>Cantidad</th>
+                      <th>Nota</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockMovements.map((movement) => (
+                      <tr key={movement.id}>
+                        <td>{movement.date}</td>
+                        <td>{formatProductName(movement.product_id)}</td>
+                        <td>{movement.type}</td>
+                        <td>{movement.quantity}</td>
+                        <td>{movement.note || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}

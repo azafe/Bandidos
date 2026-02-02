@@ -1,0 +1,135 @@
+/* ===== PetShop ===== */
+.petshop-page {
+  gap: 20px;
+}
+
+.petshop-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.petshop-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.petshop-kpi {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--color-text-soft);
+}
+
+.petshop-kpi strong {
+  font-size: 1.2rem;
+  color: #111827;
+}
+
+.petshop-items {
+  margin-top: 16px;
+  border: 1px dashed rgba(17, 24, 39, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.petshop-items__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+}
+
+.petshop-item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 90px 110px 120px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.petshop-item-row select,
+.petshop-item-row input {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  background: #f9f9fc;
+}
+
+.petshop-item-row__total {
+  font-weight: 600;
+  color: #111827;
+}
+
+.petshop-items__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}
+
+.petshop-items__footer strong {
+  color: #111827;
+  font-size: 1rem;
+}
+
+.petshop-list__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.petshop-date-range {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.petshop-date-range input {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 8px 10px;
+  background: #f9f9fc;
+}
+
+.petshop-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.petshop-error {
+  color: #f37b7b;
+  margin-bottom: 8px;
+}
+
+.petshop-clickable {
+  cursor: pointer;
+}
+
+.petshop-detail {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 900px) {
+  .petshop-item-row {
+    grid-template-columns: 1fr 80px 100px;
+    grid-auto-rows: auto;
+  }
+
+  .petshop-item-row__total {
+    grid-column: 1 / -1;
+  }
+}
