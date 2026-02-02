@@ -379,47 +379,11 @@ export default function PetShopPage() {
                   }
                 />
               </div>
-              <div className="form-field">
-                <label htmlFor="sale_payment">Método de pago</label>
-                <select
-                  id="sale_payment"
-                  value={saleForm.payment_method_id}
-                  onChange={(e) =>
-                    setSaleForm((prev) => ({
-                      ...prev,
-                      payment_method_id: e.target.value,
-                    }))
-                  }
-                  required
-                >
-                  <option value="">Seleccioná</option>
-                  {paymentMethods
-                    .filter((method) =>
-                      String(method.name || "").toLowerCase() !== "cash"
-                    )
-                    .map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <div className="form-field form-field--full">
-                <label htmlFor="sale_notes">Notas</label>
-                <textarea
-                  id="sale_notes"
-                  rows={3}
-                  value={saleForm.notes}
-                  onChange={(e) =>
-                    setSaleForm((prev) => ({ ...prev, notes: e.target.value }))
-                  }
-                />
-              </div>
             </div>
 
             <div className="petshop-items">
               <div className="petshop-items__header">
-                <span>Productos</span>
+                <span>Producto</span>
                 <button
                   type="button"
                   className="btn-secondary"
@@ -479,9 +443,48 @@ export default function PetShopPage() {
                   </button>
                 </div>
               ))}
-              <div className="petshop-items__footer">
-                <span>Total</span>
-                <strong>{formatCurrency(saleTotal)}</strong>
+            <div className="petshop-items__footer">
+              <span>Total</span>
+              <strong>{formatCurrency(saleTotal)}</strong>
+            </div>
+          </div>
+
+            <div className="form-grid">
+              <div className="form-field">
+                <label htmlFor="sale_payment">Método de pago</label>
+                <select
+                  id="sale_payment"
+                  value={saleForm.payment_method_id}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({
+                      ...prev,
+                      payment_method_id: e.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Seleccioná</option>
+                  {paymentMethods
+                    .filter((method) =>
+                      String(method.name || "").toLowerCase() !== "cash"
+                    )
+                    .map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="form-field form-field--full">
+                <label htmlFor="sale_notes">Notas</label>
+                <textarea
+                  id="sale_notes"
+                  rows={3}
+                  value={saleForm.notes}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                />
               </div>
             </div>
 
