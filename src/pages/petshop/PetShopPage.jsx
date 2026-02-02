@@ -56,6 +56,16 @@ export default function PetShopPage() {
     stock_min: "",
   });
   const [editingProductId, setEditingProductId] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isEditingProductModal, setIsEditingProductModal] = useState(false);
+  const [productModalForm, setProductModalForm] = useState({
+    name: "",
+    sku: "",
+    cost: "",
+    price: "",
+    stock: "",
+    stock_min: "",
+  });
 
   const [salesFilters, setSalesFilters] = useState(() => {
     const now = new Date();
@@ -137,6 +147,24 @@ export default function PetShopPage() {
     setEditingProductId(null);
   }
 
+  function openProductModal(product) {
+    setSelectedProduct(product);
+    setProductModalForm({
+      name: product.name || "",
+      sku: product.sku || "",
+      cost: product.cost !== null && product.cost !== undefined ? String(product.cost) : "",
+      price:
+        product.price !== null && product.price !== undefined ? String(product.price) : "",
+      stock:
+        product.stock !== null && product.stock !== undefined ? String(product.stock) : "",
+      stock_min:
+        product.stock_min !== null && product.stock_min !== undefined
+          ? String(product.stock_min)
+          : "",
+    });
+    setIsEditingProductModal(false);
+  }
+
   async function handleProductSubmit(e) {
     e.preventDefault();
     if (!productForm.name.trim()) {
@@ -178,6 +206,34 @@ export default function PetShopPage() {
       await refreshProducts();
     } catch (err) {
       alert(err.message || "No se pudo eliminar el producto.");
+    }
+  }
+
+  async function handleProductModalSave() {
+    if (!selectedProduct) return;
+    if (!productModalForm.name.trim()) {
+      alert("Ingresá el nombre del producto.");
+      return;
+    }
+    if (!productModalForm.price) {
+      alert("Ingresá el precio de venta.");
+      return;
+    }
+    const payload = {
+      name: productModalForm.name.trim(),
+      sku: productModalForm.sku.trim() || null,
+      cost: toNumber(productModalForm.cost, 0),
+      price: toNumber(productModalForm.price, 0),
+      stock: toNumber(productModalForm.stock, 0),
+      stock_min: toNumber(productModalForm.stock_min, 0),
+    };
+    try {
+      await updateProduct(selectedProduct.id, payload);
+      await refreshProducts();
+      setSelectedProduct((prev) => (prev ? { ...prev, ...payload } : prev));
+      setIsEditingProductModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo actualizar el producto.");
     }
   }
 
@@ -732,7 +788,11 @@ export default function PetShopPage() {
             ) : (
               <div className="services-list">
                 {products.map((product) => (
-                  <div key={product.id} className="service-item">
+                  <div
+                    key={product.id}
+                    className="service-item petshop-clickable"
+                    onClick={() => openProductModal(product)}
+                  >
                     <div className="service-item__body">
                       <div className="service-item__title">{product.name}</div>
                       <div className="service-item__meta">
@@ -744,22 +804,6 @@ export default function PetShopPage() {
                     <div className="service-item__side">
                       <div className="service-item__price">
                         {formatCurrency(product.price)}
-                      </div>
-                      <div className="petshop-actions">
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => startEditProduct(product)}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-danger"
-                          onClick={() => handleProductDelete(product.id)}
-                        >
-                          Eliminar
-                        </button>
                       </div>
                     </div>
                   </div>
@@ -917,6 +961,166 @@ export default function PetShopPage() {
           </div>
         </>
       ) : null}
+
+      <Modal
+        isOpen={Boolean(selectedProduct)}
+        onClose={() => setSelectedProduct(null)}
+        title="Detalle del producto"
+      >
+        {selectedProduct && (
+          <>
+            {isEditingProductModal ? (
+              <>
+                <label className="form-field">
+                  <span>Nombre</span>
+                  <input
+                    type="text"
+                    value={productModalForm.name}
+                    onChange={(e) =>
+                      setProductModalForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>SKU</span>
+                  <input
+                    type="text"
+                    value={productModalForm.sku}
+                    onChange={(e) =>
+                      setProductModalForm((prev) => ({
+                        ...prev,
+                        sku: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Costo</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={productModalForm.cost}
+                    onChange={(e) =>
+                      setProductModalForm((prev) => ({
+                        ...prev,
+                        cost: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Precio</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="100"
+                    value={productModalForm.price}
+                    onChange={(e) =>
+                      setProductModalForm((prev) => ({
+                        ...prev,
+                        price: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Stock</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={productModalForm.stock}
+                    onChange={(e) =>
+                      setProductModalForm((prev) => ({
+                        ...prev,
+                        stock: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="form-field">
+                  <span>Stock mínimo</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={productModalForm.stock_min}
+                    onChange={(e) =>
+                      setProductModalForm((prev) => ({
+                        ...prev,
+                        stock_min: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </>
+            ) : (
+              <div className="petshop-detail">
+                <div>
+                  <strong>Nombre:</strong> {selectedProduct.name}
+                </div>
+                <div>
+                  <strong>SKU:</strong> {selectedProduct.sku || "-"}
+                </div>
+                <div>
+                  <strong>Costo:</strong> {formatCurrency(selectedProduct.cost)}
+                </div>
+                <div>
+                  <strong>Precio:</strong> {formatCurrency(selectedProduct.price)}
+                </div>
+                <div>
+                  <strong>Stock:</strong> {selectedProduct.stock ?? 0}
+                </div>
+                <div>
+                  <strong>Stock mínimo:</strong> {selectedProduct.stock_min ?? 0}
+                </div>
+              </div>
+            )}
+            <div className="modal-actions">
+              {isEditingProductModal ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsEditingProductModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleProductModalSave}
+                  >
+                    Guardar cambios
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setIsEditingProductModal(true)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger"
+                    onClick={async () => {
+                      await handleProductDelete(selectedProduct.id);
+                      setSelectedProduct(null);
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
