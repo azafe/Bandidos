@@ -35,7 +35,6 @@ function toNumber(value, fallback = 0) {
 export default function PetShopPage() {
   const [activeTab, setActiveTab] = useState("sales");
 
-  const { items: customers } = useApiResource("/v2/customers");
   const { items: suppliers } = useApiResource("/v2/suppliers");
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
 
@@ -79,7 +78,6 @@ export default function PetShopPage() {
 
   const [saleForm, setSaleForm] = useState({
     date: todayISO(),
-    customer_id: "",
     payment_method_id: "",
     notes: "",
   });
@@ -247,7 +245,6 @@ export default function PetShopPage() {
     try {
       const payload = {
         date: saleForm.date,
-        customer_id: saleForm.customer_id || null,
         payment_method_id: saleForm.payment_method_id,
         notes: saleForm.notes.trim(),
         total: saleTotal,
@@ -260,7 +257,6 @@ export default function PetShopPage() {
       await apiRequest("/v2/petshop/sales", { method: "POST", body: payload });
       setSaleForm({
         date: todayISO(),
-        customer_id: "",
         payment_method_id: "",
         notes: "",
       });
@@ -320,14 +316,20 @@ export default function PetShopPage() {
     return supplier?.name || "-";
   }
 
-  function formatCustomerName(customerId) {
-    const customer = customers.find((c) => String(c.id) === String(customerId));
-    return customer?.name || "-";
-  }
-
   function formatPaymentMethod(id) {
     const method = paymentMethods.find((m) => String(m.id) === String(id));
     return method?.name || "-";
+  }
+
+  function getSaleTitle(sale) {
+    if (!sale.items?.length) return "Venta";
+    const first = formatProductName(sale.items[0].product_id);
+    if (sale.items.length === 1) return first;
+    return `${first} +${sale.items.length - 1}`;
+  }
+
+  function getSaleQuantity(sale) {
+    return sale.items?.reduce((sum, item) => sum + toNumber(item.quantity, 0), 0) || 0;
   }
 
   return (
@@ -400,23 +402,6 @@ export default function PetShopPage() {
                     setSaleForm((prev) => ({ ...prev, date: e.target.value }))
                   }
                 />
-              </div>
-              <div className="form-field">
-                <label htmlFor="sale_customer">Cliente (opcional)</label>
-                <select
-                  id="sale_customer"
-                  value={saleForm.customer_id}
-                  onChange={(e) =>
-                    setSaleForm((prev) => ({ ...prev, customer_id: e.target.value }))
-                  }
-                >
-                  <option value="">Sin cliente</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
               </div>
               <div className="form-field">
                 <label htmlFor="sale_payment">Método de pago</label>
@@ -568,11 +553,11 @@ export default function PetShopPage() {
                   >
                     <div className="service-item__body">
                       <div className="service-item__title">
-                        {formatCustomerName(sale.customer_id)}
+                        {getSaleTitle(sale)}
                       </div>
                       <div className="service-item__meta">
                         <span>{formatDateDisplay(sale.date)}</span>
-                        <span>{sale.items?.length || 0} items</span>
+                        <span>{getSaleQuantity(sale)} u.</span>
                         <span>{formatPaymentMethod(sale.payment_method_id)}</span>
                       </div>
                       {sale.notes ? (
@@ -601,11 +586,7 @@ export default function PetShopPage() {
               <>
                 <div className="petshop-detail">
                   <div>
-                    <strong>Fecha:</strong> {selectedSale.date}
-                  </div>
-                  <div>
-                    <strong>Cliente:</strong>{" "}
-                    {formatCustomerName(selectedSale.customer_id)}
+                    <strong>Fecha:</strong> {formatDateDisplay(selectedSale.date)}
                   </div>
                   <div>
                     <strong>Método de pago:</strong>{" "}
