@@ -18,6 +18,14 @@ function formatCurrency(value) {
   return `$${Number(value).toLocaleString("es-AR")}`;
 }
 
+function formatDateDisplay(value) {
+  if (!value) return "-";
+  const raw = String(value).split("T")[0];
+  const [yyyy, mm, dd] = raw.split("-");
+  if (!yyyy || !mm || !dd) return value;
+  return `${dd}-${mm}-${yyyy}`;
+}
+
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   if (Number.isNaN(num)) return fallback;
@@ -548,34 +556,38 @@ export default function PetShopPage() {
             {salesError && <div className="petshop-error">{salesError}</div>}
             {salesLoading ? (
               <div className="card-subtitle">Cargando ventas...</div>
+            ) : sales.length === 0 ? (
+              <div className="card-subtitle">Sin ventas registradas.</div>
             ) : (
-              <div className="table-wrapper">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Cliente</th>
-                      <th>Items</th>
-                      <th>Método</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sales.map((sale) => (
-                      <tr
-                        key={sale.id}
-                        onClick={() => setSelectedSale(sale)}
-                        className="petshop-clickable"
-                      >
-                        <td>{sale.date}</td>
-                        <td>{formatCustomerName(sale.customer_id)}</td>
-                        <td>{sale.items?.length || 0}</td>
-                        <td>{formatPaymentMethod(sale.payment_method_id)}</td>
-                        <td>{formatCurrency(sale.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="services-list">
+                {sales.map((sale) => (
+                  <div
+                    key={sale.id}
+                    className="service-item petshop-clickable"
+                    onClick={() => setSelectedSale(sale)}
+                  >
+                    <div className="service-item__body">
+                      <div className="service-item__title">
+                        {formatCustomerName(sale.customer_id)}
+                      </div>
+                      <div className="service-item__meta">
+                        <span>{formatDateDisplay(sale.date)}</span>
+                        <span>{sale.items?.length || 0} items</span>
+                        <span>{formatPaymentMethod(sale.payment_method_id)}</span>
+                      </div>
+                      {sale.notes ? (
+                        <div className="service-item__badges">
+                          <span className="service-badge">{sale.notes}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="service-item__side">
+                      <div className="service-item__price">
+                        {formatCurrency(sale.total)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
