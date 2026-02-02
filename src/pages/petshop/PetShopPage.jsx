@@ -727,47 +727,43 @@ export default function PetShopPage() {
             {productsError && <div className="petshop-error">{productsError}</div>}
             {productsLoading ? (
               <div className="card-subtitle">Cargando productos...</div>
+            ) : products.length === 0 ? (
+              <div className="card-subtitle">Sin productos cargados.</div>
             ) : (
-              <div className="table-wrapper">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Producto</th>
-                      <th>SKU</th>
-                      <th>Stock</th>
-                      <th>Min</th>
-                      <th>Precio</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => (
-                      <tr key={product.id}>
-                        <td>{product.name}</td>
-                        <td>{product.sku || "-"}</td>
-                        <td>{product.stock ?? 0}</td>
-                        <td>{product.stock_min ?? 0}</td>
-                        <td>{formatCurrency(product.price)}</td>
-                        <td className="petshop-actions">
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            onClick={() => startEditProduct(product)}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-danger"
-                            onClick={() => handleProductDelete(product.id)}
-                          >
-                            Eliminar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="services-list">
+                {products.map((product) => (
+                  <div key={product.id} className="service-item">
+                    <div className="service-item__body">
+                      <div className="service-item__title">{product.name}</div>
+                      <div className="service-item__meta">
+                        <span>SKU: {product.sku || "-"}</span>
+                        <span>Stock: {product.stock ?? 0}</span>
+                        <span>Mín: {product.stock_min ?? 0}</span>
+                      </div>
+                    </div>
+                    <div className="service-item__side">
+                      <div className="service-item__price">
+                        {formatCurrency(product.price)}
+                      </div>
+                      <div className="petshop-actions">
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => startEditProduct(product)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-danger"
+                          onClick={() => handleProductDelete(product.id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
