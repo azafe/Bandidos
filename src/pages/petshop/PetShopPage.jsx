@@ -393,11 +393,15 @@ export default function PetShopPage() {
                   required
                 >
                   <option value="">Seleccioná</option>
-                  {paymentMethods.map((method) => (
-                    <option key={method.id} value={method.id}>
-                      {method.name}
-                    </option>
-                  ))}
+                  {paymentMethods
+                    .filter((method) =>
+                      String(method.name || "").toLowerCase() !== "cash"
+                    )
+                    .map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.name}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="form-field form-field--full">
