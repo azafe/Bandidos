@@ -93,6 +93,13 @@ export default function PetShopPage() {
   ]);
   const [saleSubmitting, setSaleSubmitting] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
+  const [isEditingSaleModal, setIsEditingSaleModal] = useState(false);
+  const [saleModalForm, setSaleModalForm] = useState({
+    date: todayISO(),
+    payment_method_id: "",
+    notes: "",
+    items: [],
+  });
 
 
   const saleTotal = useMemo(
@@ -102,6 +109,15 @@ export default function PetShopPage() {
         0
       ),
     [saleItems]
+  );
+
+  const saleModalTotal = useMemo(
+    () =>
+      saleModalForm.items.reduce(
+        (sum, item) => sum + toNumber(item.quantity) * toNumber(item.unit_price),
+        0
+      ),
+    [saleModalForm.items]
   );
 
   const salesCount = sales.length;
@@ -247,6 +263,24 @@ export default function PetShopPage() {
     });
   }
 
+  function updateSaleModalItem(index, next) {
+    setSaleModalForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, idx) => (idx === index ? { ...item, ...next } : item)),
+    }));
+  }
+
+  function handleSaleModalProduct(index, productId) {
+    const product = products.find((p) => String(p.id) === String(productId));
+    updateSaleModalItem(index, {
+      product_id: productId,
+      unit_price:
+        product && product.price !== null && product.price !== undefined
+          ? String(product.price)
+          : "",
+    });
+  }
+
   async function handleSaleSubmit(e) {
     e.preventDefault();
     if (!saleForm.payment_method_id) {
@@ -290,6 +324,60 @@ export default function PetShopPage() {
       alert(err.message || "No se pudo registrar la venta.");
     } finally {
       setSaleSubmitting(false);
+    }
+  }
+
+  async function handleSaleDelete() {
+    if (!selectedSale) return;
+    const ok = window.confirm("¿Eliminar esta venta?");
+    if (!ok) return;
+    try {
+      await apiRequest(`/v2/petshop/sales/${selectedSale.id}`, {
+        method: "DELETE",
+      });
+      setSelectedSale(null);
+      await refreshSales();
+      await refreshProducts();
+    } catch (err) {
+      alert(err.message || "No se pudo eliminar la venta.");
+    }
+  }
+
+  async function handleSaleModalSave() {
+    if (!selectedSale) return;
+    if (!saleModalForm.payment_method_id) {
+      alert("Seleccioná un método de pago.");
+      return;
+    }
+    const invalid = saleModalForm.items.some(
+      (item) => !item.product_id || toNumber(item.quantity) <= 0
+    );
+    if (invalid) {
+      alert("Completá producto y cantidad en cada ítem.");
+      return;
+    }
+    const payload = {
+      date: saleModalForm.date,
+      payment_method_id: saleModalForm.payment_method_id,
+      notes: saleModalForm.notes.trim(),
+      total: saleModalTotal,
+      items: saleModalForm.items.map((item) => ({
+        product_id: item.product_id,
+        quantity: toNumber(item.quantity, 1),
+        unit_price: toNumber(item.unit_price, 0),
+      })),
+    };
+    try {
+      await apiRequest(`/v2/petshop/sales/${selectedSale.id}`, {
+        method: "PUT",
+        body: payload,
+      });
+      await refreshSales();
+      await refreshProducts();
+      setSelectedSale((prev) => (prev ? { ...prev, ...payload } : prev));
+      setIsEditingSaleModal(false);
+    } catch (err) {
+      alert(err.message || "No se pudo actualizar la venta.");
     }
   }
 
@@ -532,7 +620,23 @@ export default function PetShopPage() {
                   <div
                     key={sale.id}
                     className="service-item petshop-clickable"
-                    onClick={() => setSelectedSale(sale)}
+                    onClick={() => {
+                      setSelectedSale(sale);
+                      setSaleModalForm({
+                        date: sale.date || todayISO(),
+                        payment_method_id: sale.payment_method_id || "",
+                        notes: sale.notes || "",
+                        items: (sale.items || []).map((item) => ({
+                          product_id: item.product_id,
+                          quantity: item.quantity,
+                          unit_price:
+                            item.unit_price !== null && item.unit_price !== undefined
+                              ? String(item.unit_price)
+                              : "",
+                        })),
+                      });
+                      setIsEditingSaleModal(false);
+                    }}
                   >
                     <div className="service-item__body">
                       <div className="service-item__title">
@@ -567,49 +671,223 @@ export default function PetShopPage() {
           >
             {selectedSale && (
               <>
-                <div className="petshop-detail">
-                  <div>
-                    <strong>Fecha:</strong> {formatDateDisplay(selectedSale.date)}
-                  </div>
-                  <div>
-                    <strong>Método de pago:</strong>{" "}
-                    {formatPaymentMethod(selectedSale.payment_method_id)}
-                  </div>
-                  <div>
-                    <strong>Total:</strong> {formatCurrency(selectedSale.total)}
-                  </div>
-                  <div>
-                    <strong>Notas:</strong> {selectedSale.notes || "-"}
-                  </div>
+                {isEditingSaleModal ? (
+                  <>
+                    <div className="form-grid">
+                      <div className="form-field">
+                        <label htmlFor="sale_modal_date">Fecha</label>
+                        <input
+                          id="sale_modal_date"
+                          type="date"
+                          value={saleModalForm.date}
+                          onChange={(e) =>
+                            setSaleModalForm((prev) => ({
+                              ...prev,
+                              date: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="form-field">
+                        <label htmlFor="sale_modal_payment">Método de pago</label>
+                        <select
+                          id="sale_modal_payment"
+                          value={saleModalForm.payment_method_id}
+                          onChange={(e) =>
+                            setSaleModalForm((prev) => ({
+                              ...prev,
+                              payment_method_id: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">Seleccioná</option>
+                          {paymentMethods
+                            .filter((method) =>
+                              String(method.name || "").toLowerCase() !== "cash"
+                            )
+                            .map((method) => (
+                              <option key={method.id} value={method.id}>
+                                {method.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <div className="form-field form-field--full">
+                        <label htmlFor="sale_modal_notes">Notas</label>
+                        <textarea
+                          id="sale_modal_notes"
+                          rows={3}
+                          value={saleModalForm.notes}
+                          onChange={(e) =>
+                            setSaleModalForm((prev) => ({
+                              ...prev,
+                              notes: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="petshop-items">
+                      <div className="petshop-items__header">
+                        <span>Producto</span>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() =>
+                            setSaleModalForm((prev) => ({
+                              ...prev,
+                              items: [
+                                ...prev.items,
+                                { product_id: "", quantity: 1, unit_price: "" },
+                              ],
+                            }))
+                          }
+                        >
+                          + Agregar item
+                        </button>
+                      </div>
+                      {saleModalForm.items.map((item, index) => (
+                        <div key={`${index}-${item.product_id}`} className="petshop-item-row">
+                          <select
+                            value={item.product_id}
+                            onChange={(e) =>
+                              handleSaleModalProduct(index, e.target.value)
+                            }
+                          >
+                            <option value="">Producto</option>
+                            {products.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              updateSaleModalItem(index, { quantity: e.target.value })
+                            }
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            step="100"
+                            value={item.unit_price}
+                            onChange={(e) =>
+                              updateSaleModalItem(index, { unit_price: e.target.value })
+                            }
+                          />
+                          <span className="petshop-item-row__total">
+                            {formatCurrency(
+                              toNumber(item.quantity) * toNumber(item.unit_price)
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() =>
+                              setSaleModalForm((prev) => ({
+                                ...prev,
+                                items: prev.items.filter((_, idx) => idx !== index),
+                              }))
+                            }
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      ))}
+                      <div className="petshop-items__footer">
+                        <span>Total</span>
+                        <strong>{formatCurrency(saleModalTotal)}</strong>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="petshop-detail">
+                      <div>
+                        <strong>Fecha:</strong> {formatDateDisplay(selectedSale.date)}
+                      </div>
+                      <div>
+                        <strong>Método de pago:</strong>{" "}
+                        {formatPaymentMethod(selectedSale.payment_method_id)}
+                      </div>
+                      <div>
+                        <strong>Total:</strong> {formatCurrency(selectedSale.total)}
+                      </div>
+                      <div>
+                        <strong>Notas:</strong> {selectedSale.notes || "-"}
+                      </div>
+                    </div>
+                    {selectedSale.items?.length ? (
+                      <div className="table-wrapper">
+                        <table className="table table--compact">
+                          <thead>
+                            <tr>
+                              <th>Producto</th>
+                              <th>Cantidad</th>
+                              <th>Precio</th>
+                              <th>Subtotal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedSale.items.map((item) => (
+                              <tr key={item.id || `${item.product_id}-${item.quantity}`}>
+                                <td>{formatProductName(item.product_id)}</td>
+                                <td>{item.quantity}</td>
+                                <td>{formatCurrency(item.unit_price)}</td>
+                                <td>
+                                  {formatCurrency(
+                                    toNumber(item.quantity) * toNumber(item.unit_price)
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+                <div className="modal-actions">
+                  {isEditingSaleModal ? (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setIsEditingSaleModal(false)}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={handleSaleModalSave}
+                      >
+                        Guardar cambios
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => setIsEditingSaleModal(true)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={handleSaleDelete}
+                      >
+                        Eliminar
+                      </button>
+                    </>
+                  )}
                 </div>
-                {selectedSale.items?.length ? (
-                  <div className="table-wrapper">
-                    <table className="table table--compact">
-                      <thead>
-                        <tr>
-                          <th>Producto</th>
-                          <th>Cantidad</th>
-                          <th>Precio</th>
-                          <th>Subtotal</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedSale.items.map((item) => (
-                          <tr key={item.id || `${item.product_id}-${item.quantity}`}>
-                            <td>{formatProductName(item.product_id)}</td>
-                            <td>{item.quantity}</td>
-                            <td>{formatCurrency(item.unit_price)}</td>
-                            <td>
-                              {formatCurrency(
-                                toNumber(item.quantity) * toNumber(item.unit_price)
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
               </>
             )}
           </Modal>
