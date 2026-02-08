@@ -32,6 +32,15 @@
   --shadow-strong: 0 24px 60px rgba(10, 12, 20, 0.28);
 }
 
+/* iOS Safari: prevent auto-zoom on form focus */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* ===== Reset ===== */
 *,
 *::before,
