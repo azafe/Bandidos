@@ -573,6 +573,7 @@ export default function PetShopPage() {
                         value={item.product_id}
                         onChange={(e) => handleSaleItemProduct(index, e.target.value)}
                         aria-label="Producto"
+                        className="petshop-item-row__product"
                       >
                         <option value="">Producto</option>
                         {products.map((product) => (
@@ -621,6 +622,7 @@ export default function PetShopPage() {
                           updateSaleItem(index, { unit_price: e.target.value })
                         }
                         aria-label="Precio unitario"
+                        className="petshop-item-row__price"
                       />
                       <span className="petshop-item-row__total">
                         {formatCurrency(
@@ -629,7 +631,7 @@ export default function PetShopPage() {
                       </span>
                       <button
                         type="button"
-                        className="petshop-icon-button"
+                        className="petshop-icon-button petshop-icon-button--ghost"
                         onClick={() =>
                           setSaleItems((prev) => prev.filter((_, idx) => idx !== index))
                         }
