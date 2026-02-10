@@ -1,5 +1,5 @@
 // src/pages/petshop/PetShopPage.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
@@ -23,6 +23,18 @@ function formatDateDisplay(value) {
   const raw = String(value).split("T")[0];
   const [yyyy, mm, dd] = raw.split("-");
   if (!yyyy || !mm || !dd) return value;
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+function getDateKey(value) {
+  if (!value) return "";
+  return String(value).split("T")[0];
+}
+
+function formatDateLabel(dateKey) {
+  if (!dateKey) return "-";
+  const [yyyy, mm, dd] = String(dateKey).split("-");
+  if (!yyyy || !mm || !dd) return dateKey;
   return `${dd}-${mm}-${yyyy}`;
 }
 
@@ -92,6 +104,9 @@ export default function PetShopPage() {
     { product_id: "", quantity: 1, unit_price: "" },
   ]);
   const [saleSubmitting, setSaleSubmitting] = useState(false);
+  const [saleSuccess, setSaleSuccess] = useState(false);
+  const [saleError, setSaleError] = useState("");
+  const [totalBump, setTotalBump] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
   const [isEditingSaleModal, setIsEditingSaleModal] = useState(false);
   const [saleModalForm, setSaleModalForm] = useState({
@@ -120,12 +135,53 @@ export default function PetShopPage() {
     [saleModalForm.items]
   );
 
+  const saleHasInvalidItems = useMemo(
+    () =>
+      saleItems.some(
+        (item) => !item.product_id || toNumber(item.quantity) <= 0
+      ),
+    [saleItems]
+  );
+  const saleSubmitDisabled =
+    saleSubmitting || !saleForm.payment_method_id || saleHasInvalidItems;
+
+  const salesByDay = useMemo(() => {
+    const sorted = [...sales].sort((a, b) =>
+      String(b.date || "").localeCompare(String(a.date || ""))
+    );
+    const map = new Map();
+    sorted.forEach((sale) => {
+      const key = getDateKey(sale.date);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(sale);
+    });
+    return Array.from(map.entries()).map(([dateKey, items]) => ({
+      dateKey,
+      label: formatDateLabel(dateKey),
+      total: items.reduce((sum, sale) => sum + toNumber(sale.total), 0),
+      items,
+    }));
+  }, [sales]);
+
   const salesCount = sales.length;
   const salesRevenue = sales.reduce((sum, sale) => sum + toNumber(sale.total), 0);
 
   const lowStockProducts = products.filter(
     (product) => toNumber(product.stock) <= toNumber(product.stock_min)
   );
+  const hasCriticalStock = lowStockProducts.length > 0;
+
+  useEffect(() => {
+    if (!saleSuccess) return;
+    const timer = setTimeout(() => setSaleSuccess(false), 2600);
+    return () => clearTimeout(timer);
+  }, [saleSuccess]);
+
+  useEffect(() => {
+    setTotalBump(true);
+    const timer = setTimeout(() => setTotalBump(false), 140);
+    return () => clearTimeout(timer);
+  }, [saleTotal]);
 
   function resetProductForm() {
     setProductForm({
@@ -229,26 +285,19 @@ export default function PetShopPage() {
     }
   }
 
-  function startEditProduct(product) {
-    setProductForm({
-      name: product.name || "",
-      sku: product.sku || "",
-      cost: product.cost !== null && product.cost !== undefined ? String(product.cost) : "",
-      price:
-        product.price !== null && product.price !== undefined ? String(product.price) : "",
-      stock:
-        product.stock !== null && product.stock !== undefined ? String(product.stock) : "",
-      stock_min:
-        product.stock_min !== null && product.stock_min !== undefined
-          ? String(product.stock_min)
-          : "",
-    });
-    setEditingProductId(product.id);
-  }
-
   function updateSaleItem(index, next) {
     setSaleItems((prev) =>
       prev.map((item, idx) => (idx === index ? { ...item, ...next } : item))
+    );
+  }
+
+  function adjustSaleQuantity(index, delta) {
+    setSaleItems((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== index) return item;
+        const nextQty = Math.max(1, toNumber(item.quantity, 1) + delta);
+        return { ...item, quantity: nextQty };
+      })
     );
   }
 
@@ -283,19 +332,17 @@ export default function PetShopPage() {
 
   async function handleSaleSubmit(e) {
     e.preventDefault();
+    setSaleError("");
     if (!saleForm.payment_method_id) {
-      alert("Seleccioná un método de pago.");
+      setSaleError("Seleccioná un método de pago.");
       return;
     }
     if (!saleItems.length) {
-      alert("Agregá al menos un producto.");
+      setSaleError("Agregá al menos un producto.");
       return;
     }
-    const invalid = saleItems.some(
-      (item) => !item.product_id || toNumber(item.quantity) <= 0
-    );
-    if (invalid) {
-      alert("Completá producto y cantidad en cada ítem.");
+    if (saleHasInvalidItems) {
+      setSaleError("Completá producto y cantidad en cada ítem.");
       return;
     }
     setSaleSubmitting(true);
@@ -320,8 +367,9 @@ export default function PetShopPage() {
       setSaleItems([{ product_id: "", quantity: 1, unit_price: "" }]);
       await refreshSales();
       await refreshProducts();
+      setSaleSuccess(true);
     } catch (err) {
-      alert(err.message || "No se pudo registrar la venta.");
+      setSaleError(err.message || "No se pudo registrar la venta.");
     } finally {
       setSaleSubmitting(false);
     }
@@ -409,7 +457,7 @@ export default function PetShopPage() {
         <div>
           <h1 className="page-title">PetShop</h1>
           <p className="page-subtitle">
-            Ventas, productos y control de stock del local.
+            Ventas y productos del local, en un flujo operativo directo.
           </p>
         </div>
       </header>
@@ -437,24 +485,48 @@ export default function PetShopPage() {
         <>
           <div className="petshop-summary">
             <div className="petshop-kpi card">
-              <span>Ventas en período</span>
-              <strong>{salesCount}</strong>
+              <div className="petshop-kpi__label">
+                <span className="petshop-kpi__icon" aria-hidden="true">
+                  🧾
+                </span>
+                Ventas en período
+              </div>
+              <strong className="petshop-kpi__value">{salesCount}</strong>
             </div>
-            <div className="petshop-kpi card">
-              <span>Total vendido</span>
-              <strong>{formatCurrency(salesRevenue)}</strong>
+            <div className="petshop-kpi petshop-kpi--success card">
+              <div className="petshop-kpi__label">
+                <span className="petshop-kpi__icon" aria-hidden="true">
+                  💸
+                </span>
+                Total vendido
+              </div>
+              <strong className="petshop-kpi__value petshop-amount">
+                {formatCurrency(salesRevenue)}
+              </strong>
             </div>
-            <div className="petshop-kpi card">
-              <span>Stock crítico</span>
-              <strong>{lowStockProducts.length}</strong>
+            <div
+              className={`petshop-kpi card${
+                hasCriticalStock ? " petshop-kpi--danger" : ""
+              }`}
+            >
+              <div className="petshop-kpi__label">
+                <span className="petshop-kpi__icon" aria-hidden="true">
+                  ⚠️
+                </span>
+                Stock crítico
+              </div>
+              <strong className="petshop-kpi__value">
+                {lowStockProducts.length}
+              </strong>
             </div>
           </div>
 
-          <form className="form-card" onSubmit={handleSaleSubmit}>
+          <form className="form-card petshop-sale-form" onSubmit={handleSaleSubmit}>
             <h2 className="card-title">Nueva venta</h2>
             <p className="card-subtitle">
               Registrá ventas de productos físicos y ajustá el stock.
             </p>
+            <div className="petshop-section-label">Fecha</div>
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="sale_date">Fecha</label>
@@ -469,12 +541,13 @@ export default function PetShopPage() {
               </div>
             </div>
 
+            <div className="petshop-section-label">Productos</div>
             <div className="petshop-items">
               <div className="petshop-items__header">
-                <span>Producto</span>
+                <span>Productos</span>
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-secondary petshop-action-ghost"
                   onClick={() =>
                     setSaleItems((prev) => [
                       ...prev,
@@ -485,58 +558,101 @@ export default function PetShopPage() {
                   + Agregar item
                 </button>
               </div>
-              {saleItems.map((item, index) => (
-                <div key={`${index}-${item.product_id}`} className="petshop-item-row">
-                  <select
-                    value={item.product_id}
-                    onChange={(e) => handleSaleItemProduct(index, e.target.value)}
-                  >
-                    <option value="">Producto</option>
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateSaleItem(index, { quantity: e.target.value })
-                    }
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="100"
-                    value={item.unit_price}
-                    onChange={(e) =>
-                      updateSaleItem(index, { unit_price: e.target.value })
-                    }
-                  />
-                  <span className="petshop-item-row__total">
-                    {formatCurrency(
-                      toNumber(item.quantity) * toNumber(item.unit_price)
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() =>
-                      setSaleItems((prev) => prev.filter((_, idx) => idx !== index))
-                    }
-                  >
-                    Quitar
-                  </button>
-                </div>
-              ))}
+              {saleItems.map((item, index) => {
+                const hasProduct = Boolean(item.product_id);
+                const hasQty = toNumber(item.quantity) > 0;
+                const isInvalid = !hasProduct || !hasQty;
+                return (
+                  <div key={`${index}-${item.product_id || "item"}`}>
+                    <div
+                      className={`petshop-item-row${
+                        isInvalid ? " petshop-item-row--invalid" : ""
+                      }`}
+                    >
+                      <select
+                        value={item.product_id}
+                        onChange={(e) => handleSaleItemProduct(index, e.target.value)}
+                        aria-label="Producto"
+                      >
+                        <option value="">Producto</option>
+                        {products.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="petshop-stepper" role="group" aria-label="Cantidad">
+                        <button
+                          type="button"
+                          className="petshop-stepper__btn"
+                          onClick={() => adjustSaleQuantity(index, -1)}
+                          aria-label="Disminuir cantidad"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateSaleItem(index, { quantity: e.target.value })
+                          }
+                          onBlur={(e) => {
+                            const next = Math.max(1, toNumber(e.target.value, 1));
+                            updateSaleItem(index, { quantity: next });
+                          }}
+                          aria-label="Cantidad"
+                        />
+                        <button
+                          type="button"
+                          className="petshop-stepper__btn"
+                          onClick={() => adjustSaleQuantity(index, 1)}
+                          aria-label="Aumentar cantidad"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={item.unit_price}
+                        onChange={(e) =>
+                          updateSaleItem(index, { unit_price: e.target.value })
+                        }
+                        aria-label="Precio unitario"
+                      />
+                      <span className="petshop-item-row__total">
+                        {formatCurrency(
+                          toNumber(item.quantity) * toNumber(item.unit_price)
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className="petshop-icon-button"
+                        onClick={() =>
+                          setSaleItems((prev) => prev.filter((_, idx) => idx !== index))
+                        }
+                        aria-label="Quitar ítem"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                    {isInvalid ? (
+                      <div className="petshop-item-row__hint">
+                        {hasProduct ? "Ingresá cantidad válida." : "Seleccioná un producto."}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             <div className="petshop-items__footer">
               <span>Total</span>
-              <strong>{formatCurrency(saleTotal)}</strong>
+              <strong className="petshop-amount">{formatCurrency(saleTotal)}</strong>
             </div>
           </div>
 
+            <div className="petshop-section-label">Método de pago</div>
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="sale_payment">Método de pago</label>
@@ -563,6 +679,10 @@ export default function PetShopPage() {
                     ))}
                 </select>
               </div>
+            </div>
+
+            <div className="petshop-section-label">Notas (opcional)</div>
+            <div className="form-grid">
               <div className="form-field form-field--full">
                 <label htmlFor="sale_notes">Notas</label>
                 <textarea
@@ -576,8 +696,27 @@ export default function PetShopPage() {
               </div>
             </div>
 
-            <div className="form-actions">
-              <button type="submit" className="btn-primary" disabled={saleSubmitting}>
+            {saleError ? (
+              <div className="petshop-inline-error">{saleError}</div>
+            ) : null}
+            {saleSuccess ? (
+              <div className="petshop-inline-success">Venta registrada ✓</div>
+            ) : null}
+
+            <div className="petshop-total-bar" role="status" aria-live="polite">
+              <div className="petshop-total-bar__label">TOTAL</div>
+              <div
+                className={`petshop-total-bar__value petshop-amount${
+                  totalBump ? " petshop-total-bar__value--bump" : ""
+                }`}
+              >
+                {formatCurrency(saleTotal)}
+              </div>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={saleSubmitDisabled}
+              >
                 {saleSubmitting ? "Guardando..." : "Registrar venta"}
               </button>
             </div>
@@ -615,48 +754,94 @@ export default function PetShopPage() {
             ) : sales.length === 0 ? (
               <div className="card-subtitle">Sin ventas registradas.</div>
             ) : (
-              <div className="services-list">
-                {sales.map((sale) => (
-                  <div
-                    key={sale.id}
-                    className="service-item petshop-clickable"
-                    onClick={() => {
-                      setSelectedSale(sale);
-                      setSaleModalForm({
-                        date: sale.date || todayISO(),
-                        payment_method_id: sale.payment_method_id || "",
-                        notes: sale.notes || "",
-                        items: (sale.items || []).map((item) => ({
-                          product_id: item.product_id,
-                          quantity: item.quantity,
-                          unit_price:
-                            item.unit_price !== null && item.unit_price !== undefined
-                              ? String(item.unit_price)
-                              : "",
-                        })),
-                      });
-                      setIsEditingSaleModal(false);
-                    }}
-                  >
-                    <div className="service-item__body">
-                      <div className="service-item__title">
-                        {getSaleTitle(sale)}
-                      </div>
-                      <div className="service-item__meta">
-                        <span>{formatDateDisplay(sale.date)}</span>
-                        <span>{getSaleQuantity(sale)} u.</span>
-                        <span>{formatPaymentMethod(sale.payment_method_id)}</span>
-                      </div>
-                      {sale.notes ? (
-                        <div className="service-item__badges">
-                          <span className="service-badge">{sale.notes}</span>
-                        </div>
-                      ) : null}
+              <div className="petshop-sales-groups">
+                {salesByDay.map((group) => (
+                  <div key={group.dateKey} className="petshop-sales-group">
+                    <div className="petshop-sales-group__header">
+                      <span>{group.label}</span>
+                      <strong className="petshop-amount">
+                        Total día: {formatCurrency(group.total)}
+                      </strong>
                     </div>
-                    <div className="service-item__side">
-                      <div className="service-item__price">
-                        {formatCurrency(sale.total)}
-                      </div>
+                    <div className="services-list">
+                      {group.items.map((sale) => {
+                        const isTestSale = String(sale.notes || "")
+                          .toLowerCase()
+                          .includes("prueba");
+                        return (
+                          <div
+                            key={sale.id}
+                            className="service-item petshop-clickable"
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setSaleModalForm({
+                                date: sale.date || todayISO(),
+                                payment_method_id: sale.payment_method_id || "",
+                                notes: sale.notes || "",
+                                items: (sale.items || []).map((item) => ({
+                                  product_id: item.product_id,
+                                  quantity: item.quantity,
+                                  unit_price:
+                                    item.unit_price !== null &&
+                                    item.unit_price !== undefined
+                                      ? String(item.unit_price)
+                                      : "",
+                                })),
+                              });
+                              setIsEditingSaleModal(false);
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedSale(sale);
+                                setSaleModalForm({
+                                  date: sale.date || todayISO(),
+                                  payment_method_id: sale.payment_method_id || "",
+                                  notes: sale.notes || "",
+                                  items: (sale.items || []).map((item) => ({
+                                    product_id: item.product_id,
+                                    quantity: item.quantity,
+                                    unit_price:
+                                      item.unit_price !== null &&
+                                      item.unit_price !== undefined
+                                        ? String(item.unit_price)
+                                        : "",
+                                  })),
+                                });
+                                setIsEditingSaleModal(false);
+                              }
+                            }}
+                          >
+                            <div className="service-item__body">
+                              <div className="petshop-sale-card__title-row">
+                                <div className="service-item__title">
+                                  {getSaleTitle(sale)}
+                                </div>
+                                <div className="petshop-amount">
+                                  {formatCurrency(sale.total)}
+                                </div>
+                              </div>
+                              <div className="service-item__meta">
+                                <span>{formatDateDisplay(sale.date)}</span>
+                                <span>{getSaleQuantity(sale)} u.</span>
+                                <span>{formatPaymentMethod(sale.payment_method_id)}</span>
+                              </div>
+                              <div className="service-item__badges">
+                                {isTestSale ? (
+                                  <span className="service-badge service-badge--muted">
+                                    Venta de prueba
+                                  </span>
+                                ) : null}
+                                {sale.notes ? (
+                                  <span className="service-badge">{sale.notes}</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -1011,18 +1196,37 @@ export default function PetShopPage() {
                     key={product.id}
                     className="service-item petshop-clickable"
                     onClick={() => openProductModal(product)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openProductModal(product);
+                      }
+                    }}
                   >
                     <div className="service-item__body">
-                      <div className="service-item__title">{product.name}</div>
-                      <div className="service-item__meta">
-                        <span>SKU: {product.sku || "-"}</span>
-                        <span>Stock: {product.stock ?? 0}</span>
-                        <span>Mín: {product.stock_min ?? 0}</span>
+                      <div className="petshop-product-card__header">
+                        <div>
+                          <div className="service-item__title">{product.name}</div>
+                          <div className="service-item__meta">
+                            SKU: {product.sku || "-"}
+                          </div>
+                        </div>
+                        {toNumber(product.stock) <= toNumber(product.stock_min) ? (
+                          <span className="service-badge service-badge--critical">
+                            Crítico
+                          </span>
+                        ) : null}
                       </div>
-                    </div>
-                    <div className="service-item__side">
-                      <div className="service-item__price">
-                        {formatCurrency(product.price)}
+                      <div className="petshop-product-card__stock">
+                        {product.stock ?? 0}
+                      </div>
+                      <div className="petshop-product-card__meta">
+                        <span>Mín: {product.stock_min ?? 0}</span>
+                        <span className="petshop-amount">
+                          {formatCurrency(product.price)}
+                        </span>
                       </div>
                     </div>
                   </div>
