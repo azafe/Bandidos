@@ -138,6 +138,8 @@ export default function AgendaPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showReminder, setShowReminder] = useState(false);
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
@@ -252,6 +254,7 @@ export default function AgendaPage() {
     () => [...items].sort((a, b) => (a.time || "").localeCompare(b.time || "")),
     [items]
   );
+  const nextTurno = dailySummaryItems[0] || null;
 
   const filteredTurnos = useMemo(() => {
     const term = normalize(search);
@@ -601,6 +604,11 @@ export default function AgendaPage() {
       : null,
   ].filter(Boolean);
 
+  function resetFilters() {
+    setFilters({ service_type_id: "", groomer_id: "", status: "" });
+    setSearch("");
+  }
+
   return (
     <div className={`page-content agenda-page${isCompact ? " agenda-page--compact" : ""}`}>
       <div className="agenda-header">
@@ -615,224 +623,242 @@ export default function AgendaPage() {
         </button>
       </div>
 
-      <div className="agenda-daybar card">
-        <div className="agenda-daybar__left">
-          <span className="agenda-daybar__label">{formatDateLong(selectedDate)}</span>
-          <div className="agenda-date__controls">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setSelectedDate(todayISO())}
-            >
-              Hoy
-            </button>
-            <div className="date-field__control">
-              <input
-                type="text"
-                className="date-field__display"
-                value={formatDateDisplay(selectedDate)}
-                placeholder="DD-MM-AAAA"
-                readOnly
-                tabIndex={-1}
-                aria-hidden="true"
-              />
-              <input
-                type="date"
-                className="date-field__native"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
-            </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
-            >
-              →
-            </button>
-          </div>
-        </div>
-        <div className="agenda-metrics">
-          <div className="agenda-metric agenda-metric--count">
-            <span>Total turnos</span>
-            <strong>{summary.total}</strong>
-            <div className="agenda-metric__sub">
-              <span className="agenda-chip agenda-chip--ok">
-                Finalizados {summary.finished}
-              </span>
-              <span className="agenda-chip agenda-chip--pending">
-                Reservados {summary.reserved}
-              </span>
-              <span className="agenda-chip agenda-chip--danger">
-                Cancelados {summary.cancelled}
-              </span>
+      <div className="agenda-command card">
+        <div className="agenda-command__top">
+          <div className="agenda-command__date">
+            <span className="agenda-daybar__label">{formatDateLong(selectedDate)}</span>
+            <div className="agenda-date__controls">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedDate(todayISO())}
+              >
+                Hoy
+              </button>
+              <div className="date-field__control">
+                <input
+                  type="text"
+                  className="date-field__display"
+                  value={formatDateDisplay(selectedDate)}
+                  placeholder="DD-MM-AAAA"
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                />
+                <input
+                  type="date"
+                  className="date-field__native"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+              >
+                →
+              </button>
             </div>
           </div>
-          <div className="agenda-metric agenda-metric--income">
-            <span>Ingresos estimados</span>
-            <strong>{formatCurrency(summary.income)}</strong>
-          </div>
-        </div>
-        <div className="agenda-summary">
-          <div className="agenda-summary__header">
-            <span>Resumen diario</span>
-            <strong>{summary.total} perros</strong>
-          </div>
-          {dailySummaryItems.length === 0 ? (
-            <div className="agenda-summary__empty">Sin turnos para el día.</div>
-          ) : (
-            <ul className="agenda-summary__list">
-              {dailySummaryItems.map((turno) => (
-                <li key={turno.id} className="agenda-summary__item">
-                  <span className="agenda-summary__time">
-                    {formatTime(turno.time)}
-                  </span>
-                  <span className="agenda-summary__name">
-                    {turno.pet_name || "Mascota"}
-                  </span>
-                  <span className="agenda-summary__detail">
-                    {turno.owner_name || "-"} ·{" "}
-                    {getServiceName(turno, serviceTypes)} ·{" "}
-                    {STATUS_LABELS[normalizeStatus(turno.status)]} ·{" "}
-                    {formatCurrency(getServicePrice(turno))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
 
-      <div className="agenda-controls">
-        <div className="agenda-filters card">
-          <div className="agenda-filters__header">
-            <div>
-              <h2 className="card-title">Busqueda y filtros</h2>
-              <p className="card-subtitle">Encontrá turnos en segundos.</p>
-            </div>
-            <div className="agenda-filters__actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setIsCompact((prev) => !prev)}
-              >
-                {isCompact ? "Modo normal" : "Modo compacto"}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setFilters({ service_type_id: "", groomer_id: "", status: "" });
-                  setSearch("");
-                }}
-              >
-                Limpiar filtros
-              </button>
-            </div>
-          </div>
-          {warning ? <div className="agenda-warning">{warning}</div> : null}
-          <div className="agenda-search agenda-search--primary">
+          <div className="agenda-search agenda-search--primary agenda-command__search">
             <input
               type="text"
-              placeholder="Buscar por mascota o dueno..."
+              placeholder="Buscar por mascota o dueño..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="agenda-quick-filters">
-            <select
-              value={filters.service_type_id}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, service_type_id: e.target.value }))
-              }
-            >
-              <option value="">Servicio</option>
-              {serviceTypes.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.groomer_id}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
-              }
-            >
-              <option value="">Groomer</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filters.status}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, status: e.target.value }))
-              }
-            >
-              <option value="">Estado</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="agenda-filter-chips">
-            {activeFilterChips.length > 0 ? (
-              activeFilterChips.map((chip) => (
-                <button
-                  key={chip.key}
-                  type="button"
-                  className="filter-chip"
-                  onClick={chip.onRemove}
-                >
-                  {chip.label} <span aria-hidden="true">×</span>
-                </button>
-              ))
-            ) : (
-              <span className="agenda-filter-chips__empty">Sin filtros activos</span>
-            )}
-          </div>
-        </div>
 
-        <div className="agenda-reminder card">
-          <div className="agenda-reminder__header">
-            <div>
-              <h2 className="card-title">
-                <span className="agenda-reminder__icon" aria-hidden="true">
-                  📝
-                </span>{" "}
-                Recordatorio del dia
-              </h2>
-              <p className="card-subtitle">Nota interna para el equipo.</p>
-            </div>
+          <div className="agenda-command__actions">
             <button
               type="button"
               className="btn-secondary"
-              onClick={saveReminder}
+              onClick={() => setIsCompact((prev) => !prev)}
             >
-              {reminderSaved ? "Guardado" : "Guardar nota del dia"}
+              {isCompact ? "Modo normal" : "Modo compacto"}
+            </button>
+            <button
+              type="button"
+              className={showFilters ? "btn-primary" : "btn-secondary"}
+              onClick={() => setShowFilters((prev) => !prev)}
+            >
+              Filtros{activeFilterChips.length ? ` (${activeFilterChips.length})` : ""}
+            </button>
+            <button
+              type="button"
+              className={showReminder ? "btn-primary" : "btn-secondary"}
+              onClick={() => setShowReminder((prev) => !prev)}
+            >
+              Nota del día
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={resetFilters}
+              disabled={activeFilterChips.length === 0}
+            >
+              Limpiar
             </button>
           </div>
-          <textarea
-            rows={4}
-            placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
-            value={reminder}
-            onChange={(e) => setReminder(e.target.value)}
-            onBlur={saveReminder}
-          />
+        </div>
+
+        {warning ? <div className="agenda-warning">{warning}</div> : null}
+
+        <div className="agenda-kpi-strip">
+          <span className="agenda-chip agenda-chip--neutral">
+            Turnos: <strong>{summary.total}</strong>
+          </span>
+          <span className="agenda-chip agenda-chip--pending">
+            Reservados {summary.reserved}
+          </span>
+          <span className="agenda-chip agenda-chip--ok">
+            Finalizados {summary.finished}
+          </span>
+          <span className="agenda-chip agenda-chip--danger">
+            Cancelados {summary.cancelled}
+          </span>
+          <span className="agenda-chip agenda-chip--income">
+            Ingresos estimados {formatCurrency(summary.income)}
+          </span>
+          {nextTurno ? (
+            <span className="agenda-chip agenda-chip--next">
+              Próximo: {formatTime(nextTurno.time)} · {nextTurno.pet_name || "Mascota"}
+            </span>
+          ) : (
+            <span className="agenda-chip agenda-chip--next">Sin turnos para hoy</span>
+          )}
+        </div>
+
+        <div className="agenda-filter-chips">
+          {activeFilterChips.length > 0 ? (
+            activeFilterChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                className="filter-chip"
+                onClick={chip.onRemove}
+              >
+                {chip.label} <span aria-hidden="true">×</span>
+              </button>
+            ))
+          ) : (
+            <span className="agenda-filter-chips__empty">
+              Sin filtros activos. Mostrando agenda completa del día.
+            </span>
+          )}
         </div>
       </div>
+
+      {showFilters || showReminder ? (
+        <div className="agenda-controls">
+          {showFilters ? (
+            <div className="agenda-filters card">
+              <div className="agenda-filters__header">
+                <div>
+                  <h2 className="card-title">Filtros rápidos</h2>
+                  <p className="card-subtitle">Refiná turnos por servicio, groomer y estado.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowFilters(false)}
+                >
+                  Ocultar
+                </button>
+              </div>
+              <div className="agenda-quick-filters">
+                <select
+                  value={filters.service_type_id}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, service_type_id: e.target.value }))
+                  }
+                >
+                  <option value="">Servicio</option>
+                  {serviceTypes.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filters.groomer_id}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
+                  }
+                >
+                  <option value="">Groomer</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filters.status}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, status: e.target.value }))
+                  }
+                >
+                  <option value="">Estado</option>
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : null}
+
+          {showReminder ? (
+            <div className="agenda-reminder card">
+              <div className="agenda-reminder__header">
+                <div>
+                  <h2 className="card-title">
+                    <span className="agenda-reminder__icon" aria-hidden="true">
+                      📝
+                    </span>{" "}
+                    Recordatorio del día
+                  </h2>
+                  <p className="card-subtitle">Nota interna rápida para el equipo.</p>
+                </div>
+                <div className="agenda-reminder__actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={saveReminder}
+                  >
+                    {reminderSaved ? "Guardado" : "Guardar nota"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowReminder(false)}
+                  >
+                    Ocultar
+                  </button>
+                </div>
+              </div>
+              <textarea
+                rows={4}
+                placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
+                value={reminder}
+                onChange={(e) => setReminder(e.target.value)}
+                onBlur={saveReminder}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="agenda-day card">
         <div className="agenda-day__header">
@@ -867,10 +893,7 @@ export default function AgendaPage() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => {
-                setFilters({ service_type_id: "", groomer_id: "", status: "" });
-                setSearch("");
-              }}
+              onClick={resetFilters}
             >
               Limpiar filtros
             </button>
