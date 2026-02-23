@@ -84,7 +84,10 @@ export async function apiRequest(
   });
 
   if (res.status === 401 && unauthorizedHandler) {
-    unauthorizedHandler();
+    const latestToken = getStoredToken();
+    if (token && latestToken && token === latestToken) {
+      unauthorizedHandler();
+    }
   }
 
   return handleResponse(res);
