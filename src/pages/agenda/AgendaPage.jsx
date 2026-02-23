@@ -126,12 +126,6 @@ function getServiceName(turno, serviceTypes) {
   return match?.name || "-";
 }
 
-function getPrimaryAction(turno) {
-  if (normalizeStatus(turno.status) === "reserved")
-    return { label: "Finalizar", status: "finished" };
-  return null;
-}
-
 export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [search, setSearch] = useState("");

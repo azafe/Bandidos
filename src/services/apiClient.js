@@ -22,7 +22,10 @@ export function setStoredToken(token) {
 }
 
 function buildUrl(path, params) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL;
+  const baseUrl =
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    DEFAULT_BASE_URL;
   const url = new URL(path, baseUrl);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -65,9 +68,12 @@ export async function publicRequest(path, { method = "GET", body, params } = {})
   return handleResponse(res);
 }
 
-export async function apiRequest(path, { method = "GET", body, params } = {}) {
+export async function apiRequest(
+  path,
+  { method = "GET", body, params, token: tokenOverride } = {}
+) {
   const url = buildUrl(path, params);
-  const token = getStoredToken();
+  const token = tokenOverride || getStoredToken();
   const res = await fetch(url, {
     method,
     headers: {

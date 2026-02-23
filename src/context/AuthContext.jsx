@@ -38,11 +38,22 @@ export function AuthProvider({ children }) {
     }
     try {
       setLoading(true);
-      const me = await apiRequest("/me");
+      let me;
+      try {
+        me = await apiRequest("/me", { token });
+      } catch (err) {
+        if (err?.status === 404) {
+          me = await apiRequest("/auth/me", { token });
+        } else {
+          throw err;
+        }
+      }
       setUser(me?.user || me);
     } catch (err) {
       console.error("[AuthContext] Error cargando /me:", err);
-      logout();
+      if (err?.status === 401) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }
@@ -57,7 +68,11 @@ export function AuthProvider({ children }) {
       method: "POST",
       body: payload,
     });
-    setToken(data?.token);
+    if (!data?.token) {
+      throw new Error("No se recibió token de sesión.");
+    }
+    setStoredToken(data.token);
+    setToken(data.token);
     setUser(data?.user || null);
   };
 
@@ -66,7 +81,11 @@ export function AuthProvider({ children }) {
       method: "POST",
       body: payload,
     });
-    setToken(data?.token);
+    if (!data?.token) {
+      throw new Error("No se recibió token de sesión.");
+    }
+    setStoredToken(data.token);
+    setToken(data.token);
     setUser(data?.user || null);
   };
 

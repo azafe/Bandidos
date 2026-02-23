@@ -18,17 +18,28 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.email || !form.password) {
+    const email = form.email.trim().toLowerCase();
+    const password = form.password;
+
+    if (!email || !password) {
       alert("Completá email y contraseña.");
+      return;
+    }
+    if (password.length < 6) {
+      alert("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     try {
       setSubmitting(true);
-      await login({ email: form.email, password: form.password });
+      await login({ email, password });
       navigate("/");
     } catch (err) {
-      alert(err.message || "No se pudo iniciar sesión.");
+      if (err?.message === "Invalid request body") {
+        alert("Credenciales inválidas. Verificá email y contraseña (mínimo 6 caracteres).");
+      } else {
+        alert(err.message || "No se pudo iniciar sesión.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -94,6 +105,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               autoComplete="current-password"
               aria-label="Contraseña"
+              minLength={6}
               required
             />
           </div>
