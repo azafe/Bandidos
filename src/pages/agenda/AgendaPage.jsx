@@ -157,8 +157,6 @@ export default function AgendaPage() {
   const [selectedDate, setSelectedDate] = useState(todayISO());
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({
-    service_type_id: "",
-    groomer_id: "",
     status: "",
     without_groomer: false,
   });
@@ -169,7 +167,6 @@ export default function AgendaPage() {
   const [viewMode, setViewMode] = useState("operation");
   const [closeGroomerId, setCloseGroomerId] = useState("");
   const [showZeroFinishedRows, setShowZeroFinishedRows] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
@@ -289,23 +286,19 @@ export default function AgendaPage() {
     const term = normalize(search);
     return items
       .filter((turno) => {
-        if (
-          filters.service_type_id &&
-          String(turno.service_type_id || "") !== String(filters.service_type_id)
-        )
-          return false;
-        if (
-          filters.groomer_id &&
-          String(getTurnoGroomerId(turno) || "") !== String(filters.groomer_id)
-        )
-          return false;
         if (filters.without_groomer && String(getTurnoGroomerId(turno) || "").trim())
           return false;
         if (filters.status && normalizeStatus(turno.status) !== filters.status) return false;
         if (!term) return true;
+        const groomerName =
+          turno.groomer?.name ||
+          (typeof turno.groomer === "string" ? turno.groomer : "") ||
+          employeesById.get(String(getTurnoGroomerId(turno) || ""))?.name ||
+          "";
         return [
           turno.pet_name,
           turno.owner_name,
+          groomerName,
           turno.breed,
           turno.service_type?.name,
         ]
@@ -313,7 +306,7 @@ export default function AgendaPage() {
           .some((field) => normalize(field).includes(term));
       })
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-  }, [items, search, filters]);
+  }, [items, search, filters, employeesById]);
 
   const closeFilteredTurnos = useMemo(() => {
     if (!closeGroomerId) return items;
@@ -761,26 +754,6 @@ export default function AgendaPage() {
   }
 
   const activeFilterChips = [
-    filters.service_type_id
-      ? {
-          key: "service",
-          label: `Servicio: ${
-            serviceTypes.find((s) => String(s.id) === String(filters.service_type_id))
-              ?.name ||
-            ""
-          }`,
-          onRemove: () => setFilters((prev) => ({ ...prev, service_type_id: "" })),
-        }
-      : null,
-    filters.groomer_id
-      ? {
-          key: "groomer",
-          label: `Groomer: ${
-            employees.find((g) => String(g.id) === String(filters.groomer_id))?.name || ""
-          }`,
-          onRemove: () => setFilters((prev) => ({ ...prev, groomer_id: "" })),
-        }
-      : null,
     filters.status
       ? {
           key: "status",
@@ -806,8 +779,6 @@ export default function AgendaPage() {
 
   function resetFilters() {
     setFilters({
-      service_type_id: "",
-      groomer_id: "",
       status: "",
       without_groomer: false,
     });
@@ -821,11 +792,8 @@ export default function AgendaPage() {
 
   function goToOperationPending() {
     setViewMode("operation");
-    setShowFilters(true);
     setShowReminder(false);
     setFilters({
-      service_type_id: "",
-      groomer_id: "",
       status: "reserved",
       without_groomer: false,
     });
@@ -834,11 +802,8 @@ export default function AgendaPage() {
 
   function goToOperationFinishedWithoutGroomer() {
     setViewMode("operation");
-    setShowFilters(true);
     setShowReminder(false);
     setFilters({
-      service_type_id: "",
-      groomer_id: "",
       status: "finished",
       without_groomer: true,
     });
@@ -878,7 +843,6 @@ export default function AgendaPage() {
             aria-selected={viewMode === "close"}
             className={viewMode === "close" ? "is-active" : ""}
             onClick={() => {
-              setShowFilters(false);
               setShowReminder(false);
               setViewMode("close");
             }}
@@ -943,7 +907,7 @@ export default function AgendaPage() {
             <div className="agenda-search agenda-search--primary agenda-command__search">
               <input
                 type="text"
-                placeholder="Buscar por mascota o dueño..."
+                placeholder="Buscar por mascota, dueño o groomer..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -965,13 +929,6 @@ export default function AgendaPage() {
                   onClick={() => setIsCompact((prev) => !prev)}
                 >
                   {isCompact ? "Modo normal" : "Modo compacto"}
-                </button>
-                <button
-                  type="button"
-                  className={showFilters ? "btn-primary" : "btn-secondary"}
-                  onClick={() => setShowFilters((prev) => !prev)}
-                >
-                  Filtros{activeFilterChips.length ? ` (${activeFilterChips.length})` : ""}
                 </button>
                 <button
                   type="button"
@@ -1040,126 +997,44 @@ export default function AgendaPage() {
 
       {viewMode === "operation" ? (
         <>
-          {showFilters || showReminder ? (
+          {showReminder ? (
             <div className="agenda-controls">
-              {showFilters ? (
-                <div className="agenda-filters card">
-                  <div className="agenda-filters__header">
-                    <div>
-                      <h2 className="card-title">Filtros rápidos</h2>
-                      <p className="card-subtitle">
-                        Refiná turnos por servicio, groomer y estado.
-                      </p>
-                    </div>
+              <div className="agenda-reminder card">
+                <div className="agenda-reminder__header">
+                  <div>
+                    <h2 className="card-title">
+                      <span className="agenda-reminder__icon" aria-hidden="true">
+                        📝
+                      </span>{" "}
+                      Recordatorio del día
+                    </h2>
+                    <p className="card-subtitle">Nota interna rápida para el equipo.</p>
+                  </div>
+                  <div className="agenda-reminder__actions">
                     <button
                       type="button"
                       className="btn-secondary"
-                      onClick={() => setShowFilters(false)}
+                      onClick={saveReminder}
+                    >
+                      {reminderSaved ? "Guardado" : "Guardar nota"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setShowReminder(false)}
                     >
                       Ocultar
                     </button>
                   </div>
-                  <div className="agenda-quick-filters">
-                    <select
-                      value={filters.service_type_id}
-                      onChange={(e) =>
-                        setFilters((prev) => ({ ...prev, service_type_id: e.target.value }))
-                      }
-                    >
-                      <option value="">Servicio</option>
-                      {serviceTypes.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={filters.groomer_id}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          groomer_id: e.target.value,
-                          without_groomer: false,
-                        }))
-                      }
-                    >
-                      <option value="">Groomer</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={filters.status}
-                      onChange={(e) =>
-                        setFilters((prev) => ({ ...prev, status: e.target.value }))
-                      }
-                    >
-                      <option value="">Estado</option>
-                      {STATUS_OPTIONS.map((status) => (
-                        <option key={status.value} value={status.value}>
-                          {status.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      className={`btn-secondary agenda-quick-toggle${
-                        filters.without_groomer ? " is-active" : ""
-                      }`}
-                      onClick={() =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          without_groomer: !prev.without_groomer,
-                          groomer_id: !prev.without_groomer ? "" : prev.groomer_id,
-                        }))
-                      }
-                    >
-                      Sin groomer
-                    </button>
-                  </div>
                 </div>
-              ) : null}
-
-              {showReminder ? (
-                <div className="agenda-reminder card">
-                  <div className="agenda-reminder__header">
-                    <div>
-                      <h2 className="card-title">
-                        <span className="agenda-reminder__icon" aria-hidden="true">
-                          📝
-                        </span>{" "}
-                        Recordatorio del día
-                      </h2>
-                      <p className="card-subtitle">Nota interna rápida para el equipo.</p>
-                    </div>
-                    <div className="agenda-reminder__actions">
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={saveReminder}
-                      >
-                        {reminderSaved ? "Guardado" : "Guardar nota"}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary"
-                        onClick={() => setShowReminder(false)}
-                      >
-                        Ocultar
-                      </button>
-                    </div>
-                  </div>
-                  <textarea
-                    rows={4}
-                    placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
-                    value={reminder}
-                    onChange={(e) => setReminder(e.target.value)}
-                    onBlur={saveReminder}
-                  />
-                </div>
-              ) : null}
+                <textarea
+                  rows={4}
+                  placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
+                  value={reminder}
+                  onChange={(e) => setReminder(e.target.value)}
+                  onBlur={saveReminder}
+                />
+              </div>
             </div>
           ) : null}
 
