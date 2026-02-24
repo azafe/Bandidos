@@ -24,6 +24,8 @@ const STATUS_LABELS = {
   cancelled: "Cancelado",
 };
 
+const DEFAULT_GROOMER_COMMISSION = 40;
+
 function todayISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -118,6 +120,31 @@ function normalizeStatus(status) {
   return STATUS_LABELS[status] ? status : "reserved";
 }
 
+function toNumber(value) {
+  const parsed =
+    typeof value === "string" ? Number(value.trim().replace(",", ".")) : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getTurnoGroomerId(turno) {
+  return turno?.groomer_id ?? turno?.groomer?.id ?? "";
+}
+
+function getEmployeeCommissionRate(employee) {
+  if (!employee) return DEFAULT_GROOMER_COMMISSION;
+  const raw =
+    employee.commission_rate ??
+    employee.commissionRate ??
+    employee.commission ??
+    employee.comision ??
+    employee.comision_porcentaje ??
+    employee.percentage ??
+    DEFAULT_GROOMER_COMMISSION;
+  const rate = Number(raw);
+  if (!Number.isFinite(rate)) return DEFAULT_GROOMER_COMMISSION;
+  return Math.max(0, Math.min(100, rate));
+}
+
 function getServiceName(turno, serviceTypes) {
   if (turno?.service_type?.name) return turno.service_type.name;
   const match = serviceTypes.find(
@@ -138,6 +165,8 @@ export default function AgendaPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [viewMode, setViewMode] = useState("operation");
+  const [closeGroomerId, setCloseGroomerId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
   const [formError, setFormError] = useState("");
@@ -255,15 +284,31 @@ export default function AgendaPage() {
     [items]
   );
   const nextTurno = dailySummaryItems[0] || null;
+  const employeesById = useMemo(
+    () =>
+      new Map(
+        employees
+          .filter((employee) => employee?.id !== null && employee?.id !== undefined)
+          .map((employee) => [String(employee.id), employee])
+      ),
+    [employees]
+  );
 
   const filteredTurnos = useMemo(() => {
     const term = normalize(search);
     return items
       .filter((turno) => {
-        if (filters.service_type_id && turno.service_type_id !== filters.service_type_id)
+        if (
+          filters.service_type_id &&
+          String(turno.service_type_id || "") !== String(filters.service_type_id)
+        )
           return false;
-        if (filters.groomer_id && turno.groomer_id !== filters.groomer_id) return false;
-        if (filters.status && turno.status !== filters.status) return false;
+        if (
+          filters.groomer_id &&
+          String(getTurnoGroomerId(turno) || "") !== String(filters.groomer_id)
+        )
+          return false;
+        if (filters.status && normalizeStatus(turno.status) !== filters.status) return false;
         if (!term) return true;
         return [
           turno.pet_name,
@@ -276,6 +321,120 @@ export default function AgendaPage() {
       })
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
   }, [items, search, filters]);
+
+  const closeFilteredTurnos = useMemo(() => {
+    if (!closeGroomerId) return items;
+    return items.filter(
+      (turno) => String(getTurnoGroomerId(turno) || "") === String(closeGroomerId)
+    );
+  }, [items, closeGroomerId]);
+
+  const closeSummary = useMemo(() => {
+    let reserved = 0;
+    let finished = 0;
+    let cancelled = 0;
+    let estimatedIncome = 0;
+    let finishedIncome = 0;
+    let totalDeposit = 0;
+
+    closeFilteredTurnos.forEach((turno) => {
+      const status = normalizeStatus(turno.status);
+      const amount = getServicePrice(turno);
+      estimatedIncome += amount;
+      totalDeposit += toNumber(turno.deposit_amount);
+      if (status === "reserved") reserved += 1;
+      if (status === "finished") {
+        finished += 1;
+        finishedIncome += amount;
+      }
+      if (status === "cancelled") cancelled += 1;
+    });
+
+    const totalScheduled = closeFilteredTurnos.length;
+    const completionRate = totalScheduled
+      ? Math.round((finished / totalScheduled) * 100)
+      : 0;
+
+    return {
+      totalScheduled,
+      reserved,
+      finished,
+      cancelled,
+      completionRate,
+      estimatedIncome,
+      finishedIncome,
+      totalDeposit,
+      pendingCollection: Math.max(estimatedIncome - totalDeposit, 0),
+    };
+  }, [closeFilteredTurnos, getServicePrice]);
+
+  const closeLiquidationRows = useMemo(() => {
+    const grouped = new Map();
+
+    closeFilteredTurnos.forEach((turno) => {
+      const rawGroomerId = getTurnoGroomerId(turno);
+      const hasGroomerId = rawGroomerId !== null && rawGroomerId !== undefined && rawGroomerId !== "";
+      const groomerKey = hasGroomerId ? String(rawGroomerId) : "unassigned";
+      const employee = hasGroomerId ? employeesById.get(groomerKey) : null;
+      const groomerName =
+        turno.groomer?.name ||
+        employee?.name ||
+        (hasGroomerId ? `Groomer #${groomerKey}` : "Sin groomer asignado");
+      const commissionRate = hasGroomerId ? getEmployeeCommissionRate(employee) : 0;
+
+      if (!grouped.has(groomerKey)) {
+        grouped.set(groomerKey, {
+          groomerId: groomerKey,
+          groomerName,
+          commissionRate,
+          scheduledCount: 0,
+          finishedCount: 0,
+          estimatedIncome: 0,
+          finishedIncome: 0,
+        });
+      }
+
+      const row = grouped.get(groomerKey);
+      const amount = getServicePrice(turno);
+      row.scheduledCount += 1;
+      row.estimatedIncome += amount;
+      if (normalizeStatus(turno.status) === "finished") {
+        row.finishedCount += 1;
+        row.finishedIncome += amount;
+      }
+    });
+
+    return Array.from(grouped.values())
+      .map((row) => ({
+        ...row,
+        completionRate: row.scheduledCount
+          ? Math.round((row.finishedCount / row.scheduledCount) * 100)
+          : 0,
+        payout: row.finishedIncome * (row.commissionRate / 100),
+      }))
+      .sort((a, b) => b.payout - a.payout || b.finishedIncome - a.finishedIncome);
+  }, [closeFilteredTurnos, employeesById, getServicePrice]);
+
+  const closeLiquidationTotals = useMemo(
+    () =>
+      closeLiquidationRows.reduce(
+        (acc, row) => ({
+          scheduledCount: acc.scheduledCount + row.scheduledCount,
+          finishedCount: acc.finishedCount + row.finishedCount,
+          finishedIncome: acc.finishedIncome + row.finishedIncome,
+          payout: acc.payout + row.payout,
+        }),
+        { scheduledCount: 0, finishedCount: 0, finishedIncome: 0, payout: 0 }
+      ),
+    [closeLiquidationRows]
+  );
+
+  const selectedCloseRow = useMemo(() => {
+    if (!closeGroomerId) return null;
+    return (
+      closeLiquidationRows.find((row) => row.groomerId === String(closeGroomerId)) || null
+    );
+  }, [closeLiquidationRows, closeGroomerId]);
 
   const selectedService = useMemo(
     () => serviceTypes.find((service) => service.id === form.service_type_id),
@@ -573,7 +732,8 @@ export default function AgendaPage() {
       ? {
           key: "service",
           label: `Servicio: ${
-            serviceTypes.find((s) => s.id === filters.service_type_id)?.name ||
+            serviceTypes.find((s) => String(s.id) === String(filters.service_type_id))
+              ?.name ||
             ""
           }`,
           onRemove: () => setFilters((prev) => ({ ...prev, service_type_id: "" })),
@@ -583,7 +743,7 @@ export default function AgendaPage() {
       ? {
           key: "groomer",
           label: `Groomer: ${
-            employees.find((g) => g.id === filters.groomer_id)?.name || ""
+            employees.find((g) => String(g.id) === String(filters.groomer_id))?.name || ""
           }`,
           onRemove: () => setFilters((prev) => ({ ...prev, groomer_id: "" })),
         }
@@ -607,6 +767,10 @@ export default function AgendaPage() {
   function resetFilters() {
     setFilters({ service_type_id: "", groomer_id: "", status: "" });
     setSearch("");
+  }
+
+  function resetCloseFilters() {
+    setCloseGroomerId("");
   }
 
   return (
@@ -669,157 +833,557 @@ export default function AgendaPage() {
             </div>
           </div>
 
-          <div className="agenda-search agenda-search--primary agenda-command__search">
-            <input
-              type="text"
-              placeholder="Buscar por mascota o dueño..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          {viewMode === "operation" ? (
+            <div className="agenda-search agenda-search--primary agenda-command__search">
+              <input
+                type="text"
+                placeholder="Buscar por mascota o dueño..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+          ) : (
+            <div className="agenda-close-filter">
+              <label htmlFor="agenda-close-groomer">Filtro de cierre por groomer</label>
+              <select
+                id="agenda-close-groomer"
+                value={closeGroomerId}
+                onChange={(e) => setCloseGroomerId(e.target.value)}
+              >
+                <option value="">Todos los groomers</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="agenda-command__actions">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => setIsCompact((prev) => !prev)}
-            >
-              {isCompact ? "Modo normal" : "Modo compacto"}
-            </button>
-            <button
-              type="button"
-              className={showFilters ? "btn-primary" : "btn-secondary"}
-              onClick={() => setShowFilters((prev) => !prev)}
-            >
-              Filtros{activeFilterChips.length ? ` (${activeFilterChips.length})` : ""}
-            </button>
-            <button
-              type="button"
-              className={showReminder ? "btn-primary" : "btn-secondary"}
-              onClick={() => setShowReminder((prev) => !prev)}
-            >
-              Nota del día
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={resetFilters}
-              disabled={activeFilterChips.length === 0}
-            >
-              Limpiar
-            </button>
+            <div className="agenda-mode-switch" role="tablist" aria-label="Modo de agenda">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "operation"}
+                className={viewMode === "operation" ? "is-active" : ""}
+                onClick={() => setViewMode("operation")}
+              >
+                Operación
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "close"}
+                className={viewMode === "close" ? "is-active" : ""}
+                onClick={() => {
+                  setShowFilters(false);
+                  setShowReminder(false);
+                  setViewMode("close");
+                }}
+              >
+                Cierre del día
+              </button>
+            </div>
+            {viewMode === "operation" ? (
+              <>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsCompact((prev) => !prev)}
+                >
+                  {isCompact ? "Modo normal" : "Modo compacto"}
+                </button>
+                <button
+                  type="button"
+                  className={showFilters ? "btn-primary" : "btn-secondary"}
+                  onClick={() => setShowFilters((prev) => !prev)}
+                >
+                  Filtros{activeFilterChips.length ? ` (${activeFilterChips.length})` : ""}
+                </button>
+                <button
+                  type="button"
+                  className={showReminder ? "btn-primary" : "btn-secondary"}
+                  onClick={() => setShowReminder((prev) => !prev)}
+                >
+                  Nota del día
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={resetFilters}
+                  disabled={activeFilterChips.length === 0}
+                >
+                  Limpiar
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={resetCloseFilters}
+                disabled={!closeGroomerId}
+              >
+                Limpiar filtro
+              </button>
+            )}
           </div>
         </div>
 
         {warning ? <div className="agenda-warning">{warning}</div> : null}
 
-        <div className="agenda-kpi-strip">
-          <span className="agenda-chip agenda-chip--neutral">
-            Turnos: <strong>{summary.total}</strong>
-          </span>
-          <span className="agenda-chip agenda-chip--pending">
-            Reservados {summary.reserved}
-          </span>
-          <span className="agenda-chip agenda-chip--ok">
-            Finalizados {summary.finished}
-          </span>
-          <span className="agenda-chip agenda-chip--danger">
-            Cancelados {summary.cancelled}
-          </span>
-          <span className="agenda-chip agenda-chip--income">
-            Ingresos estimados {formatCurrency(summary.income)}
-          </span>
-          {nextTurno ? (
-            <span className="agenda-chip agenda-chip--next">
-              Próximo: {formatTime(nextTurno.time)} · {nextTurno.pet_name || "Mascota"}
-            </span>
-          ) : (
-            <span className="agenda-chip agenda-chip--next">Sin turnos para hoy</span>
-          )}
-        </div>
+        {viewMode === "operation" ? (
+          <>
+            <div className="agenda-kpi-strip">
+              <span className="agenda-chip agenda-chip--neutral">
+                Turnos: <strong>{summary.total}</strong>
+              </span>
+              <span className="agenda-chip agenda-chip--pending">
+                Reservados {summary.reserved}
+              </span>
+              <span className="agenda-chip agenda-chip--ok">
+                Finalizados {summary.finished}
+              </span>
+              <span className="agenda-chip agenda-chip--danger">
+                Cancelados {summary.cancelled}
+              </span>
+              <span className="agenda-chip agenda-chip--income">
+                Ingresos estimados {formatCurrency(summary.income)}
+              </span>
+              {nextTurno ? (
+                <span className="agenda-chip agenda-chip--next">
+                  Próximo: {formatTime(nextTurno.time)} · {nextTurno.pet_name || "Mascota"}
+                </span>
+              ) : (
+                <span className="agenda-chip agenda-chip--next">Sin turnos para hoy</span>
+              )}
+            </div>
 
-        <div className="agenda-filter-chips">
-          {activeFilterChips.length > 0 ? (
-            activeFilterChips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                className="filter-chip"
-                onClick={chip.onRemove}
-              >
-                {chip.label} <span aria-hidden="true">×</span>
-              </button>
-            ))
-          ) : (
-            <span className="agenda-filter-chips__empty">
-              Sin filtros activos. Mostrando agenda completa del día.
-            </span>
-          )}
-        </div>
+            <div className="agenda-filter-chips">
+              {activeFilterChips.length > 0 ? (
+                activeFilterChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    type="button"
+                    className="filter-chip"
+                    onClick={chip.onRemove}
+                  >
+                    {chip.label} <span aria-hidden="true">×</span>
+                  </button>
+                ))
+              ) : (
+                <span className="agenda-filter-chips__empty">
+                  Sin filtros activos. Mostrando agenda completa del día.
+                </span>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="agenda-close-kpis">
+              <article className="agenda-close-kpi agenda-close-kpi--neutral">
+                <span className="agenda-close-kpi__label">Turnos agendados</span>
+                <strong className="agenda-close-kpi__value">{closeSummary.totalScheduled}</strong>
+                <span className="agenda-close-kpi__meta">
+                  Reservados {closeSummary.reserved} · Cancelados {closeSummary.cancelled}
+                </span>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--success">
+                <span className="agenda-close-kpi__label">Turnos finalizados</span>
+                <strong className="agenda-close-kpi__value">{closeSummary.finished}</strong>
+                <span className="agenda-close-kpi__meta">
+                  Cumplimiento {closeSummary.completionRate}%
+                </span>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--income">
+                <span className="agenda-close-kpi__label">Ingresos estimados</span>
+                <strong className="agenda-close-kpi__value">
+                  {formatCurrency(closeSummary.estimatedIncome)}
+                </strong>
+                <span className="agenda-close-kpi__meta">
+                  Señas {formatCurrency(closeSummary.totalDeposit)}
+                </span>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--paid">
+                <span className="agenda-close-kpi__label">Facturación finalizada</span>
+                <strong className="agenda-close-kpi__value">
+                  {formatCurrency(closeSummary.finishedIncome)}
+                </strong>
+                <span className="agenda-close-kpi__meta">
+                  Solo turnos marcados como finalizados
+                </span>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--pending">
+                <span className="agenda-close-kpi__label">Pendiente de cobro</span>
+                <strong className="agenda-close-kpi__value">
+                  {formatCurrency(closeSummary.pendingCollection)}
+                </strong>
+                <span className="agenda-close-kpi__meta">Estimado menos señas registradas</span>
+              </article>
+            </div>
+            <div className="agenda-close-focus">
+              {closeGroomerId ? (
+                selectedCloseRow ? (
+                  <p>
+                    Liquidación de <strong>{selectedCloseRow.groomerName}</strong>:{" "}
+                    <strong>{formatCurrency(selectedCloseRow.payout)}</strong> ({selectedCloseRow.commissionRate}% sobre{" "}
+                    {formatCurrency(selectedCloseRow.finishedIncome)}).
+                  </p>
+                ) : (
+                  <p>No hay turnos para el groomer seleccionado en esta fecha.</p>
+                )
+              ) : (
+                <p>
+                  Mostrando el cierre consolidado del día. Usá el filtro por groomer para ver
+                  liquidación individual.
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {showFilters || showReminder ? (
-        <div className="agenda-controls">
-          {showFilters ? (
-            <div className="agenda-filters card">
-              <div className="agenda-filters__header">
-                <div>
-                  <h2 className="card-title">Filtros rápidos</h2>
-                  <p className="card-subtitle">Refiná turnos por servicio, groomer y estado.</p>
+      {viewMode === "operation" ? (
+        <>
+          {showFilters || showReminder ? (
+            <div className="agenda-controls">
+              {showFilters ? (
+                <div className="agenda-filters card">
+                  <div className="agenda-filters__header">
+                    <div>
+                      <h2 className="card-title">Filtros rápidos</h2>
+                      <p className="card-subtitle">
+                        Refiná turnos por servicio, groomer y estado.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setShowFilters(false)}
+                    >
+                      Ocultar
+                    </button>
+                  </div>
+                  <div className="agenda-quick-filters">
+                    <select
+                      value={filters.service_type_id}
+                      onChange={(e) =>
+                        setFilters((prev) => ({ ...prev, service_type_id: e.target.value }))
+                      }
+                    >
+                      <option value="">Servicio</option>
+                      {serviceTypes.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={filters.groomer_id}
+                      onChange={(e) =>
+                        setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
+                      }
+                    >
+                      <option value="">Groomer</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        setFilters((prev) => ({ ...prev, status: e.target.value }))
+                      }
+                    >
+                      <option value="">Estado</option>
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setShowFilters(false)}
-                >
-                  Ocultar
-                </button>
-              </div>
-              <div className="agenda-quick-filters">
-                <select
-                  value={filters.service_type_id}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, service_type_id: e.target.value }))
-                  }
-                >
-                  <option value="">Servicio</option>
-                  {serviceTypes.map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {service.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={filters.groomer_id}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
-                  }
-                >
-                  <option value="">Groomer</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={filters.status}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, status: e.target.value }))
-                  }
-                >
-                  <option value="">Estado</option>
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              ) : null}
+
+              {showReminder ? (
+                <div className="agenda-reminder card">
+                  <div className="agenda-reminder__header">
+                    <div>
+                      <h2 className="card-title">
+                        <span className="agenda-reminder__icon" aria-hidden="true">
+                          📝
+                        </span>{" "}
+                        Recordatorio del día
+                      </h2>
+                      <p className="card-subtitle">Nota interna rápida para el equipo.</p>
+                    </div>
+                    <div className="agenda-reminder__actions">
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={saveReminder}
+                      >
+                        {reminderSaved ? "Guardado" : "Guardar nota"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setShowReminder(false)}
+                      >
+                        Ocultar
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={4}
+                    placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
+                    value={reminder}
+                    onChange={(e) => setReminder(e.target.value)}
+                    onBlur={saveReminder}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
 
-          {showReminder ? (
+          <div className="agenda-day card">
+            <div className="agenda-day__header">
+              <div>
+                <h2 className="card-title">Turnos del dia</h2>
+                <p className="card-subtitle">
+                  {formatDateDisplay(selectedDate)} · {filteredTurnos.length} turnos
+                </p>
+              </div>
+            </div>
+
+            {error && <div className="agenda-empty">{error}</div>}
+            {loading ? (
+              <div className="agenda-skeleton">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={idx} className="agenda-card agenda-card--skeleton">
+                    <div className="skeleton skeleton-line" />
+                    <div className="skeleton skeleton-line short" />
+                  </div>
+                ))}
+              </div>
+            ) : items.length === 0 ? (
+              <div className="agenda-empty">
+                <p>No hay turnos cargados para este dia.</p>
+                <button type="button" className="btn-primary" onClick={openCreate}>
+                  Agregar primer turno
+                </button>
+              </div>
+            ) : filteredTurnos.length === 0 ? (
+              <div className="agenda-empty">
+                <p>No hay resultados para la busqueda o filtros actuales.</p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={resetFilters}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+            ) : (
+              <div className="agenda-timeline">
+                {filteredTurnos.map((turno) => (
+                  <div
+                    key={turno.id}
+                    className={`agenda-timeline__row agenda-timeline__row--${normalizeStatus(
+                      turno.status
+                    )}`}
+                  >
+                    <div className="agenda-timeline__time">
+                      <span className="agenda-time-range">
+                        {formatTime(turno.time)} -{" "}
+                        {getEndTime(turno.time, turno.duration || 60)}
+                      </span>
+                      <span className="agenda-time-dot" aria-hidden="true" />
+                      <span className="agenda-time-line" aria-hidden="true" />
+                    </div>
+                    <button
+                      type="button"
+                      className="agenda-card agenda-card--timeline"
+                      onClick={() => {
+                        setSelectedTurno(turno);
+                        setIsEditing(false);
+                      }}
+                    >
+                      <div className="agenda-card__body">
+                        <div className="agenda-card__title">
+                          {turno.pet_name || "Mascota"} -{" "}
+                          {getServiceName(turno, serviceTypes) || "Servicio"}
+                        </div>
+                        <div className="agenda-card__meta">
+                          {turno.owner_name || "-"} · {turno.breed || "-"}
+                        </div>
+                        <div className="agenda-card__pills">
+                          {turno.groomer?.name ? (
+                            <span className="agenda-card__pill agenda-card__pill--groomer">
+                              {turno.groomer.name}
+                            </span>
+                          ) : null}
+                          {turno.payment_method?.name ? (
+                            <span className="agenda-card__pill">
+                              {turno.payment_method.name}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="agenda-card__side">
+                        <span
+                          className={`agenda-badge agenda-badge--${normalizeStatus(
+                            turno.status
+                          )}`}
+                          title={STATUS_LABELS[normalizeStatus(turno.status)]}
+                        >
+                          {STATUS_LABELS[normalizeStatus(turno.status)]}
+                        </span>
+                        <div className="agenda-card__amount">
+                          {formatCurrency(getServicePrice(turno))}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="agenda-close-layout">
+          <div className="agenda-close-liquidation card">
+            <div className="agenda-close-liquidation__header">
+              <div>
+                <h2 className="card-title">Liquidación por groomer</h2>
+                <p className="card-subtitle">
+                  {formatDateDisplay(selectedDate)} · Comisión por defecto{" "}
+                  {DEFAULT_GROOMER_COMMISSION}% si no hay valor definido en empleados.
+                </p>
+              </div>
+            </div>
+            {error && <div className="agenda-empty">{error}</div>}
+            {loading ? (
+              <div className="agenda-skeleton">
+                {Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="agenda-card agenda-card--skeleton">
+                    <div className="skeleton skeleton-line" />
+                  </div>
+                ))}
+              </div>
+            ) : closeLiquidationRows.length === 0 ? (
+              <div className="agenda-empty">
+                <p>No hay turnos cargados para este día.</p>
+                <button type="button" className="btn-primary" onClick={openCreate}>
+                  Agregar primer turno
+                </button>
+              </div>
+            ) : (
+              <div className="agenda-close-table-wrap">
+                <table className="agenda-close-table">
+                  <thead>
+                    <tr>
+                      <th>Groomer</th>
+                      <th>Agendados</th>
+                      <th>Finalizados</th>
+                      <th>Cumplimiento</th>
+                      <th>Facturación</th>
+                      <th>Comisión</th>
+                      <th>A pagar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closeLiquidationRows.map((row) => (
+                      <tr key={row.groomerId}>
+                        <td>{row.groomerName}</td>
+                        <td>{row.scheduledCount}</td>
+                        <td>{row.finishedCount}</td>
+                        <td>{row.completionRate}%</td>
+                        <td>{formatCurrency(row.finishedIncome)}</td>
+                        <td>{row.commissionRate}%</td>
+                        <td className="agenda-close-table__amount">
+                          {formatCurrency(row.payout)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total</td>
+                      <td>{closeLiquidationTotals.scheduledCount}</td>
+                      <td>{closeLiquidationTotals.finishedCount}</td>
+                      <td>
+                        {closeLiquidationTotals.scheduledCount
+                          ? Math.round(
+                              (closeLiquidationTotals.finishedCount /
+                                closeLiquidationTotals.scheduledCount) *
+                                100
+                            )
+                          : 0}
+                        %
+                      </td>
+                      <td>{formatCurrency(closeLiquidationTotals.finishedIncome)}</td>
+                      <td>-</td>
+                      <td className="agenda-close-table__amount">
+                        {formatCurrency(closeLiquidationTotals.payout)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className="agenda-close-side">
+            <div className="agenda-close-box card">
+              <h2 className="card-title">Resumen de pago</h2>
+              {selectedCloseRow ? (
+                <div className="agenda-close-formula">
+                  <strong>{selectedCloseRow.groomerName}</strong>
+                  <span>
+                    {formatCurrency(selectedCloseRow.finishedIncome)} ×{" "}
+                    {selectedCloseRow.commissionRate}% ={" "}
+                    {formatCurrency(selectedCloseRow.payout)}
+                  </span>
+                </div>
+              ) : (
+                <div className="agenda-close-formula">
+                  <strong>Total del equipo</strong>
+                  <span>{formatCurrency(closeLiquidationTotals.payout)} a pagar hoy.</span>
+                </div>
+              )}
+              <div className="agenda-close-metrics">
+                <article>
+                  <span>Turnos finalizados</span>
+                  <strong>
+                    {selectedCloseRow
+                      ? selectedCloseRow.finishedCount
+                      : closeLiquidationTotals.finishedCount}
+                  </strong>
+                </article>
+                <article>
+                  <span>Facturación finalizada</span>
+                  <strong>
+                    {formatCurrency(
+                      selectedCloseRow
+                        ? selectedCloseRow.finishedIncome
+                        : closeLiquidationTotals.finishedIncome
+                    )}
+                  </strong>
+                </article>
+                <article>
+                  <span>A pagar</span>
+                  <strong>
+                    {formatCurrency(
+                      selectedCloseRow ? selectedCloseRow.payout : closeLiquidationTotals.payout
+                    )}
+                  </strong>
+                </article>
+              </div>
+            </div>
+
             <div className="agenda-reminder card">
               <div className="agenda-reminder__header">
                 <div>
@@ -827,142 +1391,27 @@ export default function AgendaPage() {
                     <span className="agenda-reminder__icon" aria-hidden="true">
                       📝
                     </span>{" "}
-                    Recordatorio del día
+                    Nota de cierre
                   </h2>
-                  <p className="card-subtitle">Nota interna rápida para el equipo.</p>
+                  <p className="card-subtitle">Dejá observaciones del día para el equipo.</p>
                 </div>
                 <div className="agenda-reminder__actions">
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={saveReminder}
-                  >
+                  <button type="button" className="btn-secondary" onClick={saveReminder}>
                     {reminderSaved ? "Guardado" : "Guardar nota"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowReminder(false)}
-                  >
-                    Ocultar
                   </button>
                 </div>
               </div>
               <textarea
-                rows={4}
-                placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
+                rows={5}
+                placeholder="Ej: revisar pagos pendientes y confirmar transferencias."
                 value={reminder}
                 onChange={(e) => setReminder(e.target.value)}
                 onBlur={saveReminder}
               />
             </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      <div className="agenda-day card">
-        <div className="agenda-day__header">
-          <div>
-            <h2 className="card-title">Turnos del dia</h2>
-            <p className="card-subtitle">
-              {formatDateDisplay(selectedDate)} · {filteredTurnos.length} turnos
-            </p>
           </div>
         </div>
-
-        {error && <div className="agenda-empty">{error}</div>}
-        {loading ? (
-          <div className="agenda-skeleton">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <div key={idx} className="agenda-card agenda-card--skeleton">
-                <div className="skeleton skeleton-line" />
-                <div className="skeleton skeleton-line short" />
-              </div>
-            ))}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="agenda-empty">
-            <p>No hay turnos cargados para este dia.</p>
-            <button type="button" className="btn-primary" onClick={openCreate}>
-              Agregar primer turno
-            </button>
-          </div>
-        ) : filteredTurnos.length === 0 ? (
-          <div className="agenda-empty">
-            <p>No hay resultados para la busqueda o filtros actuales.</p>
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={resetFilters}
-            >
-              Limpiar filtros
-            </button>
-          </div>
-        ) : (
-          <div className="agenda-timeline">
-            {filteredTurnos.map((turno) => (
-              <div
-                key={turno.id}
-                className={`agenda-timeline__row agenda-timeline__row--${normalizeStatus(
-                  turno.status
-                )}`}
-              >
-                <div className="agenda-timeline__time">
-                  <span className="agenda-time-range">
-                    {formatTime(turno.time)} -{" "}
-                    {getEndTime(turno.time, turno.duration || 60)}
-                  </span>
-                  <span className="agenda-time-dot" aria-hidden="true" />
-                  <span className="agenda-time-line" aria-hidden="true" />
-                </div>
-                <button
-                  type="button"
-                  className="agenda-card agenda-card--timeline"
-                  onClick={() => {
-                    setSelectedTurno(turno);
-                    setIsEditing(false);
-                  }}
-                >
-                  <div className="agenda-card__body">
-                    <div className="agenda-card__title">
-                      {turno.pet_name || "Mascota"} -{" "}
-                      {getServiceName(turno, serviceTypes) || "Servicio"}
-                    </div>
-                    <div className="agenda-card__meta">
-                      {turno.owner_name || "-"} · {turno.breed || "-"}
-                    </div>
-                    <div className="agenda-card__pills">
-                      {turno.groomer?.name ? (
-                        <span className="agenda-card__pill agenda-card__pill--groomer">
-                          {turno.groomer.name}
-                        </span>
-                      ) : null}
-                      {turno.payment_method?.name ? (
-                        <span className="agenda-card__pill">
-                          {turno.payment_method.name}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="agenda-card__side">
-                    <span
-                      className={`agenda-badge agenda-badge--${normalizeStatus(
-                        turno.status
-                      )}`}
-                      title={STATUS_LABELS[normalizeStatus(turno.status)]}
-                    >
-                      {STATUS_LABELS[normalizeStatus(turno.status)]}
-                    </span>
-                    <div className="agenda-card__amount">
-                      {formatCurrency(getServicePrice(turno))}
-                    </div>
-                  </div>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       <Modal
         isOpen={Boolean(selectedTurno)}
