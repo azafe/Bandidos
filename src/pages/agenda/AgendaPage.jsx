@@ -337,7 +337,7 @@ export default function AgendaPage() {
     let finishedIncome = 0;
     let totalDeposit = 0;
 
-    closeFilteredTurnos.forEach((turno) => {
+    items.forEach((turno) => {
       const status = normalizeStatus(turno.status);
       const amount = getServicePrice(turno);
       estimatedIncome += amount;
@@ -350,7 +350,7 @@ export default function AgendaPage() {
       if (status === "cancelled") cancelled += 1;
     });
 
-    const totalScheduled = closeFilteredTurnos.length;
+    const totalScheduled = items.length;
     const completionRate = totalScheduled
       ? Math.round((finished / totalScheduled) * 100)
       : 0;
@@ -366,7 +366,7 @@ export default function AgendaPage() {
       totalDeposit,
       pendingCollection: Math.max(estimatedIncome - totalDeposit, 0),
     };
-  }, [closeFilteredTurnos, getServicePrice]);
+  }, [items, getServicePrice]);
 
   const closeLiquidationRows = useMemo(() => {
     const grouped = new Map();
@@ -435,6 +435,26 @@ export default function AgendaPage() {
       closeLiquidationRows.find((row) => row.groomerId === String(closeGroomerId)) || null
     );
   }, [closeLiquidationRows, closeGroomerId]);
+
+  const closePendingFinalizeCount = useMemo(
+    () =>
+      items.filter(
+        (turno) => normalizeStatus(turno.status) === "reserved"
+      ).length,
+    [items]
+  );
+
+  const closeFinishedWithoutGroomerCount = useMemo(
+    () =>
+      items.filter(
+        (turno) =>
+          normalizeStatus(turno.status) === "finished" && !String(getTurnoGroomerId(turno) || "").trim()
+      ).length,
+    [items]
+  );
+
+  const closeReadyToFinishDay =
+    closePendingFinalizeCount === 0 && closeFinishedWithoutGroomerCount === 0;
 
   const selectedService = useMemo(
     () => serviceTypes.find((service) => service.id === form.service_type_id),
@@ -782,9 +802,43 @@ export default function AgendaPage() {
             Turnos diarios y control rapido del dia.
           </p>
         </div>
-        <button type="button" className="btn-primary agenda-cta" onClick={openCreate}>
-          + Nuevo turno
-        </button>
+        {viewMode === "operation" ? (
+          <button type="button" className="btn-primary agenda-cta" onClick={openCreate}>
+            + Nuevo turno
+          </button>
+        ) : null}
+      </div>
+
+      <div className="agenda-mode-bar card">
+        <div className="agenda-mode-switch" role="tablist" aria-label="Modo de agenda">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "operation"}
+            className={viewMode === "operation" ? "is-active" : ""}
+            onClick={() => setViewMode("operation")}
+          >
+            Operación
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "close"}
+            className={viewMode === "close" ? "is-active" : ""}
+            onClick={() => {
+              setShowFilters(false);
+              setShowReminder(false);
+              setViewMode("close");
+            }}
+          >
+            Cierre del día
+          </button>
+        </div>
+        <p className="agenda-mode-hint">
+          {viewMode === "operation"
+            ? "Usá este modo para cargar, editar y ejecutar turnos del día."
+            : "Usá este modo para cerrar el día: revisar finalizados y liquidar por groomer."}
+        </p>
       </div>
 
       <div className="agenda-command card">
@@ -843,48 +897,14 @@ export default function AgendaPage() {
               />
             </div>
           ) : (
-            <div className="agenda-close-filter">
-              <label htmlFor="agenda-close-groomer">Filtro de cierre por groomer</label>
-              <select
-                id="agenda-close-groomer"
-                value={closeGroomerId}
-                onChange={(e) => setCloseGroomerId(e.target.value)}
-              >
-                <option value="">Todos los groomers</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name}
-                  </option>
-                ))}
-              </select>
+            <div className={`agenda-close-mini-note${closeReadyToFinishDay ? " is-ready" : " is-pending"}`}>
+              {closeReadyToFinishDay
+                ? "Cierre operativo al día."
+                : "Hay pendientes antes del cierre final."}
             </div>
           )}
 
           <div className="agenda-command__actions">
-            <div className="agenda-mode-switch" role="tablist" aria-label="Modo de agenda">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={viewMode === "operation"}
-                className={viewMode === "operation" ? "is-active" : ""}
-                onClick={() => setViewMode("operation")}
-              >
-                Operación
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={viewMode === "close"}
-                className={viewMode === "close" ? "is-active" : ""}
-                onClick={() => {
-                  setShowFilters(false);
-                  setShowReminder(false);
-                  setViewMode("close");
-                }}
-              >
-                Cierre del día
-              </button>
-            </div>
             {viewMode === "operation" ? (
               <>
                 <button
@@ -917,16 +937,7 @@ export default function AgendaPage() {
                   Limpiar
                 </button>
               </>
-            ) : (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={resetCloseFilters}
-                disabled={!closeGroomerId}
-              >
-                Limpiar filtro
-              </button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -978,69 +989,7 @@ export default function AgendaPage() {
               )}
             </div>
           </>
-        ) : (
-          <>
-            <div className="agenda-close-kpis">
-              <article className="agenda-close-kpi agenda-close-kpi--neutral">
-                <span className="agenda-close-kpi__label">Turnos agendados</span>
-                <strong className="agenda-close-kpi__value">{closeSummary.totalScheduled}</strong>
-                <span className="agenda-close-kpi__meta">
-                  Reservados {closeSummary.reserved} · Cancelados {closeSummary.cancelled}
-                </span>
-              </article>
-              <article className="agenda-close-kpi agenda-close-kpi--success">
-                <span className="agenda-close-kpi__label">Turnos finalizados</span>
-                <strong className="agenda-close-kpi__value">{closeSummary.finished}</strong>
-                <span className="agenda-close-kpi__meta">
-                  Cumplimiento {closeSummary.completionRate}%
-                </span>
-              </article>
-              <article className="agenda-close-kpi agenda-close-kpi--income">
-                <span className="agenda-close-kpi__label">Ingresos estimados</span>
-                <strong className="agenda-close-kpi__value">
-                  {formatCurrency(closeSummary.estimatedIncome)}
-                </strong>
-                <span className="agenda-close-kpi__meta">
-                  Señas {formatCurrency(closeSummary.totalDeposit)}
-                </span>
-              </article>
-              <article className="agenda-close-kpi agenda-close-kpi--paid">
-                <span className="agenda-close-kpi__label">Facturación finalizada</span>
-                <strong className="agenda-close-kpi__value">
-                  {formatCurrency(closeSummary.finishedIncome)}
-                </strong>
-                <span className="agenda-close-kpi__meta">
-                  Solo turnos marcados como finalizados
-                </span>
-              </article>
-              <article className="agenda-close-kpi agenda-close-kpi--pending">
-                <span className="agenda-close-kpi__label">Pendiente de cobro</span>
-                <strong className="agenda-close-kpi__value">
-                  {formatCurrency(closeSummary.pendingCollection)}
-                </strong>
-                <span className="agenda-close-kpi__meta">Estimado menos señas registradas</span>
-              </article>
-            </div>
-            <div className="agenda-close-focus">
-              {closeGroomerId ? (
-                selectedCloseRow ? (
-                  <p>
-                    Liquidación de <strong>{selectedCloseRow.groomerName}</strong>:{" "}
-                    <strong>{formatCurrency(selectedCloseRow.payout)}</strong> ({selectedCloseRow.commissionRate}% sobre{" "}
-                    {formatCurrency(selectedCloseRow.finishedIncome)}).
-                  </p>
-                ) : (
-                  <p>No hay turnos para el groomer seleccionado en esta fecha.</p>
-                )
-              ) : (
-                <p>
-                  Mostrando el cierre consolidado del día. Usá el filtro por groomer para ver
-                  liquidación individual.
-                </p>
-              )}
-            </div>
-          </>
-        )}
+        ) : null}
       </div>
 
       {viewMode === "operation" ? (
@@ -1254,7 +1203,93 @@ export default function AgendaPage() {
           </div>
         </>
       ) : (
-        <div className="agenda-close-layout">
+        <>
+          <div className="agenda-close-overview card">
+            <div className="agenda-close-overview__header">
+              <div>
+                <h2 className="card-title">Estado de cierre</h2>
+                <p className="card-subtitle">
+                  {formatDateDisplay(selectedDate)} · checklist operativo antes de cerrar.
+                </p>
+              </div>
+              <span
+                className={`agenda-close-overview__badge${
+                  closeReadyToFinishDay ? " is-ready" : " is-pending"
+                }`}
+              >
+                {closeReadyToFinishDay ? "Listo para cerrar" : "Faltan acciones"}
+              </span>
+            </div>
+
+            <div className="agenda-close-checklist">
+              <article
+                className={
+                  closePendingFinalizeCount > 0
+                    ? "agenda-close-checklist__item is-alert"
+                    : "agenda-close-checklist__item is-ok"
+                }
+              >
+                <strong>Turnos por finalizar</strong>
+                <span>
+                  {closePendingFinalizeCount > 0
+                    ? `${closePendingFinalizeCount} pendientes`
+                    : "Todo finalizado"}
+                </span>
+              </article>
+              <article
+                className={
+                  closeFinishedWithoutGroomerCount > 0
+                    ? "agenda-close-checklist__item is-alert"
+                    : "agenda-close-checklist__item is-ok"
+                }
+              >
+                <strong>Finalizados sin groomer</strong>
+                <span>
+                  {closeFinishedWithoutGroomerCount > 0
+                    ? `${closeFinishedWithoutGroomerCount} para corregir`
+                    : "Sin pendientes"}
+                </span>
+              </article>
+              <article
+                className={
+                  closeSummary.pendingCollection > 0
+                    ? "agenda-close-checklist__item is-alert"
+                    : "agenda-close-checklist__item is-ok"
+                }
+              >
+                <strong>Saldo por cobrar</strong>
+                <span>
+                  {closeSummary.pendingCollection > 0
+                    ? formatCurrency(closeSummary.pendingCollection)
+                    : "Todo cobrado"}
+                </span>
+              </article>
+            </div>
+
+            <div className="agenda-close-kpis agenda-close-kpis--simple">
+              <article className="agenda-close-kpi agenda-close-kpi--neutral">
+                <span className="agenda-close-kpi__label">Turnos agendados</span>
+                <strong className="agenda-close-kpi__value">{closeSummary.totalScheduled}</strong>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--success">
+                <span className="agenda-close-kpi__label">Turnos finalizados</span>
+                <strong className="agenda-close-kpi__value">{closeSummary.finished}</strong>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--paid">
+                <span className="agenda-close-kpi__label">Facturación finalizada</span>
+                <strong className="agenda-close-kpi__value">
+                  {formatCurrency(closeSummary.finishedIncome)}
+                </strong>
+              </article>
+              <article className="agenda-close-kpi agenda-close-kpi--income">
+                <span className="agenda-close-kpi__label">Pago a groomers</span>
+                <strong className="agenda-close-kpi__value">
+                  {formatCurrency(closeLiquidationTotals.payout)}
+                </strong>
+              </article>
+            </div>
+          </div>
+
           <div className="agenda-close-liquidation card">
             <div className="agenda-close-liquidation__header">
               <div>
@@ -1263,6 +1298,31 @@ export default function AgendaPage() {
                   {formatDateDisplay(selectedDate)} · Comisión por defecto{" "}
                   {DEFAULT_GROOMER_COMMISSION}% si no hay valor definido en empleados.
                 </p>
+              </div>
+              <div className="agenda-close-toolbar">
+                <label className="agenda-close-filter" htmlFor="agenda-close-groomer">
+                  <span>Groomer</span>
+                  <select
+                    id="agenda-close-groomer"
+                    value={closeGroomerId}
+                    onChange={(e) => setCloseGroomerId(e.target.value)}
+                  >
+                    <option value="">Todos los groomers</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={resetCloseFilters}
+                  disabled={!closeGroomerId}
+                >
+                  Limpiar filtro
+                </button>
               </div>
             </div>
             {error && <div className="agenda-empty">{error}</div>}
@@ -1277,8 +1337,12 @@ export default function AgendaPage() {
             ) : closeLiquidationRows.length === 0 ? (
               <div className="agenda-empty">
                 <p>No hay turnos cargados para este día.</p>
-                <button type="button" className="btn-primary" onClick={openCreate}>
-                  Agregar primer turno
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setViewMode("operation")}
+                >
+                  Ir a Operación
                 </button>
               </div>
             ) : (
@@ -1336,81 +1400,52 @@ export default function AgendaPage() {
               </div>
             )}
           </div>
-          <div className="agenda-close-side">
-            <div className="agenda-close-box card">
-              <h2 className="card-title">Resumen de pago</h2>
-              {selectedCloseRow ? (
-                <div className="agenda-close-formula">
-                  <strong>{selectedCloseRow.groomerName}</strong>
-                  <span>
-                    {formatCurrency(selectedCloseRow.finishedIncome)} ×{" "}
-                    {selectedCloseRow.commissionRate}% ={" "}
-                    {formatCurrency(selectedCloseRow.payout)}
-                  </span>
-                </div>
-              ) : (
-                <div className="agenda-close-formula">
-                  <strong>Total del equipo</strong>
-                  <span>{formatCurrency(closeLiquidationTotals.payout)} a pagar hoy.</span>
-                </div>
-              )}
-              <div className="agenda-close-metrics">
-                <article>
-                  <span>Turnos finalizados</span>
-                  <strong>
-                    {selectedCloseRow
-                      ? selectedCloseRow.finishedCount
-                      : closeLiquidationTotals.finishedCount}
-                  </strong>
-                </article>
-                <article>
-                  <span>Facturación finalizada</span>
-                  <strong>
-                    {formatCurrency(
-                      selectedCloseRow
-                        ? selectedCloseRow.finishedIncome
-                        : closeLiquidationTotals.finishedIncome
-                    )}
-                  </strong>
-                </article>
-                <article>
-                  <span>A pagar</span>
-                  <strong>
-                    {formatCurrency(
-                      selectedCloseRow ? selectedCloseRow.payout : closeLiquidationTotals.payout
-                    )}
-                  </strong>
-                </article>
-              </div>
-            </div>
 
-            <div className="agenda-reminder card">
-              <div className="agenda-reminder__header">
-                <div>
-                  <h2 className="card-title">
-                    <span className="agenda-reminder__icon" aria-hidden="true">
-                      📝
-                    </span>{" "}
-                    Nota de cierre
-                  </h2>
-                  <p className="card-subtitle">Dejá observaciones del día para el equipo.</p>
-                </div>
-                <div className="agenda-reminder__actions">
-                  <button type="button" className="btn-secondary" onClick={saveReminder}>
-                    {reminderSaved ? "Guardado" : "Guardar nota"}
-                  </button>
-                </div>
+          <div className="agenda-close-resume card">
+            <h2 className="card-title">Resumen de pago</h2>
+            {selectedCloseRow ? (
+              <div className="agenda-close-formula">
+                <strong>{selectedCloseRow.groomerName}</strong>
+                <span>
+                  {formatCurrency(selectedCloseRow.finishedIncome)} ×{" "}
+                  {selectedCloseRow.commissionRate}% ={" "}
+                  {formatCurrency(selectedCloseRow.payout)}
+                </span>
               </div>
-              <textarea
-                rows={5}
-                placeholder="Ej: revisar pagos pendientes y confirmar transferencias."
-                value={reminder}
-                onChange={(e) => setReminder(e.target.value)}
-                onBlur={saveReminder}
-              />
-            </div>
+            ) : (
+              <div className="agenda-close-formula">
+                <strong>Total del equipo</strong>
+                <span>{formatCurrency(closeLiquidationTotals.payout)} a pagar hoy.</span>
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="agenda-reminder card agenda-reminder--close">
+            <div className="agenda-reminder__header">
+              <div>
+                <h2 className="card-title">
+                  <span className="agenda-reminder__icon" aria-hidden="true">
+                    📝
+                  </span>{" "}
+                  Nota de cierre
+                </h2>
+                <p className="card-subtitle">Dejá observaciones del día para el equipo.</p>
+              </div>
+              <div className="agenda-reminder__actions">
+                <button type="button" className="btn-secondary" onClick={saveReminder}>
+                  {reminderSaved ? "Guardado" : "Guardar nota"}
+                </button>
+              </div>
+            </div>
+            <textarea
+              rows={4}
+              placeholder="Ej: revisar pagos pendientes y confirmar transferencias."
+              value={reminder}
+              onChange={(e) => setReminder(e.target.value)}
+              onBlur={saveReminder}
+            />
+          </div>
+        </>
       )}
 
       <Modal

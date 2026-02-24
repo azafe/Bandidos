@@ -76,6 +76,20 @@
   justify-content: flex-end;
 }
 
+.agenda-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.agenda-mode-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
 .agenda-mode-switch {
   display: inline-flex;
   align-items: center;
@@ -105,9 +119,10 @@
   display: grid;
   gap: 6px;
   align-content: end;
+  min-width: 220px;
 }
 
-.agenda-close-filter label {
+.agenda-close-filter span {
   font-size: 0.74rem;
   font-weight: 600;
   color: #334155;
@@ -120,6 +135,28 @@
   background: #fff;
   color: #1f2937;
   min-height: 42px;
+}
+
+.agenda-close-mini-note {
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  color: #334155;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.agenda-close-mini-note.is-ready {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.agenda-close-mini-note.is-pending {
+  border-color: rgba(245, 158, 11, 0.38);
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
 }
 
 .agenda-kpi-strip {
@@ -223,6 +260,10 @@
 .agenda-close-kpi--pending {
   border-color: rgba(217, 119, 6, 0.25);
   background: rgba(245, 158, 11, 0.12);
+}
+
+.agenda-close-kpis--simple .agenda-close-kpi {
+  min-height: 96px;
 }
 
 .agenda-close-focus {
@@ -351,6 +392,72 @@
   gap: 12px;
 }
 
+.agenda-close-overview {
+  display: grid;
+  gap: 12px;
+}
+
+.agenda-close-overview__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.agenda-close-overview__badge {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+}
+
+.agenda-close-overview__badge.is-ready {
+  background: rgba(34, 197, 94, 0.18);
+  color: #166534;
+}
+
+.agenda-close-overview__badge.is-pending {
+  background: rgba(245, 158, 11, 0.16);
+  color: #92400e;
+}
+
+.agenda-close-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.agenda-close-checklist__item {
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.agenda-close-checklist__item strong {
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
+.agenda-close-checklist__item span {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.agenda-close-checklist__item.is-alert {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.agenda-close-checklist__item.is-ok {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.1);
+}
+
 .agenda-close-layout {
   display: grid;
   grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
@@ -361,6 +468,21 @@
 .agenda-close-liquidation {
   display: grid;
   gap: 12px;
+}
+
+.agenda-close-liquidation__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agenda-close-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .agenda-close-table-wrap {
@@ -431,6 +553,11 @@
 .agenda-close-formula span {
   font-size: 0.8rem;
   color: #475569;
+}
+
+.agenda-close-resume {
+  display: grid;
+  gap: 10px;
 }
 
 .agenda-close-metrics {
@@ -808,6 +935,11 @@
 }
 
 @media (max-width: 1180px) {
+  .agenda-mode-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .agenda-command__top {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -815,6 +947,15 @@
 
   .agenda-command__actions {
     justify-content: flex-start;
+  }
+
+  .agenda-close-overview__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .agenda-close-liquidation__header {
+    align-items: stretch;
   }
 
   .agenda-close-layout {
@@ -847,11 +988,31 @@
     justify-content: space-between;
   }
 
+  .agenda-mode-switch button {
+    flex: 1 1 auto;
+  }
+
+  .agenda-mode-hint {
+    font-size: 0.78rem;
+  }
+
+  .agenda-close-toolbar {
+    width: 100%;
+  }
+
   .agenda-close-filter select {
     width: 100%;
   }
 
+  .agenda-close-filter {
+    min-width: 100%;
+  }
+
   .agenda-close-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-close-checklist {
     grid-template-columns: 1fr;
   }
 
