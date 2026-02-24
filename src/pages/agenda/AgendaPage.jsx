@@ -160,6 +160,7 @@ export default function AgendaPage() {
     service_type_id: "",
     groomer_id: "",
     status: "",
+    without_groomer: false,
   });
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -167,6 +168,7 @@ export default function AgendaPage() {
   const [isCompact, setIsCompact] = useState(false);
   const [viewMode, setViewMode] = useState("operation");
   const [closeGroomerId, setCloseGroomerId] = useState("");
+  const [showZeroFinishedRows, setShowZeroFinishedRows] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
   const [formError, setFormError] = useState("");
@@ -207,7 +209,6 @@ export default function AgendaPage() {
     loading,
     error,
     warning,
-    summaryTotals,
     refetch,
   } = useAgendaDay(selectedDate);
 
@@ -261,18 +262,8 @@ export default function AgendaPage() {
     const finished = items.filter(
       (turno) => normalizeStatus(turno.status) === "finished"
     ).length;
-    const cancelled = items.filter(
-      (turno) => normalizeStatus(turno.status) === "cancelled"
-    ).length;
-    const computedIncome = items.reduce((sum, turno) => sum + getServicePrice(turno), 0);
-    const computedDeposit = items.reduce(
-      (sum, turno) => sum + (Number(turno.deposit_amount || 0) || 0),
-      0
-    );
-    const income = summaryTotals?.totalEstimated ?? computedIncome;
-    const deposit = summaryTotals?.totalDeposit ?? computedDeposit;
-    return { total, income, deposit, reserved, finished, cancelled };
-  }, [items, getServicePrice, summaryTotals]);
+    return { total, reserved, finished };
+  }, [items]);
 
   const statusOptions = useMemo(
     () => STATUS_OPTIONS.filter((status) => status.value !== "finished"),
@@ -307,6 +298,8 @@ export default function AgendaPage() {
           filters.groomer_id &&
           String(getTurnoGroomerId(turno) || "") !== String(filters.groomer_id)
         )
+          return false;
+        if (filters.without_groomer && String(getTurnoGroomerId(turno) || "").trim())
           return false;
         if (filters.status && normalizeStatus(turno.status) !== filters.status) return false;
         if (!term) return true;
@@ -427,6 +420,26 @@ export default function AgendaPage() {
         { scheduledCount: 0, finishedCount: 0, finishedIncome: 0, payout: 0 }
       ),
     [closeLiquidationRows]
+  );
+
+  const closeLiquidationRowsVisible = useMemo(() => {
+    if (closeGroomerId) return closeLiquidationRows;
+    if (showZeroFinishedRows) return closeLiquidationRows;
+    return closeLiquidationRows.filter((row) => row.finishedCount > 0);
+  }, [closeLiquidationRows, closeGroomerId, showZeroFinishedRows]);
+
+  const closeLiquidationVisibleTotals = useMemo(
+    () =>
+      closeLiquidationRowsVisible.reduce(
+        (acc, row) => ({
+          scheduledCount: acc.scheduledCount + row.scheduledCount,
+          finishedCount: acc.finishedCount + row.finishedCount,
+          finishedIncome: acc.finishedIncome + row.finishedIncome,
+          payout: acc.payout + row.payout,
+        }),
+        { scheduledCount: 0, finishedCount: 0, finishedIncome: 0, payout: 0 }
+      ),
+    [closeLiquidationRowsVisible]
   );
 
   const selectedCloseRow = useMemo(() => {
@@ -775,6 +788,13 @@ export default function AgendaPage() {
           onRemove: () => setFilters((prev) => ({ ...prev, status: "" })),
         }
       : null,
+    filters.without_groomer
+      ? {
+          key: "without_groomer",
+          label: "Solo sin groomer",
+          onRemove: () => setFilters((prev) => ({ ...prev, without_groomer: false })),
+        }
+      : null,
     search
       ? {
           key: "search",
@@ -785,12 +805,44 @@ export default function AgendaPage() {
   ].filter(Boolean);
 
   function resetFilters() {
-    setFilters({ service_type_id: "", groomer_id: "", status: "" });
+    setFilters({
+      service_type_id: "",
+      groomer_id: "",
+      status: "",
+      without_groomer: false,
+    });
     setSearch("");
   }
 
   function resetCloseFilters() {
     setCloseGroomerId("");
+    setShowZeroFinishedRows(false);
+  }
+
+  function goToOperationPending() {
+    setViewMode("operation");
+    setShowFilters(true);
+    setShowReminder(false);
+    setFilters({
+      service_type_id: "",
+      groomer_id: "",
+      status: "reserved",
+      without_groomer: false,
+    });
+    setSearch("");
+  }
+
+  function goToOperationFinishedWithoutGroomer() {
+    setViewMode("operation");
+    setShowFilters(true);
+    setShowReminder(false);
+    setFilters({
+      service_type_id: "",
+      groomer_id: "",
+      status: "finished",
+      without_groomer: true,
+    });
+    setSearch("");
   }
 
   return (
@@ -950,16 +1002,10 @@ export default function AgendaPage() {
                 Turnos: <strong>{summary.total}</strong>
               </span>
               <span className="agenda-chip agenda-chip--pending">
-                Reservados {summary.reserved}
+                Pendientes {summary.reserved}
               </span>
               <span className="agenda-chip agenda-chip--ok">
                 Finalizados {summary.finished}
-              </span>
-              <span className="agenda-chip agenda-chip--danger">
-                Cancelados {summary.cancelled}
-              </span>
-              <span className="agenda-chip agenda-chip--income">
-                Ingresos estimados {formatCurrency(summary.income)}
               </span>
               {nextTurno ? (
                 <span className="agenda-chip agenda-chip--next">
@@ -1030,7 +1076,11 @@ export default function AgendaPage() {
                     <select
                       value={filters.groomer_id}
                       onChange={(e) =>
-                        setFilters((prev) => ({ ...prev, groomer_id: e.target.value }))
+                        setFilters((prev) => ({
+                          ...prev,
+                          groomer_id: e.target.value,
+                          without_groomer: false,
+                        }))
                       }
                     >
                       <option value="">Groomer</option>
@@ -1053,6 +1103,21 @@ export default function AgendaPage() {
                         </option>
                       ))}
                     </select>
+                    <button
+                      type="button"
+                      className={`btn-secondary agenda-quick-toggle${
+                        filters.without_groomer ? " is-active" : ""
+                      }`}
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          without_groomer: !prev.without_groomer,
+                          groomer_id: !prev.without_groomer ? "" : prev.groomer_id,
+                        }))
+                      }
+                    >
+                      Sin groomer
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -1235,6 +1300,15 @@ export default function AgendaPage() {
                     ? `${closePendingFinalizeCount} pendientes`
                     : "Todo finalizado"}
                 </span>
+                {closePendingFinalizeCount > 0 ? (
+                  <button
+                    type="button"
+                    className="btn-secondary agenda-close-checklist__action"
+                    onClick={goToOperationPending}
+                  >
+                    Ver turnos pendientes
+                  </button>
+                ) : null}
               </article>
               <article
                 className={
@@ -1249,6 +1323,15 @@ export default function AgendaPage() {
                     ? `${closeFinishedWithoutGroomerCount} para corregir`
                     : "Sin pendientes"}
                 </span>
+                {closeFinishedWithoutGroomerCount > 0 ? (
+                  <button
+                    type="button"
+                    className="btn-secondary agenda-close-checklist__action"
+                    onClick={goToOperationFinishedWithoutGroomer}
+                  >
+                    Ver finalizados sin groomer
+                  </button>
+                ) : null}
               </article>
               <article
                 className={
@@ -1323,6 +1406,19 @@ export default function AgendaPage() {
                 >
                   Limpiar filtro
                 </button>
+                {!closeGroomerId ? (
+                  <button
+                    type="button"
+                    className={`btn-secondary agenda-close-toggle${
+                      showZeroFinishedRows ? " is-active" : ""
+                    }`}
+                    onClick={() => setShowZeroFinishedRows((prev) => !prev)}
+                  >
+                    {showZeroFinishedRows
+                      ? "Ocultar sin finalizados"
+                      : "Mostrar sin finalizados"}
+                  </button>
+                ) : null}
               </div>
             </div>
             {error && <div className="agenda-empty">{error}</div>}
@@ -1345,6 +1441,17 @@ export default function AgendaPage() {
                   Ir a Operación
                 </button>
               </div>
+            ) : closeLiquidationRowsVisible.length === 0 ? (
+              <div className="agenda-empty">
+                <p>No hay groomers con turnos finalizados para liquidar.</p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowZeroFinishedRows(true)}
+                >
+                  Mostrar también sin finalizados
+                </button>
+              </div>
             ) : (
               <div className="agenda-close-table-wrap">
                 <table className="agenda-close-table">
@@ -1360,7 +1467,7 @@ export default function AgendaPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {closeLiquidationRows.map((row) => (
+                    {closeLiquidationRowsVisible.map((row) => (
                       <tr key={row.groomerId}>
                         <td>{row.groomerName}</td>
                         <td>{row.scheduledCount}</td>
@@ -1376,23 +1483,23 @@ export default function AgendaPage() {
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td>Total</td>
-                      <td>{closeLiquidationTotals.scheduledCount}</td>
-                      <td>{closeLiquidationTotals.finishedCount}</td>
+                      <td>{showZeroFinishedRows || closeGroomerId ? "Total" : "Total visible"}</td>
+                      <td>{closeLiquidationVisibleTotals.scheduledCount}</td>
+                      <td>{closeLiquidationVisibleTotals.finishedCount}</td>
                       <td>
-                        {closeLiquidationTotals.scheduledCount
+                        {closeLiquidationVisibleTotals.scheduledCount
                           ? Math.round(
-                              (closeLiquidationTotals.finishedCount /
-                                closeLiquidationTotals.scheduledCount) *
+                              (closeLiquidationVisibleTotals.finishedCount /
+                                closeLiquidationVisibleTotals.scheduledCount) *
                                 100
                             )
                           : 0}
                         %
                       </td>
-                      <td>{formatCurrency(closeLiquidationTotals.finishedIncome)}</td>
+                      <td>{formatCurrency(closeLiquidationVisibleTotals.finishedIncome)}</td>
                       <td>-</td>
                       <td className="agenda-close-table__amount">
-                        {formatCurrency(closeLiquidationTotals.payout)}
+                        {formatCurrency(closeLiquidationVisibleTotals.payout)}
                       </td>
                     </tr>
                   </tfoot>

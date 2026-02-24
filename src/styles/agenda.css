@@ -266,19 +266,6 @@
   min-height: 96px;
 }
 
-.agenda-close-focus {
-  border-radius: 12px;
-  border: 1px dashed rgba(17, 24, 39, 0.16);
-  background: rgba(15, 23, 42, 0.03);
-  padding: 10px 12px;
-  font-size: 0.84rem;
-  color: #334155;
-}
-
-.agenda-close-focus p {
-  margin: 0;
-}
-
 .agenda-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -367,6 +354,16 @@
   padding: 8px 14px;
   background: #12131a;
   color: #fff;
+}
+
+.agenda-quick-toggle {
+  padding-inline: 14px;
+}
+
+.agenda-quick-toggle.is-active {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
 }
 
 .agenda-filter-chips {
@@ -458,11 +455,10 @@
   background: rgba(34, 197, 94, 0.1);
 }
 
-.agenda-close-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
+.agenda-close-checklist__action {
+  justify-self: start;
+  padding: 6px 10px;
+  font-size: 0.75rem;
 }
 
 .agenda-close-liquidation {
@@ -483,6 +479,12 @@
   align-items: end;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.agenda-close-toggle.is-active {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
 }
 
 .agenda-close-table-wrap {
@@ -527,16 +529,6 @@
   color: #0f7a38 !important;
 }
 
-.agenda-close-side {
-  display: grid;
-  gap: 16px;
-}
-
-.agenda-close-box {
-  display: grid;
-  gap: 12px;
-}
-
 .agenda-close-formula {
   border-radius: 12px;
   border: 1px solid rgba(17, 24, 39, 0.1);
@@ -558,30 +550,6 @@
 .agenda-close-resume {
   display: grid;
   gap: 10px;
-}
-
-.agenda-close-metrics {
-  display: grid;
-  gap: 8px;
-}
-
-.agenda-close-metrics article {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-  font-size: 0.82rem;
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: rgba(15, 23, 42, 0.04);
-}
-
-.agenda-close-metrics article span {
-  color: #64748b;
-}
-
-.agenda-close-metrics article strong {
-  color: #111827;
 }
 
 .agenda-card {
@@ -956,10 +924,6 @@
 
   .agenda-close-liquidation__header {
     align-items: stretch;
-  }
-
-  .agenda-close-layout {
-    grid-template-columns: 1fr;
   }
 }
 
