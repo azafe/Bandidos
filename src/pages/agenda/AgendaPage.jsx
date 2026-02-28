@@ -6,6 +6,7 @@ import { useApiResource } from "../../hooks/useApiResource";
 import {
   createAgendaTurno,
   deleteAgendaTurno,
+  listAgendaDay,
   updateAgendaTurno,
 } from "../../services/agendaApi";
 import { apiRequest } from "../../services/apiClient";
@@ -25,6 +26,44 @@ const STATUS_LABELS = {
 };
 
 const DEFAULT_GROOMER_COMMISSION = 40;
+const FORM_STEPS = [
+  { key: "details", label: "1. Datos del turno" },
+  { key: "service", label: "2. Servicio y pago" },
+];
+const FORM_STEP_FIELDS = {
+  details: ["date", "time", "duration", "pet_name", "owner_name"],
+  service: ["service_type_id", "deposit_amount", "status"],
+};
+const FORM_FIELD_IDS = {
+  date: "agenda-date",
+  time: "agenda-time",
+  duration: "agenda-duration",
+  pet_name: "agenda-pet",
+  owner_name: "agenda-owner",
+  service_type_id: "agenda-service",
+  deposit_amount: "agenda-deposit",
+  status: "agenda-status",
+};
+const FORM_FIELD_ORDER = [
+  "date",
+  "time",
+  "duration",
+  "pet_name",
+  "owner_name",
+  "service_type_id",
+  "deposit_amount",
+  "status",
+];
+const FORM_STEP_BY_FIELD = {
+  date: "details",
+  time: "details",
+  duration: "details",
+  pet_name: "details",
+  owner_name: "details",
+  service_type_id: "service",
+  deposit_amount: "service",
+  status: "service",
+};
 
 function todayISO() {
   const d = new Date();
@@ -91,6 +130,21 @@ function addDays(dateStr, delta) {
 function formatTime(value) {
   if (!value) return "-";
   return value.slice(0, 5);
+}
+
+function parseTimeToMinutes(value) {
+  if (!value || typeof value !== "string") return null;
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function resolveDuration(value, fallback = 60) {
+  const duration = Number(value);
+  return Number.isFinite(duration) && duration > 0 ? duration : fallback;
 }
 
 function getEndTime(startTime, duration) {
@@ -169,6 +223,8 @@ export default function AgendaPage() {
   const [showZeroFinishedRows, setShowZeroFinishedRows] = useState(false);
   const [showReminder, setShowReminder] = useState(false);
   const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formStep, setFormStep] = useState("details");
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
   const [reminderSaved, setReminderSaved] = useState(false);
@@ -463,7 +519,7 @@ export default function AgendaPage() {
     closePendingFinalizeCount === 0 && closeFinishedWithoutGroomerCount === 0;
 
   const selectedService = useMemo(
-    () => serviceTypes.find((service) => service.id === form.service_type_id),
+    () => serviceTypes.find((service) => String(service.id) === String(form.service_type_id)),
     [serviceTypes, form.service_type_id]
   );
   const servicePrice = Number(selectedService?.default_price || 0);
@@ -479,8 +535,13 @@ export default function AgendaPage() {
         .some((field) => field.toLowerCase().includes(term))
     );
   }, [pets, petSearch]);
+  const selectedPetRecord = useMemo(
+    () => pets.find((pet) => String(pet.id) === String(form.pet_id)) || null,
+    [pets, form.pet_id]
+  );
 
   function openCreate() {
+    setSelectedTurno(null);
     setForm({
       date: selectedDate,
       time: "",
@@ -497,7 +558,10 @@ export default function AgendaPage() {
       status: "reserved",
     });
     setPetSearch("");
+    setIsPetOpen(false);
     setFormError("");
+    setFieldErrors({});
+    setFormStep("details");
     setIsCreating(true);
     setIsEditing(false);
   }
@@ -523,7 +587,10 @@ export default function AgendaPage() {
       status: normalizeStatus(turno.status),
     });
     setPetSearch(turno.pet_name || "");
+    setIsPetOpen(false);
     setFormError("");
+    setFieldErrors({});
+    setFormStep("details");
     setIsCreating(true);
     setIsEditing(true);
   }
@@ -531,25 +598,43 @@ export default function AgendaPage() {
   function closeForm() {
     setIsCreating(false);
     setIsEditing(false);
+    setIsPetOpen(false);
     setFormError("");
+    setFieldErrors({});
+    setFormStep("details");
+  }
+
+  function clearFieldError(fieldName) {
+    setFieldErrors((prev) => {
+      if (!prev[fieldName]) return prev;
+      const next = { ...prev };
+      delete next[fieldName];
+      return next;
+    });
   }
 
   function handleFormChange(e) {
     const { name, value } = e.target;
+    if (formError) setFormError("");
+    clearFieldError(name);
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function handlePetSelect(petId) {
     const pet = pets.find((p) => String(p.id) === String(petId));
+    const nextPetName = pet?.name || "";
     setForm((prev) => ({
       ...prev,
       pet_id: petId,
-      pet_name: pet?.name || prev.pet_name,
+      pet_name: nextPetName || prev.pet_name,
       breed: pet?.breed || prev.breed,
       owner_name: pet?.owner_name || prev.owner_name,
     }));
-    setPetSearch(pet?.name || "");
+    setPetSearch(nextPetName);
     setIsPetOpen(false);
+    if (formError) setFormError("");
+    clearFieldError("pet_name");
+    clearFieldError("owner_name");
   }
 
   function saveReminder() {
@@ -562,28 +647,81 @@ export default function AgendaPage() {
     }
   }
 
-  function validateForm() {
-    if (!form.date) return { field: "agenda-date", message: "Seleccioná la fecha." };
-    if (!form.time) return { field: "agenda-time", message: "Ingresá la hora." };
-    if (!form.pet_name.trim())
-      return { field: "agenda-pet", message: "Ingresá la mascota." };
-    if (!form.owner_name.trim())
-      return { field: "agenda-owner", message: "Ingresá el dueño." };
-    if (!form.service_type_id)
-      return { field: "agenda-service", message: "Seleccioná el servicio." };
+  function validateForm(onlyFields) {
+    const selectedFields =
+      Array.isArray(onlyFields) && onlyFields.length > 0 ? new Set(onlyFields) : null;
+    const shouldValidate = (fieldName) => !selectedFields || selectedFields.has(fieldName);
+    const errors = {};
+
+    if (shouldValidate("date") && !form.date) {
+      errors.date = "Seleccioná la fecha.";
+    }
+    if (shouldValidate("time")) {
+      if (!form.time) {
+        errors.time = "Ingresá la hora.";
+      } else {
+        const [hour, minute] = form.time.split(":").map(Number);
+        if (
+          Number.isNaN(hour) ||
+          Number.isNaN(minute) ||
+          hour < 7 ||
+          hour > 22 ||
+          minute > 59 ||
+          minute < 0 ||
+          (hour === 22 && minute > 0)
+        ) {
+          errors.time = "La hora debe estar entre 07:00 y 22:00 (inclusive).";
+        }
+      }
+    }
+    const duration = Number(form.duration || 0);
+    if (shouldValidate("duration") && (!Number.isFinite(duration) || duration < 30)) {
+      errors.duration = "La duración debe ser de al menos 30 minutos.";
+    }
+    if (shouldValidate("pet_name") && !form.pet_name.trim()) {
+      errors.pet_name = "Ingresá la mascota.";
+    }
+    if (shouldValidate("owner_name") && !form.owner_name.trim()) {
+      errors.owner_name = "Ingresá el dueño.";
+    }
+    if (shouldValidate("service_type_id") && !form.service_type_id) {
+      errors.service_type_id = "Seleccioná el servicio.";
+    }
     const amount = Number(form.deposit_amount || 0);
-    if (Number.isNaN(amount) || amount < 0)
-      return {
-        field: "agenda-deposit",
-        message: "El monto de pago/seña debe ser mayor o igual a 0.",
-      };
-    const [hour, minute] = form.time.split(":").map(Number);
-    if (hour < 7 || hour > 22 || minute > 59 || minute < 0)
-      return {
-        field: "agenda-time",
-        message: "La hora debe estar entre 07:00 y 22:00.",
-      };
-    return null;
+    if (shouldValidate("deposit_amount") && (Number.isNaN(amount) || amount < 0)) {
+      errors.deposit_amount = "El monto de pago/seña debe ser mayor o igual a 0.";
+    }
+    if (
+      shouldValidate("status") &&
+      !isEditing &&
+      normalizeStatus(form.status) === "finished"
+    ) {
+      errors.status =
+        "Un turno nuevo no puede iniciar como finalizado. Guardalo como reservado y finalizalo desde el detalle.";
+    }
+
+    return errors;
+  }
+
+  function updateFieldErrors(errors, fields) {
+    if (!fields) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      fields.forEach((fieldName) => {
+        delete next[fieldName];
+      });
+      fields.forEach((fieldName) => {
+        if (errors[fieldName]) next[fieldName] = errors[fieldName];
+      });
+      return next;
+    });
+  }
+
+  function getFirstInvalidField(errors) {
+    return FORM_FIELD_ORDER.find((fieldName) => errors[fieldName]) || "";
   }
 
   function focusField(fieldId) {
@@ -597,23 +735,67 @@ export default function AgendaPage() {
     });
   }
 
+  function focusInvalidField(fieldName) {
+    focusField(FORM_FIELD_IDS[fieldName]);
+  }
+
+  function moveToFormStep(nextStep) {
+    if (nextStep === formStep) return;
+    if (nextStep === "service") {
+      const stepErrors = validateForm(FORM_STEP_FIELDS.details);
+      if (Object.keys(stepErrors).length > 0) {
+        updateFieldErrors(stepErrors, FORM_STEP_FIELDS.details);
+        const firstField = getFirstInvalidField(stepErrors);
+        setFormError("Completá los campos marcados antes de continuar.");
+        setFormStep("details");
+        focusInvalidField(firstField);
+        return;
+      }
+    }
+    setFormError("");
+    setFormStep(nextStep);
+  }
+
   async function handleSubmit() {
-    const validationError = validateForm();
-    if (validationError) {
-      setFormError(validationError.message);
-      focusField(validationError.field);
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstField = getFirstInvalidField(errors);
+      setFormError("Completá los campos marcados para guardar el turno.");
+      setFormStep(FORM_STEP_BY_FIELD[firstField] || "details");
+      focusInvalidField(firstField);
       return;
     }
+    setFormError("");
+    setFieldErrors({});
+    const normalizedDate = normalizeDate(form.date);
+    let dateItems = items;
+    if (normalizedDate && normalizedDate !== selectedDate) {
+      try {
+        const { items: remoteItems } = await listAgendaDay(normalizedDate);
+        dateItems = remoteItems;
+      } catch {
+        dateItems = [];
+      }
+    }
 
-    const conflict = items.find(
-      (turno) =>
-        turno.date === form.date &&
-        turno.time === form.time &&
-        turno.id !== selectedTurno?.id
-    );
+    const newStart = parseTimeToMinutes(form.time);
+    const newDuration = resolveDuration(form.duration, 60);
+    const newEnd = newStart !== null ? newStart + newDuration : null;
+    const conflict = dateItems.find((turno) => {
+      if (isEditing && String(turno.id) === String(selectedTurno?.id || "")) return false;
+      if (normalizeDate(turno.date) !== normalizedDate) return false;
+      const existingStart = parseTimeToMinutes(turno.time);
+      if (existingStart === null || newStart === null || newEnd === null) return false;
+      const existingEnd = existingStart + resolveDuration(turno.duration, 60);
+      return newStart < existingEnd && existingStart < newEnd;
+    });
     if (conflict) {
       const ok = window.confirm(
-        "Ya existe un turno en la misma fecha y hora. ¿Querés continuar?"
+        `Se superpone con otro turno (${formatTime(conflict.time)} - ${getEndTime(
+          conflict.time,
+          conflict.duration || 60
+        )}). ¿Querés continuar?`
       );
       if (!ok) return;
     }
@@ -625,9 +807,9 @@ export default function AgendaPage() {
       const paymentMethodId = normalizeId(form.payment_method_id);
       const groomerId = normalizeId(form.groomer_id);
       const payload = {
-        date: normalizeDate(form.date),
+        date: normalizedDate,
         time: form.time,
-        duration: Number(form.duration || 60),
+        duration: resolveDuration(form.duration, 60),
         pet_id: petId,
         pet_name: form.pet_name.trim(),
         breed: form.breed.trim(),
@@ -1600,208 +1782,352 @@ export default function AgendaPage() {
         title={isEditing ? "Editar turno" : "Nuevo turno"}
       >
         <div className="agenda-form">
-          {formError ? <div className="agenda-form__error">{formError}</div> : null}
-          <label className="form-field">
-            <span>Fecha</span>
-            <div className="date-field__control">
-              <input
-                type="text"
-                className="date-field__display"
-                value={formatDateDisplay(form.date)}
-                placeholder="DD-MM-AAAA"
-                readOnly
-                tabIndex={-1}
-                aria-hidden="true"
-              />
-              <input
-                type="date"
-                id="agenda-date"
-                name="date"
-                className="date-field__native"
-                value={form.date}
-                onChange={handleFormChange}
-              />
-            </div>
-          </label>
-          <label className="form-field">
-            <span>Hora</span>
-            <input
-              id="agenda-time"
-              type="time"
-              name="time"
-              value={form.time}
-              onChange={handleFormChange}
-            />
-          </label>
-          <label className="form-field">
-            <span>Duracion (min)</span>
-            <input
-              type="number"
-              name="duration"
-              min="30"
-              step="15"
-              value={form.duration}
-              onChange={handleFormChange}
-            />
-            <small className="agenda-helper">
-              Termina {getEndTime(form.time, form.duration || 60)}
-            </small>
-          </label>
-          <label className="form-field">
-            <span>Mascota</span>
-            <div className="combo-field">
-              <input
-                type="text"
-                name="pet_name"
-                id="agenda-pet"
-                placeholder="Buscá por nombre..."
-                value={petSearch}
-                onChange={(e) => {
-                  setPetSearch(e.target.value);
-                  setIsPetOpen(true);
-                  setForm((prev) => ({ ...prev, pet_id: "", pet_name: e.target.value }));
-                }}
-                onFocus={() => setIsPetOpen(true)}
-                onBlur={() => setTimeout(() => setIsPetOpen(false), 120)}
-                autoComplete="off"
-                required
-              />
-              {isPetOpen ? (
-                <div className="combo-field__list" role="listbox">
-                  {filteredPets.length === 0 ? (
-                    <div className="combo-field__empty">Sin resultados</div>
-                  ) : (
-                    filteredPets.map((pet) => (
-                      <button
-                        key={pet.id}
-                        type="button"
-                        className="combo-field__option"
-                        onMouseDown={() => handlePetSelect(pet.id)}
-                      >
-                        {formatPetLabel(pet)}
-                      </button>
-                    ))
-                  )}
-                </div>
-              ) : null}
-            </div>
-            <Link className="agenda-link" to="/pets">
-              Crear nueva mascota
-            </Link>
-          </label>
-          <label className="form-field">
-            <span>Raza</span>
-            <input type="text" name="breed" value={form.breed} onChange={handleFormChange} />
-          </label>
-          <label className="form-field">
-            <span>Dueño</span>
-            <input
-              id="agenda-owner"
-              type="text"
-              name="owner_name"
-              value={form.owner_name}
-              onChange={handleFormChange}
-            />
-          </label>
-          <label className="form-field">
-            <span>Servicio</span>
-            <select
-              id="agenda-service"
-              name="service_type_id"
-              value={form.service_type_id}
-              onChange={handleFormChange}
-            >
-              <option value="">Seleccionar</option>
-              {serviceTypes.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="agenda-price-card">
-            <div>
-              <span>Precio del servicio</span>
-              <strong>
-                {servicePrice ? formatCurrency(servicePrice) : "Sin definir"}
-              </strong>
-            </div>
-            <div>
-              <span>Seña recibida</span>
-              <strong>{formatCurrency(depositAmount)}</strong>
-            </div>
-            <div>
-              <span>Saldo a cobrar</span>
-              <strong>{formatCurrency(remainingAmount)}</strong>
-            </div>
+          <div className="agenda-form__steps" role="tablist" aria-label="Pasos del turno">
+            {FORM_STEPS.map((step) => (
+              <button
+                key={step.key}
+                type="button"
+                role="tab"
+                className={`agenda-form__step${formStep === step.key ? " is-active" : ""}`}
+                aria-selected={formStep === step.key}
+                onClick={() => moveToFormStep(step.key)}
+              >
+                {step.label}
+              </button>
+            ))}
           </div>
-          <label className="form-field">
-            <span>Metodo de pago</span>
-            <select
-              name="payment_method_id"
-              value={form.payment_method_id}
-              onChange={handleFormChange}
-            >
-              <option value="">Opcional</option>
-              {paymentMethods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Pago/Seña</span>
-            <input
-              id="agenda-deposit"
-              type="number"
-              name="deposit_amount"
-              min="0"
-              value={form.deposit_amount}
-              onChange={handleFormChange}
-            />
-          </label>
-          <label className="form-field">
-            <span>Groomer</span>
-            <select
-              name="groomer_id"
-              value={form.groomer_id}
-              onChange={handleFormChange}
-            >
-              <option value="">Opcional</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Estado</span>
-            <select name="status" value={form.status} onChange={handleFormChange}>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Notas</span>
-            <textarea name="notes" rows={3} value={form.notes} onChange={handleFormChange} />
-          </label>
-          <div className="modal-actions">
+          <p className="agenda-form__step-hint">
+            {formStep === "details"
+              ? "Definí fecha, hora y mascota. En el segundo paso completás servicio y cobro."
+              : "Completá servicio, pago y notas antes de guardar."}
+          </p>
+          {formError ? <div className="agenda-form__error">{formError}</div> : null}
+          {formStep === "details" ? (
+            <div className="agenda-form__section">
+              <label
+                className={`form-field${fieldErrors.date ? " form-field--error" : ""}`}
+              >
+                <span>Fecha</span>
+                <div className="date-field__control">
+                  <input
+                    type="text"
+                    className="date-field__display"
+                    value={formatDateDisplay(form.date)}
+                    placeholder="DD-MM-AAAA"
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="date"
+                    id="agenda-date"
+                    name="date"
+                    className="date-field__native"
+                    value={form.date}
+                    onChange={handleFormChange}
+                    aria-invalid={Boolean(fieldErrors.date)}
+                  />
+                </div>
+                {fieldErrors.date ? (
+                  <small className="agenda-field-error">{fieldErrors.date}</small>
+                ) : null}
+              </label>
+              <label
+                className={`form-field${fieldErrors.time ? " form-field--error" : ""}`}
+              >
+                <span>Hora</span>
+                <input
+                  id="agenda-time"
+                  type="time"
+                  name="time"
+                  min="07:00"
+                  max="22:00"
+                  step="900"
+                  value={form.time}
+                  onChange={handleFormChange}
+                  aria-invalid={Boolean(fieldErrors.time)}
+                />
+                <small className="agenda-helper">Horario permitido: 07:00 a 22:00.</small>
+                {fieldErrors.time ? (
+                  <small className="agenda-field-error">{fieldErrors.time}</small>
+                ) : null}
+              </label>
+              <label
+                className={`form-field${fieldErrors.duration ? " form-field--error" : ""}`}
+              >
+                <span>Duración (min)</span>
+                <input
+                  id="agenda-duration"
+                  type="number"
+                  name="duration"
+                  min="30"
+                  step="15"
+                  value={form.duration}
+                  onChange={handleFormChange}
+                  aria-invalid={Boolean(fieldErrors.duration)}
+                />
+                <small className="agenda-helper">
+                  Termina {getEndTime(form.time, form.duration || 60)}
+                </small>
+                {fieldErrors.duration ? (
+                  <small className="agenda-field-error">{fieldErrors.duration}</small>
+                ) : null}
+              </label>
+              <label
+                className={`form-field${fieldErrors.pet_name ? " form-field--error" : ""}`}
+              >
+                <span>Mascota</span>
+                <div className="combo-field">
+                  <input
+                    type="text"
+                    name="pet_name"
+                    id="agenda-pet"
+                    placeholder="Buscá por nombre..."
+                    value={petSearch}
+                    onChange={(e) => {
+                      const nextPetName = e.target.value;
+                      if (formError) setFormError("");
+                      clearFieldError("pet_name");
+                      clearFieldError("owner_name");
+                      setPetSearch(nextPetName);
+                      setIsPetOpen(true);
+                      setForm((prev) => {
+                        const selectedName = selectedPetRecord?.name || "";
+                        const shouldResetLinked = Boolean(prev.pet_id) && nextPetName !== selectedName;
+                        return {
+                          ...prev,
+                          pet_id: "",
+                          pet_name: nextPetName,
+                          breed: shouldResetLinked ? "" : prev.breed,
+                          owner_name: shouldResetLinked ? "" : prev.owner_name,
+                        };
+                      });
+                    }}
+                    onFocus={() => setIsPetOpen(true)}
+                    onBlur={() => setTimeout(() => setIsPetOpen(false), 120)}
+                    autoComplete="off"
+                    aria-invalid={Boolean(fieldErrors.pet_name)}
+                    required
+                  />
+                  {isPetOpen ? (
+                    <div className="combo-field__list" role="listbox">
+                      {filteredPets.length === 0 ? (
+                        <div className="combo-field__empty">Sin resultados</div>
+                      ) : (
+                        filteredPets.map((pet) => (
+                          <button
+                            key={pet.id}
+                            type="button"
+                            className="combo-field__option"
+                            onMouseDown={() => handlePetSelect(pet.id)}
+                          >
+                            {formatPetLabel(pet)}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                {selectedPetRecord ? (
+                  <small className="agenda-helper">
+                    Se completaron dueño y raza desde la ficha. Podés editarlos.
+                  </small>
+                ) : (
+                  <small className="agenda-helper">
+                    Si la mascota no existe, podés crearla y volver al turno.
+                  </small>
+                )}
+                {fieldErrors.pet_name ? (
+                  <small className="agenda-field-error">{fieldErrors.pet_name}</small>
+                ) : null}
+                <Link className="agenda-link agenda-link--secondary" to="/pets">
+                  Ir a Mascotas para crear una nueva
+                </Link>
+              </label>
+              <label className="form-field">
+                <span>Raza</span>
+                <input
+                  type="text"
+                  name="breed"
+                  value={form.breed}
+                  onChange={handleFormChange}
+                />
+              </label>
+              <label
+                className={`form-field${fieldErrors.owner_name ? " form-field--error" : ""}`}
+              >
+                <span>Dueño</span>
+                <input
+                  id="agenda-owner"
+                  type="text"
+                  name="owner_name"
+                  value={form.owner_name}
+                  onChange={handleFormChange}
+                  aria-invalid={Boolean(fieldErrors.owner_name)}
+                />
+                {fieldErrors.owner_name ? (
+                  <small className="agenda-field-error">{fieldErrors.owner_name}</small>
+                ) : null}
+              </label>
+            </div>
+          ) : (
+            <div className="agenda-form__section">
+              <label
+                className={`form-field${fieldErrors.service_type_id ? " form-field--error" : ""}`}
+              >
+                <span>Servicio</span>
+                <select
+                  id="agenda-service"
+                  name="service_type_id"
+                  value={form.service_type_id}
+                  onChange={handleFormChange}
+                  aria-invalid={Boolean(fieldErrors.service_type_id)}
+                >
+                  <option value="">Seleccionar</option>
+                  {serviceTypes.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.service_type_id ? (
+                  <small className="agenda-field-error">{fieldErrors.service_type_id}</small>
+                ) : null}
+              </label>
+              <div className="agenda-price-card">
+                <div>
+                  <span>Precio del servicio</span>
+                  <strong>
+                    {servicePrice ? formatCurrency(servicePrice) : "Sin definir"}
+                  </strong>
+                </div>
+                <div>
+                  <span>Seña recibida</span>
+                  <strong>{formatCurrency(depositAmount)}</strong>
+                </div>
+                <div>
+                  <span>Saldo a cobrar</span>
+                  <strong>{formatCurrency(remainingAmount)}</strong>
+                </div>
+              </div>
+              <label className="form-field">
+                <span>Método de pago</span>
+                <select
+                  name="payment_method_id"
+                  value={form.payment_method_id}
+                  onChange={handleFormChange}
+                >
+                  <option value="">Opcional</option>
+                  {paymentMethods.map((method) => (
+                    <option key={method.id} value={method.id}>
+                      {method.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label
+                className={`form-field${fieldErrors.deposit_amount ? " form-field--error" : ""}`}
+              >
+                <span>Pago/Seña</span>
+                <input
+                  id="agenda-deposit"
+                  type="number"
+                  name="deposit_amount"
+                  min="0"
+                  value={form.deposit_amount}
+                  onChange={handleFormChange}
+                  aria-invalid={Boolean(fieldErrors.deposit_amount)}
+                />
+                {fieldErrors.deposit_amount ? (
+                  <small className="agenda-field-error">{fieldErrors.deposit_amount}</small>
+                ) : null}
+              </label>
+              <label className="form-field">
+                <span>Groomer</span>
+                <select
+                  name="groomer_id"
+                  value={form.groomer_id}
+                  onChange={handleFormChange}
+                >
+                  <option value="">Opcional</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {isEditing ? (
+                <label
+                  className={`form-field${fieldErrors.status ? " form-field--error" : ""}`}
+                >
+                  <span>Estado</span>
+                  <select
+                    id="agenda-status"
+                    name="status"
+                    value={form.status}
+                    onChange={handleFormChange}
+                    aria-invalid={Boolean(fieldErrors.status)}
+                  >
+                    {STATUS_OPTIONS.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.status ? (
+                    <small className="agenda-field-error">{fieldErrors.status}</small>
+                  ) : null}
+                </label>
+              ) : (
+                <div className="agenda-form__readonly-status">
+                  <span>Estado inicial</span>
+                  <strong>Reservado</strong>
+                  <small>Se finaliza o cancela desde el detalle del turno.</small>
+                </div>
+              )}
+              <label className="form-field">
+                <span>Notas</span>
+                <textarea
+                  name="notes"
+                  rows={4}
+                  value={form.notes}
+                  onChange={handleFormChange}
+                />
+              </label>
+            </div>
+          )}
+          <div className="modal-actions agenda-form__actions">
+            {formStep === "service" ? (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => moveToFormStep("details")}
+              >
+                Volver
+              </button>
+            ) : null}
             <button type="button" className="btn-secondary" onClick={closeForm}>
               Cancelar
             </button>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleSubmit}
-              disabled={formLoading}
-            >
-              {formLoading ? "Guardando..." : "Guardar"}
-            </button>
+            {formStep === "details" ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => moveToFormStep("service")}
+              >
+                Continuar
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleSubmit}
+                disabled={formLoading}
+              >
+                {formLoading ? "Guardando..." : "Guardar"}
+              </button>
+            )}
           </div>
         </div>
       </Modal>

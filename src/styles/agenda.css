@@ -820,6 +820,40 @@
 
 .agenda-form {
   display: grid;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+.agenda-form__steps {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agenda-form__step {
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  background: rgba(17, 24, 39, 0.04);
+  color: #334155;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.agenda-form__step.is-active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.agenda-form__step-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.agenda-form__section {
+  display: grid;
   gap: 10px;
 }
 
@@ -847,6 +881,19 @@
   color: var(--color-text-soft);
 }
 
+.agenda-form .form-field--error input,
+.agenda-form .form-field--error select,
+.agenda-form .form-field--error textarea,
+.agenda-form .form-field--error .date-field__display {
+  border-color: rgba(185, 28, 28, 0.55);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+.agenda-field-error {
+  font-size: 0.74rem;
+  color: #b91c1c;
+}
+
 .agenda-form__error {
   background: rgba(248, 113, 113, 0.15);
   color: #b91c1c;
@@ -855,12 +902,40 @@
   font-size: 0.85rem;
 }
 
+.agenda-form__readonly-status {
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.08);
+  padding: 10px 12px;
+  display: grid;
+  gap: 2px;
+  color: #1e3a8a;
+  font-size: 0.8rem;
+}
+
+.agenda-form__readonly-status strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.agenda-form__readonly-status small {
+  color: #475569;
+}
+
+.agenda-form__actions {
+  justify-content: flex-end;
+}
+
 .agenda-link {
   font-size: 0.75rem;
   color: #6b21a8;
   text-decoration: none;
   margin-top: 6px;
   display: inline-flex;
+}
+
+.agenda-link--secondary {
+  color: #0f172a;
 }
 
 .agenda-link:hover {
@@ -889,6 +964,16 @@
 
   .agenda-close-liquidation__header {
     align-items: stretch;
+  }
+
+  .agenda-form__actions {
+    justify-content: stretch;
+  }
+
+  .agenda-form__actions .btn-primary,
+  .agenda-form__actions .btn-secondary {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 
