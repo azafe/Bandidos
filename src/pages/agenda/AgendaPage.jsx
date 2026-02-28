@@ -941,6 +941,7 @@ export default function AgendaPage() {
     const groomerId = normalizeId(finishForm.groomer_id);
     const serviceTypeId = normalizeId(finishForm.service_type_id);
     const price = Number(finishForm.price || 0);
+    const deposit = Number(selectedTurno.deposit_amount || 0);
     if (!groomerId) {
       alert("Seleccioná el groomer.");
       return;
@@ -950,7 +951,11 @@ export default function AgendaPage() {
       return;
     }
     if (!price || Number.isNaN(price) || price < 0) {
-      alert("Ingresá un monto válido.");
+      alert("Ingresá el costo total del servicio.");
+      return;
+    }
+    if (price < deposit) {
+      alert("El costo total no puede ser menor que la seña registrada.");
       return;
     }
     await updateStatusWithDetails(selectedTurno, "finished", {
@@ -989,6 +994,8 @@ export default function AgendaPage() {
   const selectedTurnoPrice = selectedTurno ? getServicePrice(selectedTurno) : 0;
   const selectedTurnoDeposit = Number(selectedTurno?.deposit_amount || 0);
   const selectedTurnoBalance = Math.max(selectedTurnoPrice - selectedTurnoDeposit, 0);
+  const finishTotalAmount = Number(finishForm.price || 0);
+  const finishRemainingAmount = Math.max(finishTotalAmount - selectedTurnoDeposit, 0);
 
   function resetFilters() {
     setFilters({
@@ -1646,7 +1653,7 @@ export default function AgendaPage() {
                   <strong>{formatCurrency(selectedTurnoPrice)}</strong>
                 </article>
                 <article className="agenda-turno-modal__metric">
-                  <span>Seña</span>
+                  <span>Seña registrada</span>
                   <strong>{formatCurrency(selectedTurnoDeposit)}</strong>
                 </article>
                 <article className="agenda-turno-modal__metric">
@@ -1705,6 +1712,20 @@ export default function AgendaPage() {
                     <h4>Cerrar y facturar turno</h4>
                     <p>Completá los datos para registrar la finalización.</p>
                   </div>
+                  <div className="agenda-price-card">
+                    <div>
+                      <span>Costo total final</span>
+                      <strong>{formatCurrency(finishTotalAmount)}</strong>
+                    </div>
+                    <div>
+                      <span>Seña registrada</span>
+                      <strong>{formatCurrency(selectedTurnoDeposit)}</strong>
+                    </div>
+                    <div>
+                      <span>Saldo pendiente</span>
+                      <strong>{formatCurrency(finishRemainingAmount)}</strong>
+                    </div>
+                  </div>
                   <div className="agenda-finish agenda-finish--modal">
                     <label className="form-field">
                       <span>Groomer</span>
@@ -1745,7 +1766,7 @@ export default function AgendaPage() {
                       </select>
                     </label>
                     <label className="form-field">
-                      <span>Monto pagado</span>
+                      <span>Costo total final</span>
                       <input
                         type="number"
                         min="0"
@@ -1755,6 +1776,9 @@ export default function AgendaPage() {
                           setFinishForm((prev) => ({ ...prev, price: e.target.value }))
                         }
                       />
+                      <small className="agenda-helper">
+                        Ingresá el precio total del servicio para calcular saldo.
+                      </small>
                     </label>
                   </div>
                   <div className="agenda-turno-modal__finish-actions">
@@ -1799,7 +1823,16 @@ export default function AgendaPage() {
                   <button
                     type="button"
                     className="btn-primary"
-                    onClick={() => setShowFinishForm(true)}
+                    onClick={() => {
+                      setFinishForm((prev) => {
+                        if (String(prev.price || "").trim()) return prev;
+                        return {
+                          ...prev,
+                          price: selectedTurnoPrice > 0 ? String(selectedTurnoPrice) : "",
+                        };
+                      });
+                      setShowFinishForm(true);
+                    }}
                   >
                     Dar por finalizado
                   </button>
@@ -2079,7 +2112,7 @@ export default function AgendaPage() {
               <label
                 className={`form-field${fieldErrors.deposit_amount ? " form-field--error" : ""}`}
               >
-                <span>Pago/Seña</span>
+                <span>Seña recibida</span>
                 <input
                   id="agenda-deposit"
                   type="number"
@@ -2092,6 +2125,9 @@ export default function AgendaPage() {
                 {fieldErrors.deposit_amount ? (
                   <small className="agenda-field-error">{fieldErrors.deposit_amount}</small>
                 ) : null}
+                <small className="agenda-helper">
+                  Anticipo cobrado al reservar. Si no hubo seña, dejar en 0.
+                </small>
               </label>
               <label className="form-field">
                 <span>Groomer</span>
