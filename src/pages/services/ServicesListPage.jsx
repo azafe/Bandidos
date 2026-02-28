@@ -57,6 +57,13 @@ function parseSheetDate(dateStr) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+function toISODateLocal(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function ServicesListPage() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +98,14 @@ export default function ServicesListPage() {
   const { items: serviceTypes } = useApiResource("/v2/service-types");
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const { items: employees } = useApiResource("/v2/employees");
+  const currentDate = new Date();
+  const todayIso = toISODateLocal(currentDate);
+  const weekStartDate = new Date(currentDate);
+  weekStartDate.setDate(weekStartDate.getDate() - 6);
+  const weekStartIso = toISODateLocal(weekStartDate);
+  const monthStartIso = toISODateLocal(
+    new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+  );
 
   useEffect(() => {
     let active = true;
@@ -124,7 +139,7 @@ export default function ServicesListPage() {
     _dateObj: parseSheetDate(s.date),
   }));
 
-  const now = new Date();
+  const now = currentDate;
   const servicesToday = servicesWithDate.filter((s) => {
     const d = s._dateObj;
     if (!d) return false;
@@ -326,6 +341,36 @@ export default function ServicesListPage() {
     setFilterGroomerSearch("");
   }
 
+  function applyRangePreset(preset) {
+    const baseDate = new Date();
+    const to = toISODateLocal(baseDate);
+    if (preset === "today") {
+      setFilters((prev) => ({ ...prev, from: to, to }));
+      return;
+    }
+    if (preset === "week") {
+      const fromDate = new Date(baseDate);
+      fromDate.setDate(fromDate.getDate() - 6);
+      setFilters((prev) => ({ ...prev, from: toISODateLocal(fromDate), to }));
+      return;
+    }
+    const monthStartDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+    setFilters((prev) => ({
+      ...prev,
+      from: toISODateLocal(monthStartDate),
+      to,
+    }));
+  }
+
+  const periodPreset =
+    filters.from === todayIso && filters.to === todayIso
+      ? "today"
+      : filters.from === weekStartIso && filters.to === todayIso
+      ? "week"
+      : filters.from === monthStartIso && filters.to === todayIso
+      ? "month"
+      : "custom";
+
   const periodLabel = `${filters.from} → ${filters.to}`;
 
   function formatPrice(value) {
@@ -394,9 +439,39 @@ export default function ServicesListPage() {
 
       <div className="card filters-card" style={{ marginBottom: 16 }}>
         <div className="filters-header">
-          <div>
+          <div className="filters-header__main">
             <h3 className="card-title">Filtros</h3>
             <p className="card-subtitle">Acotá por período o por persona.</p>
+            <div className="filters-period-quick">
+              <span>Período rápido</span>
+              <button
+                type="button"
+                className={`filters-period-pill${
+                  periodPreset === "today" ? " is-active" : ""
+                }`}
+                onClick={() => applyRangePreset("today")}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                className={`filters-period-pill${
+                  periodPreset === "week" ? " is-active" : ""
+                }`}
+                onClick={() => applyRangePreset("week")}
+              >
+                Últimos 7 días
+              </button>
+              <button
+                type="button"
+                className={`filters-period-pill${
+                  periodPreset === "month" ? " is-active" : ""
+                }`}
+                onClick={() => applyRangePreset("month")}
+              >
+                Mes actual
+              </button>
+            </div>
           </div>
           <div className="filters-actions">
             <button
@@ -430,7 +505,7 @@ export default function ServicesListPage() {
         ) : null}
 
         {filtersOpen ? (
-          <div className="filters-grid">
+          <div className="filters-grid services-filters-grid">
             <div className="form-field">
               <label htmlFor="from">Desde</label>
               <input
@@ -702,26 +777,25 @@ export default function ServicesListPage() {
       </div>
 
       {/* Cards resumen */}
-      <div className="cards-row" style={{ display: "flex", gap: 16, marginBottom: 24 }}>
-        <div className="card" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>Servicios de hoy</h3>
-          <p style={{ fontSize: "2rem", fontWeight: 600 }}>{countToday}</p>
-          <p style={{ fontSize: "0.9rem", color: "#999" }}>
+      <div className="services-kpi-row">
+        <article className="card services-kpi-card">
+          <h3 className="services-kpi-card__title">Servicios de hoy</h3>
+          <p className="services-kpi-card__value">{countToday}</p>
+          <p className="services-kpi-card__meta">
             Ingresos de hoy:{" "}
             <strong>${totalToday.toLocaleString("es-AR")}</strong>
           </p>
-        </div>
+        </article>
 
-        <div className="card" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>Servicios del período</h3>
-          <p style={{ fontSize: "2rem", fontWeight: 600 }}>{countPeriod}</p>
-          <p style={{ fontSize: "0.9rem", color: "#999" }}>
+        <article className="card services-kpi-card">
+          <h3 className="services-kpi-card__title">Servicios del período</h3>
+          <p className="services-kpi-card__value">{countPeriod}</p>
+          <p className="services-kpi-card__meta">
             Ingresos del período:{" "}
             <strong>${totalPeriod.toLocaleString("es-AR")}</strong>
-            <br />
-            <span style={{ fontSize: "0.8rem" }}>Período: {periodLabel}</span>
+            <span className="services-kpi-card__period">Período: {periodLabel}</span>
           </p>
-        </div>
+        </article>
       </div>
 
       <div className="card services-panel">
