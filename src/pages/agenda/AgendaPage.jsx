@@ -217,11 +217,9 @@ export default function AgendaPage() {
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
   const [viewMode, setViewMode] = useState("operation");
   const [closeGroomerId, setCloseGroomerId] = useState("");
   const [showZeroFinishedRows, setShowZeroFinishedRows] = useState(false);
-  const [showReminder, setShowReminder] = useState(false);
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [formStep, setFormStep] = useState("details");
@@ -974,7 +972,6 @@ export default function AgendaPage() {
 
   function goToOperationPending() {
     setViewMode("operation");
-    setShowReminder(false);
     setFilters({
       status: "reserved",
       without_groomer: false,
@@ -984,7 +981,6 @@ export default function AgendaPage() {
 
   function goToOperationFinishedWithoutGroomer() {
     setViewMode("operation");
-    setShowReminder(false);
     setFilters({
       status: "finished",
       without_groomer: true,
@@ -993,7 +989,7 @@ export default function AgendaPage() {
   }
 
   return (
-    <div className={`page-content agenda-page${isCompact ? " agenda-page--compact" : ""}`}>
+    <div className="page-content agenda-page">
       <div className="agenda-header">
         <div>
           <h1 className="page-title">Agenda</h1>
@@ -1019,18 +1015,15 @@ export default function AgendaPage() {
           >
             Operación
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "close"}
-            className={viewMode === "close" ? "is-active" : ""}
-            onClick={() => {
-              setShowReminder(false);
-              setViewMode("close");
-            }}
-          >
-            Cierre del día
-          </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "close"}
+              className={viewMode === "close" ? "is-active" : ""}
+              onClick={() => setViewMode("close")}
+            >
+              Cierre del día
+            </button>
         </div>
         <p className="agenda-mode-hint">
           {viewMode === "operation"
@@ -1108,20 +1101,6 @@ export default function AgendaPage() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setIsCompact((prev) => !prev)}
-                >
-                  {isCompact ? "Modo normal" : "Modo compacto"}
-                </button>
-                <button
-                  type="button"
-                  className={showReminder ? "btn-primary" : "btn-secondary"}
-                  onClick={() => setShowReminder((prev) => !prev)}
-                >
-                  Nota del día
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
                   onClick={resetFilters}
                   disabled={activeFilterChips.length === 0}
                 >
@@ -1179,47 +1158,6 @@ export default function AgendaPage() {
 
       {viewMode === "operation" ? (
         <>
-          {showReminder ? (
-            <div className="agenda-controls">
-              <div className="agenda-reminder card">
-                <div className="agenda-reminder__header">
-                  <div>
-                    <h2 className="card-title">
-                      <span className="agenda-reminder__icon" aria-hidden="true">
-                        📝
-                      </span>{" "}
-                      Recordatorio del día
-                    </h2>
-                    <p className="card-subtitle">Nota interna rápida para el equipo.</p>
-                  </div>
-                  <div className="agenda-reminder__actions">
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={saveReminder}
-                    >
-                      {reminderSaved ? "Guardado" : "Guardar nota"}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => setShowReminder(false)}
-                    >
-                      Ocultar
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  rows={4}
-                  placeholder="Ej: confirmar seña de Luna y cortar uñas a Toto..."
-                  value={reminder}
-                  onChange={(e) => setReminder(e.target.value)}
-                  onBlur={saveReminder}
-                />
-              </div>
-            </div>
-          ) : null}
-
           <div className="agenda-day card">
             <div className="agenda-day__header">
               <div>
@@ -1228,6 +1166,33 @@ export default function AgendaPage() {
                   {formatDateDisplay(selectedDate)} · {filteredTurnos.length} turnos
                 </p>
               </div>
+            </div>
+            <div className="agenda-day__note">
+              <div className="agenda-reminder__header">
+                <div>
+                  <h3 className="agenda-day__note-title">
+                    <span className="agenda-reminder__icon" aria-hidden="true">
+                      📝
+                    </span>{" "}
+                    Nota del día
+                  </h3>
+                  <p className="card-subtitle">
+                    Observaciones operativas del día (equipo, pagos, ausencias, etc.).
+                  </p>
+                </div>
+                <div className="agenda-reminder__actions">
+                  <button type="button" className="btn-secondary" onClick={saveReminder}>
+                    {reminderSaved ? "Guardado" : "Guardar nota"}
+                  </button>
+                </div>
+              </div>
+              <textarea
+                rows={3}
+                placeholder='Ej: "Hoy Ana no asiste" · "Pagar $20.000 a Marco".'
+                value={reminder}
+                onChange={(e) => setReminder(e.target.value)}
+                onBlur={saveReminder}
+              />
             </div>
 
             {error && <div className="agenda-empty">{error}</div>}
