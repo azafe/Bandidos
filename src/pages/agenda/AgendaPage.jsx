@@ -618,6 +618,30 @@ export default function AgendaPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function handleTimeInputChange(e) {
+    const rawValue = String(e.target.value || "");
+    const compactValue = rawValue.replace(/[^\d]/g, "").slice(0, 4);
+    const nextValue =
+      compactValue.length > 2
+        ? `${compactValue.slice(0, 2)}:${compactValue.slice(2)}`
+        : compactValue;
+
+    if (formError) setFormError("");
+    clearFieldError("time");
+    setForm((prev) => ({ ...prev, time: nextValue }));
+  }
+
+  function handleTimeInputBlur() {
+    const minutes = parseTimeToMinutes(form.time);
+    if (minutes === null) return;
+    const hoursPart = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const minutesPart = String(minutes % 60).padStart(2, "0");
+    const normalized = `${hoursPart}:${minutesPart}`;
+    if (normalized !== form.time) {
+      setForm((prev) => ({ ...prev, time: normalized }));
+    }
+  }
+
   function handlePetSelect(petId) {
     const pet = pets.find((p) => String(p.id) === String(petId));
     const nextPetName = pet?.name || "";
@@ -1863,29 +1887,17 @@ export default function AgendaPage() {
                 className={`form-field${fieldErrors.time ? " form-field--error" : ""}`}
               >
                 <span>Hora</span>
-                <div className="date-field__control">
-                  <input
-                    type="text"
-                    className="date-field__display"
-                    value={form.time ? formatTime(form.time) : ""}
-                    placeholder="HH:MM (24 hs)"
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                  <input
-                    id="agenda-time"
-                    type="time"
-                    name="time"
-                    className="date-field__native"
-                    min="07:00"
-                    max="22:00"
-                    step="900"
-                    value={form.time}
-                    onChange={handleFormChange}
-                    aria-invalid={Boolean(fieldErrors.time)}
-                  />
-                </div>
+                <input
+                  id="agenda-time"
+                  type="text"
+                  name="time"
+                  inputMode="numeric"
+                  placeholder="HH:MM"
+                  value={form.time}
+                  onChange={handleTimeInputChange}
+                  onBlur={handleTimeInputBlur}
+                  aria-invalid={Boolean(fieldErrors.time)}
+                />
                 <small className="agenda-helper">Horario permitido: 07:00 a 22:00.</small>
                 {fieldErrors.time ? (
                   <small className="agenda-field-error">{fieldErrors.time}</small>
