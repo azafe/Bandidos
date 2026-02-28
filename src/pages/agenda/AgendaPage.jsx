@@ -26,6 +26,7 @@ const STATUS_LABELS = {
 };
 
 const DEFAULT_GROOMER_COMMISSION = 40;
+const DURATION_OPTIONS = [15, 30, 45, 60];
 const FORM_STEPS = [
   { key: "details", label: "1. Datos del turno" },
   { key: "service", label: "2. Servicio y pago" },
@@ -145,6 +146,11 @@ function parseTimeToMinutes(value) {
 function resolveDuration(value, fallback = 60) {
   const duration = Number(value);
   return Number.isFinite(duration) && duration > 0 ? duration : fallback;
+}
+
+function resolveFormDuration(value, fallback = 60) {
+  const duration = Number(value);
+  return DURATION_OPTIONS.includes(duration) ? duration : fallback;
 }
 
 function getEndTime(startTime, duration) {
@@ -569,7 +575,7 @@ export default function AgendaPage() {
     setForm({
       date: normalizeDate(turno.date || selectedDate),
       time: turno.time || "",
-      duration: turno.duration || 60,
+      duration: resolveFormDuration(turno.duration, 60),
       pet_id: turno.pet_id || "",
       pet_name: turno.pet_name || "",
       breed: turno.breed || "",
@@ -697,8 +703,8 @@ export default function AgendaPage() {
       }
     }
     const duration = Number(form.duration || 0);
-    if (shouldValidate("duration") && (!Number.isFinite(duration) || duration < 30)) {
-      errors.duration = "La duración debe ser de al menos 30 minutos.";
+    if (shouldValidate("duration") && !DURATION_OPTIONS.includes(duration)) {
+      errors.duration = "Seleccioná una duración válida: 15, 30, 45 o 60 minutos.";
     }
     if (shouldValidate("pet_name") && !form.pet_name.trim()) {
       errors.pet_name = "Ingresá la mascota.";
@@ -802,7 +808,7 @@ export default function AgendaPage() {
     }
 
     const newStart = parseTimeToMinutes(form.time);
-    const newDuration = resolveDuration(form.duration, 60);
+    const newDuration = resolveFormDuration(form.duration, 60);
     const newEnd = newStart !== null ? newStart + newDuration : null;
     const conflict = dateItems.find((turno) => {
       if (isEditing && String(turno.id) === String(selectedTurno?.id || "")) return false;
@@ -831,7 +837,7 @@ export default function AgendaPage() {
       const payload = {
         date: normalizedDate,
         time: form.time,
-        duration: resolveDuration(form.duration, 60),
+        duration: resolveFormDuration(form.duration, 60),
         pet_id: petId,
         pet_name: form.pet_name.trim(),
         breed: form.breed.trim(),
@@ -1940,16 +1946,19 @@ export default function AgendaPage() {
                 className={`form-field${fieldErrors.duration ? " form-field--error" : ""}`}
               >
                 <span>Duración (min)</span>
-                <input
+                <select
                   id="agenda-duration"
-                  type="number"
                   name="duration"
-                  min="30"
-                  step="15"
                   value={form.duration}
                   onChange={handleFormChange}
                   aria-invalid={Boolean(fieldErrors.duration)}
-                />
+                >
+                  {DURATION_OPTIONS.map((duration) => (
+                    <option key={duration} value={duration}>
+                      {duration}
+                    </option>
+                  ))}
+                </select>
                 <small className="agenda-helper">
                   Termina {getEndTime(form.time, form.duration || 60)}
                 </small>
