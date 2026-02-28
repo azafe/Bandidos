@@ -27,6 +27,7 @@ const STATUS_LABELS = {
 
 const DEFAULT_GROOMER_COMMISSION = 40;
 const DURATION_OPTIONS = [15, 30, 45, 60];
+const CUSTOM_DURATION_OPTION = "other";
 const FORM_STEPS = [
   { key: "details", label: "1. Datos del turno" },
   { key: "service", label: "2. Servicio y pago" },
@@ -148,9 +149,24 @@ function resolveDuration(value, fallback = 60) {
   return Number.isFinite(duration) && duration > 0 ? duration : fallback;
 }
 
-function resolveFormDuration(value, fallback = 60) {
-  const duration = Number(value);
-  return DURATION_OPTIONS.includes(duration) ? duration : fallback;
+function parseCustomDuration(value) {
+  const raw = String(value || "").trim();
+  const match = raw.match(/^(\d{1,2}):([0-5]\d)$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 12) return null;
+  const total = hours * 60 + minutes;
+  return total > 0 ? total : null;
+}
+
+function formatCustomDuration(totalMinutes) {
+  const normalized = Number(totalMinutes);
+  if (!Number.isFinite(normalized) || normalized <= 0) return "";
+  const hours = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  return `${hours}:${String(minutes).padStart(2, "0")}`;
 }
 
 function getEndTime(startTime, duration) {
@@ -236,6 +252,8 @@ export default function AgendaPage() {
   const [isPetOpen, setIsPetOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("reserved");
   const [showFinishForm, setShowFinishForm] = useState(false);
+  const [durationMode, setDurationMode] = useState("preset");
+  const [customDuration, setCustomDuration] = useState("");
   const [finishForm, setFinishForm] = useState({
     groomer_id: "",
     service_type_id: "",
@@ -529,6 +547,8 @@ export default function AgendaPage() {
   const servicePrice = Number(selectedService?.default_price || 0);
   const depositAmount = Number(form.deposit_amount || 0);
   const remainingAmount = Math.max(servicePrice - depositAmount, 0);
+  const durationValue = Number(form.duration);
+  const durationPreview = Number.isFinite(durationValue) && durationValue > 0 ? durationValue : 0;
 
   const filteredPets = useMemo(() => {
     const term = petSearch.trim().toLowerCase();
@@ -561,6 +581,8 @@ export default function AgendaPage() {
       groomer_id: "",
       status: "reserved",
     });
+    setDurationMode("preset");
+    setCustomDuration("");
     setPetSearch("");
     setIsPetOpen(false);
     setFormError("");
@@ -571,11 +593,12 @@ export default function AgendaPage() {
   }
 
   function openEdit(turno) {
+    const normalizedDuration = resolveDuration(turno.duration, 60);
     setSelectedTurno(turno);
     setForm({
       date: normalizeDate(turno.date || selectedDate),
       time: turno.time || "",
-      duration: resolveFormDuration(turno.duration, 60),
+      duration: normalizedDuration,
       pet_id: turno.pet_id || "",
       pet_name: turno.pet_name || "",
       breed: turno.breed || "",
@@ -590,6 +613,13 @@ export default function AgendaPage() {
       groomer_id: turno.groomer_id || "",
       status: normalizeStatus(turno.status),
     });
+    if (DURATION_OPTIONS.includes(normalizedDuration)) {
+      setDurationMode("preset");
+      setCustomDuration("");
+    } else {
+      setDurationMode("custom");
+      setCustomDuration(formatCustomDuration(normalizedDuration));
+    }
     setPetSearch(turno.pet_name || "");
     setIsPetOpen(false);
     setFormError("");
@@ -648,6 +678,47 @@ export default function AgendaPage() {
     }
   }
 
+  function handleDurationModeChange(e) {
+    const nextValue = e.target.value;
+    if (formError) setFormError("");
+    clearFieldError("duration");
+    if (nextValue === CUSTOM_DURATION_OPTION) {
+      setDurationMode("custom");
+      const current = Number(form.duration);
+      if (
+        Number.isFinite(current) &&
+        current > 0 &&
+        !DURATION_OPTIONS.includes(current)
+      ) {
+        setCustomDuration(formatCustomDuration(current));
+      } else {
+        setCustomDuration("");
+        setForm((prev) => ({ ...prev, duration: "" }));
+      }
+      return;
+    }
+    const duration = Number(nextValue);
+    setDurationMode("preset");
+    setCustomDuration("");
+    setForm((prev) => ({ ...prev, duration }));
+  }
+
+  function handleCustomDurationChange(e) {
+    const next = e.target.value;
+    if (formError) setFormError("");
+    clearFieldError("duration");
+    setCustomDuration(next);
+    const parsed = parseCustomDuration(next);
+    setForm((prev) => ({ ...prev, duration: parsed === null ? "" : parsed }));
+  }
+
+  function handleCustomDurationBlur() {
+    const parsed = parseCustomDuration(customDuration);
+    if (parsed === null) return;
+    setCustomDuration(formatCustomDuration(parsed));
+    setForm((prev) => ({ ...prev, duration: parsed }));
+  }
+
   function handlePetSelect(petId) {
     const pet = pets.find((p) => String(p.id) === String(petId));
     const nextPetName = pet?.name || "";
@@ -703,8 +774,19 @@ export default function AgendaPage() {
       }
     }
     const duration = Number(form.duration || 0);
-    if (shouldValidate("duration") && !DURATION_OPTIONS.includes(duration)) {
-      errors.duration = "Seleccioná una duración válida: 15, 30, 45 o 60 minutos.";
+    if (shouldValidate("duration")) {
+      if (durationMode === "custom") {
+        const parsed = parseCustomDuration(customDuration);
+        if (parsed === null) {
+          errors.duration = "Ingresá la duración en formato HH:MM (ej: 2:30).";
+        } else if (parsed <= 60) {
+          errors.duration = "En 'Otro' ingresá una duración mayor a 60 minutos.";
+        } else if (parsed % 15 !== 0) {
+          errors.duration = "La duración personalizada debe ir en bloques de 15 minutos.";
+        }
+      } else if (!DURATION_OPTIONS.includes(duration)) {
+        errors.duration = "Seleccioná una duración válida: 15, 30, 45 o 60 minutos.";
+      }
     }
     if (shouldValidate("pet_name") && !form.pet_name.trim()) {
       errors.pet_name = "Ingresá la mascota.";
@@ -764,6 +846,10 @@ export default function AgendaPage() {
   }
 
   function focusInvalidField(fieldName) {
+    if (fieldName === "duration" && durationMode === "custom") {
+      focusField("agenda-duration-custom");
+      return;
+    }
     focusField(FORM_FIELD_IDS[fieldName]);
   }
 
@@ -808,7 +894,7 @@ export default function AgendaPage() {
     }
 
     const newStart = parseTimeToMinutes(form.time);
-    const newDuration = resolveFormDuration(form.duration, 60);
+    const newDuration = resolveDuration(form.duration, 60);
     const newEnd = newStart !== null ? newStart + newDuration : null;
     const conflict = dateItems.find((turno) => {
       if (isEditing && String(turno.id) === String(selectedTurno?.id || "")) return false;
@@ -837,7 +923,7 @@ export default function AgendaPage() {
       const payload = {
         date: normalizedDate,
         time: form.time,
-        duration: resolveFormDuration(form.duration, 60),
+        duration: resolveDuration(form.duration, 60),
         pet_id: petId,
         pet_name: form.pet_name.trim(),
         breed: form.breed.trim(),
@@ -1949,8 +2035,12 @@ export default function AgendaPage() {
                 <select
                   id="agenda-duration"
                   name="duration"
-                  value={form.duration}
-                  onChange={handleFormChange}
+                  value={
+                    durationMode === "custom"
+                      ? CUSTOM_DURATION_OPTION
+                      : String(form.duration || 60)
+                  }
+                  onChange={handleDurationModeChange}
                   aria-invalid={Boolean(fieldErrors.duration)}
                 >
                   {DURATION_OPTIONS.map((duration) => (
@@ -1958,9 +2048,22 @@ export default function AgendaPage() {
                       {duration}
                     </option>
                   ))}
+                  <option value={CUSTOM_DURATION_OPTION}>Otro</option>
                 </select>
+                {durationMode === "custom" ? (
+                  <input
+                    id="agenda-duration-custom"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:MM (ej: 2:30)"
+                    value={customDuration}
+                    onChange={handleCustomDurationChange}
+                    onBlur={handleCustomDurationBlur}
+                    aria-invalid={Boolean(fieldErrors.duration)}
+                  />
+                ) : null}
                 <small className="agenda-helper">
-                  Termina {getEndTime(form.time, form.duration || 60)}
+                  Termina {durationPreview ? getEndTime(form.time, durationPreview) : "-"}
                 </small>
                 {fieldErrors.duration ? (
                   <small className="agenda-field-error">{fieldErrors.duration}</small>
