@@ -897,7 +897,10 @@ export default function AgendaPage() {
   }
 
   async function handleDelete(turno) {
-    const ok = window.confirm("¿Eliminar este turno?");
+    const turnoLabel = `${turno?.pet_name || "Mascota"} · ${formatDateDisplay(
+      turno?.date
+    )} ${formatTime(turno?.time)}`;
+    const ok = window.confirm(`¿Eliminar este turno?\n${turnoLabel}`);
     if (!ok) return;
     try {
       await deleteAgendaTurno(turno.id);
@@ -956,6 +959,12 @@ export default function AgendaPage() {
         }
       : null,
   ].filter(Boolean);
+  const selectedTurnoStatus = selectedTurno
+    ? normalizeStatus(selectedTurno.status)
+    : "reserved";
+  const selectedTurnoPrice = selectedTurno ? getServicePrice(selectedTurno) : 0;
+  const selectedTurnoDeposit = Number(selectedTurno?.deposit_amount || 0);
+  const selectedTurnoBalance = Math.max(selectedTurnoPrice - selectedTurnoDeposit, 0);
 
   function resetFilters() {
     setFilters({
@@ -1584,52 +1593,168 @@ export default function AgendaPage() {
       >
         {selectedTurno && (
           <>
-            <div className="agenda-detail">
-              <div>
-                <strong>Fecha:</strong> {formatDateDisplay(selectedTurno.date)}
+            <div className="agenda-turno-modal">
+              <div className="agenda-turno-modal__hero">
+                <div>
+                  <p className="agenda-turno-modal__eyebrow">
+                    {formatDateDisplay(selectedTurno.date)} · {formatTime(selectedTurno.time)} -{" "}
+                    {getEndTime(selectedTurno.time, selectedTurno.duration || 60)}
+                  </p>
+                  <h3 className="agenda-turno-modal__title">
+                    {selectedTurno.pet_name || "Mascota"} -{" "}
+                    {getServiceName(selectedTurno, serviceTypes)}
+                  </h3>
+                  <p className="agenda-turno-modal__subtitle">
+                    {selectedTurno.owner_name || "-"} · {selectedTurno.breed || "-"}
+                    {selectedTurno.groomer?.name
+                      ? ` · Groomer: ${selectedTurno.groomer.name}`
+                      : ""}
+                  </p>
+                </div>
+                <span className={`agenda-badge agenda-badge--${selectedTurnoStatus}`}>
+                  {STATUS_LABELS[selectedTurnoStatus]}
+                </span>
               </div>
-              <div>
-                <strong>Hora:</strong>{" "}
-                {formatTime(selectedTurno.time)} -{" "}
-                {getEndTime(selectedTurno.time, selectedTurno.duration || 60)}
+
+              <div className="agenda-turno-modal__metrics">
+                <article className="agenda-turno-modal__metric">
+                  <span>Precio del servicio</span>
+                  <strong>{formatCurrency(selectedTurnoPrice)}</strong>
+                </article>
+                <article className="agenda-turno-modal__metric">
+                  <span>Seña</span>
+                  <strong>{formatCurrency(selectedTurnoDeposit)}</strong>
+                </article>
+                <article className="agenda-turno-modal__metric">
+                  <span>Saldo pendiente</span>
+                  <strong
+                    className={
+                      selectedTurnoBalance > 0
+                        ? "agenda-turno-modal__balance--pending"
+                        : "agenda-turno-modal__balance--clear"
+                    }
+                  >
+                    {formatCurrency(selectedTurnoBalance)}
+                  </strong>
+                </article>
               </div>
-              <div>
-                <strong>Mascota:</strong> {selectedTurno.pet_name || "-"}
+
+              <div className="agenda-turno-modal__grid">
+                <article className="agenda-turno-modal__panel">
+                  <h4>Detalle operativo</h4>
+                  <div className="agenda-turno-modal__pairs">
+                    <div className="agenda-turno-modal__pair">
+                      <span>Mascota</span>
+                      <strong>{selectedTurno.pet_name || "-"}</strong>
+                    </div>
+                    <div className="agenda-turno-modal__pair">
+                      <span>Dueño</span>
+                      <strong>{selectedTurno.owner_name || "-"}</strong>
+                    </div>
+                    <div className="agenda-turno-modal__pair">
+                      <span>Raza</span>
+                      <strong>{selectedTurno.breed || "-"}</strong>
+                    </div>
+                    <div className="agenda-turno-modal__pair">
+                      <span>Método de pago</span>
+                      <strong>{selectedTurno.payment_method?.name || "-"}</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article className="agenda-turno-modal__panel">
+                  <h4>Notas</h4>
+                  <p
+                    className={`agenda-turno-modal__notes${
+                      selectedTurno.notes ? "" : " is-empty"
+                    }`}
+                  >
+                    {selectedTurno.notes ||
+                      "Sin notas cargadas para este turno."}
+                  </p>
+                </article>
               </div>
-              <div>
-                <strong>Raza:</strong> {selectedTurno.breed || "-"}
-              </div>
-              <div>
-                <strong>Dueño:</strong> {selectedTurno.owner_name || "-"}
-              </div>
-              <div>
-                <strong>Servicio:</strong>{" "}
-                {getServiceName(selectedTurno, serviceTypes)}
-              </div>
-              <div>
-                <strong>Precio del servicio:</strong>{" "}
-                {formatCurrency(getServicePrice(selectedTurno))}
-              </div>
-              <div>
-                <strong>Seña:</strong> {formatCurrency(selectedTurno.deposit_amount)}
-              </div>
-              <div>
-                <strong>Saldo:</strong>{" "}
-                {formatCurrency(
-                  Math.max(
-                    getServicePrice(selectedTurno) -
-                      Number(selectedTurno.deposit_amount || 0),
-                    0
-                  )
-                )}
-              </div>
-              <div>
-                <strong>Notas:</strong> {selectedTurno.notes || "-"}
-              </div>
+
+              {showFinishForm ? (
+                <div className="agenda-turno-modal__finish">
+                  <div className="agenda-turno-modal__finish-header">
+                    <h4>Cerrar y facturar turno</h4>
+                    <p>Completá los datos para registrar la finalización.</p>
+                  </div>
+                  <div className="agenda-finish agenda-finish--modal">
+                    <label className="form-field">
+                      <span>Groomer</span>
+                      <select
+                        value={finishForm.groomer_id}
+                        onChange={(e) =>
+                          setFinishForm((prev) => ({
+                            ...prev,
+                            groomer_id: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Seleccioná</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="form-field">
+                      <span>Tipo de servicio</span>
+                      <select
+                        value={finishForm.service_type_id}
+                        onChange={(e) =>
+                          setFinishForm((prev) => ({
+                            ...prev,
+                            service_type_id: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Seleccioná</option>
+                        {serviceTypes.map((service) => (
+                          <option key={service.id} value={service.id}>
+                            {service.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="form-field">
+                      <span>Monto pagado</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="100"
+                        value={finishForm.price}
+                        onChange={(e) =>
+                          setFinishForm((prev) => ({ ...prev, price: e.target.value }))
+                        }
+                      />
+                    </label>
+                  </div>
+                  <div className="agenda-turno-modal__finish-actions">
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setShowFinishForm(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={handleFinishSubmit}
+                    >
+                      Guardar finalización
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
-            <div className="modal-actions">
-              <label className="form-field">
-                <span>Estado</span>
+            <div className="modal-actions agenda-turno-modal__actions">
+              <label className="form-field agenda-turno-modal__status-field">
+                <span>Estado operativo</span>
                 <select
                   value={pendingStatus}
                   onChange={(event) => {
@@ -1645,97 +1770,34 @@ export default function AgendaPage() {
                   ))}
                 </select>
               </label>
-              {!showFinishForm && normalizeStatus(selectedTurno.status) !== "finished" ? (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => setShowFinishForm(true)}
-                >
-                  Dar por finalizado
-                </button>
-              ) : null}
-              {showFinishForm ? (
-                <div className="agenda-finish">
-                  <label className="form-field">
-                    <span>Groomer</span>
-                    <select
-                      value={finishForm.groomer_id}
-                      onChange={(e) =>
-                        setFinishForm((prev) => ({
-                          ...prev,
-                          groomer_id: e.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">Seleccioná</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="form-field">
-                    <span>Tipo de servicio</span>
-                    <select
-                      value={finishForm.service_type_id}
-                      onChange={(e) =>
-                        setFinishForm((prev) => ({
-                          ...prev,
-                          service_type_id: e.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">Seleccioná</option>
-                      {serviceTypes.map((service) => (
-                        <option key={service.id} value={service.id}>
-                          {service.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="form-field">
-                    <span>Monto pagado</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={finishForm.price}
-                      onChange={(e) =>
-                        setFinishForm((prev) => ({ ...prev, price: e.target.value }))
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setShowFinishForm(false)}
-                  >
-                    Cancelar
-                  </button>
+              <div className="agenda-turno-modal__action-buttons">
+                {!showFinishForm && selectedTurnoStatus !== "finished" ? (
                   <button
                     type="button"
                     className="btn-primary"
-                    onClick={handleFinishSubmit}
+                    onClick={() => setShowFinishForm(true)}
                   >
-                    Guardar finalización
+                    Dar por finalizado
                   </button>
-                </div>
-              ) : null}
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => openEdit(selectedTurno)}
-              >
-                Editar
-              </button>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={() => handleDelete(selectedTurno)}
-              >
-                Eliminar
-              </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setSelectedTurno(null);
+                    openEdit(selectedTurno);
+                  }}
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={() => handleDelete(selectedTurno)}
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           </>
         )}
