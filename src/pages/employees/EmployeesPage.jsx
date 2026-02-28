@@ -29,6 +29,24 @@ export default function EmployeesPage() {
     return text.length > max ? `${text.slice(0, max)}…` : text;
   }
 
+  function buildEmployeePayload(source) {
+    const name = source.name.trim();
+    const role = source.role;
+    const status = source.status;
+    const phone = source.phone.trim();
+    const email = source.email.trim();
+    const notes = source.notes.trim();
+
+    return {
+      name,
+      role,
+      status,
+      ...(phone ? { phone } : {}),
+      ...(email ? { email } : {}),
+      ...(notes ? { notes } : {}),
+    };
+  }
+
   const [form, setForm] = useState({
     name: "",
     role: "Groomer",
@@ -51,14 +69,7 @@ export default function EmployeesPage() {
     }
 
     try {
-      const payload = {
-        name: form.name.trim(),
-        role: form.role,
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        status: form.status,
-        notes: form.notes.trim(),
-      };
+      const payload = buildEmployeePayload(form);
       if (editingId) {
         await updateItem(editingId, payload);
       } else {
@@ -123,24 +134,13 @@ export default function EmployeesPage() {
       return;
     }
     try {
-      await updateItem(selectedEmployee.id, {
-        name: modalForm.name.trim(),
-        role: modalForm.role,
-        phone: modalForm.phone.trim(),
-        email: modalForm.email.trim(),
-        status: modalForm.status,
-        notes: modalForm.notes.trim(),
-      });
+      const payload = buildEmployeePayload(modalForm);
+      await updateItem(selectedEmployee.id, payload);
       setSelectedEmployee((prev) =>
         prev
           ? {
               ...prev,
-              name: modalForm.name.trim(),
-              role: modalForm.role,
-              phone: modalForm.phone.trim(),
-              email: modalForm.email.trim(),
-              status: modalForm.status,
-              notes: modalForm.notes.trim(),
+              ...payload,
             }
           : prev
       );

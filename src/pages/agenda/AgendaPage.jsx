@@ -1863,17 +1863,29 @@ export default function AgendaPage() {
                 className={`form-field${fieldErrors.time ? " form-field--error" : ""}`}
               >
                 <span>Hora</span>
-                <input
-                  id="agenda-time"
-                  type="time"
-                  name="time"
-                  min="07:00"
-                  max="22:00"
-                  step="900"
-                  value={form.time}
-                  onChange={handleFormChange}
-                  aria-invalid={Boolean(fieldErrors.time)}
-                />
+                <div className="date-field__control">
+                  <input
+                    type="text"
+                    className="date-field__display"
+                    value={form.time ? formatTime(form.time) : ""}
+                    placeholder="HH:MM (24 hs)"
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="agenda-time"
+                    type="time"
+                    name="time"
+                    className="date-field__native"
+                    min="07:00"
+                    max="22:00"
+                    step="900"
+                    value={form.time}
+                    onChange={handleFormChange}
+                    aria-invalid={Boolean(fieldErrors.time)}
+                  />
+                </div>
                 <small className="agenda-helper">Horario permitido: 07:00 a 22:00.</small>
                 {fieldErrors.time ? (
                   <small className="agenda-field-error">{fieldErrors.time}</small>
