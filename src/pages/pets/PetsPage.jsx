@@ -43,6 +43,7 @@ export default function PetsPage() {
     neutered: false,
     behavior: "",
   });
+  const [saving, setSaving] = useState(false);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -56,6 +57,7 @@ export default function PetsPage() {
       return;
     }
 
+    setSaving(true);
     try {
       if (editingId) {
         await updateItem(editingId, {
@@ -81,6 +83,8 @@ export default function PetsPage() {
     } catch (err) {
       alert(err.message || "No se pudo guardar la mascota.");
       return;
+    } finally {
+      setSaving(false);
     }
 
     setForm({
@@ -297,8 +301,17 @@ export default function PetsPage() {
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar mascota"}
+          <button type="submit" className="btn-primary" disabled={saving}>
+            {saving ? (
+              <>
+                <span className="btn-spinner" aria-hidden="true" />
+                Guardando…
+              </>
+            ) : editingId ? (
+              "Guardar cambios"
+            ) : (
+              "Guardar mascota"
+            )}
           </button>
           {editingId && (
             <button type="button" className="btn-secondary" onClick={cancelEdit}>
