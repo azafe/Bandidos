@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
+  const showBackofficeLinks = false;
   const handleNavigate = () => {
     if (onNavigate) onNavigate();
   };
@@ -94,47 +95,51 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           Tipos de Servicio
         </NavLink>
 
-        <NavLink
-          to="/catalog/payment-methods"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Método de Pago
-        </NavLink>
+        {showBackofficeLinks ? (
+          <>
+            <NavLink
+              to="/catalog/payment-methods"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Método de Pago
+            </NavLink>
 
-        <NavLink
-          to="/catalog/expense-categories"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Categoría Gastos
-        </NavLink>
+            <NavLink
+              to="/catalog/expense-categories"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Categoría Gastos
+            </NavLink>
 
-        <NavLink
-          to="/suppliers"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Proveedores
-        </NavLink>
+            <NavLink
+              to="/suppliers"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Proveedores
+            </NavLink>
 
-        <NavLink
-          to="/employees"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Estilista
-        </NavLink>
+            <NavLink
+              to="/employees"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Estilista
+            </NavLink>
 
-        {user?.role === "admin" && (
-          <NavLink
-            to="/admin/users"
-            className={({ isActive }) => makeClassName(isActive)}
-            onClick={handleNavigate}
-          >
-            Usuarios
-          </NavLink>
-        )}
+            {user?.role === "admin" && (
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Usuarios
+              </NavLink>
+            )}
+          </>
+        ) : null}
       </nav>
 
       <div className="sidebar__nav" style={{ marginTop: "auto" }}>

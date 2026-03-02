@@ -75,13 +75,21 @@ function percentDelta(current, previous) {
 
 function normalizeService(service) {
   const amount =
-    Number(service.price || service.amount || service.total || 0) || 0;
+    Number(
+      service.service_type?.default_price ||
+        service.service_price ||
+        service.amount ||
+        service.price ||
+        service.total ||
+        0
+    ) || 0;
   return {
     id: service.id,
     date: service.date || service.created_at || service.createdAt,
     amount,
-    petName: service.dogName || service.pet?.name || "",
-    customerName: service.ownerName || service.customer?.name || "",
+    petName: service.dogName || service.pet_name || service.pet?.name || "",
+    customerName:
+      service.owner_name || service.ownerName || service.customer?.name || "",
     paymentMethod: service.paymentMethod || service.payment_method?.name || "",
   };
 }

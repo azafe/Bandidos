@@ -5,7 +5,7 @@ export async function fetchDashboardData(range) {
   const params = range ? { from: range.from, to: range.to } : undefined;
   const [services, dailyExpenses, fixedExpenses, categories] =
     await Promise.all([
-      apiRequest("/v2/services", { params }),
+      apiRequest("/agenda", { params }),
       apiRequest("/v2/daily-expenses", { params }),
       apiRequest("/v2/fixed-expenses", { params }),
       apiRequest("/v2/expense-categories"),
