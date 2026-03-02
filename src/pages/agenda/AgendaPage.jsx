@@ -85,9 +85,34 @@ function formatDateDisplay(value) {
 
 function normalizeDate(value) {
   if (!value) return "";
+  const parsed = parseDateInput(value);
+  return parsed ? parsed.toISOString().slice(0, 10) : "";
+}
+
+function parseDateInput(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
   const raw = String(value).trim();
-  if (raw.includes("T")) return raw.slice(0, 10);
-  return raw;
+  const isoCandidate = new Date(raw);
+  if (!Number.isNaN(isoCandidate.getTime())) return isoCandidate;
+  const parts = raw.split(/[-/]/);
+  if (parts.length !== 3) return null;
+  let [p1, p2, p3] = parts.map((part) => Number(part));
+  if (!p1 || !p2 || !p3) return null;
+  let day, month;
+  if (p1 > 12) {
+    day = p1;
+    month = p2;
+  } else if (p2 > 12) {
+    month = p1;
+    day = p2;
+  } else {
+    month = p2;
+    day = p1;
+  }
+  const year = p3 < 100 ? 2000 + p3 : p3;
+  const constructed = new Date(year, month - 1, day);
+  return Number.isNaN(constructed.getTime()) ? null : constructed;
 }
 
 function normalizeId(value) {
