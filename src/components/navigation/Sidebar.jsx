@@ -95,7 +95,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           Tipos de Servicio
         </NavLink>
 
-        {showBackofficeLinks ? (
+        {showBackofficeLinks && (
           <>
             <NavLink
               to="/catalog/payment-methods"
@@ -121,14 +121,6 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               Proveedores
             </NavLink>
 
-            <NavLink
-              to="/employees"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Estilista
-            </NavLink>
-
             {user?.role === "admin" && (
               <NavLink
                 to="/admin/users"
@@ -139,7 +131,15 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </NavLink>
             )}
           </>
-        ) : null}
+        )}
+
+        <NavLink
+          to="/employees"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Estilista
+        </NavLink>
       </nav>
 
       <div className="sidebar__nav" style={{ marginTop: "auto" }}>

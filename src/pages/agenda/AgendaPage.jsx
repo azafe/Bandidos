@@ -297,6 +297,7 @@ export default function AgendaPage() {
     notes: "",
     groomer_id: "",
     status: "reserved",
+    final_price: "",
   });
 
   const { items: serviceTypes } = useApiResource("/v2/service-types");
@@ -588,6 +589,12 @@ export default function AgendaPage() {
     [pets, form.pet_id]
   );
 
+  useEffect(() => {
+    if (!form.final_price && servicePrice > 0) {
+      setForm((prev) => ({ ...prev, final_price: String(servicePrice) }));
+    }
+  }, [servicePrice, form.final_price]);
+
   function openCreate() {
     setSelectedTurno(null);
     setForm({
@@ -636,6 +643,10 @@ export default function AgendaPage() {
       notes: turno.notes || "",
       groomer_id: turno.groomer_id || "",
       status: normalizeStatus(turno.status),
+      final_price:
+        turno.price !== null && turno.price !== undefined
+          ? String(turno.price)
+          : "",
     });
     if (DURATION_OPTIONS.includes(normalizedDuration)) {
       setDurationMode("preset");
@@ -907,6 +918,13 @@ export default function AgendaPage() {
     setFormError("");
     setFieldErrors({});
     const normalizedDate = normalizeDate(form.date);
+    const parsedFinalPrice = Number(form.final_price);
+    const finalPriceToSend =
+      Number.isFinite(parsedFinalPrice) && parsedFinalPrice > 0
+        ? parsedFinalPrice
+        : servicePrice > 0
+        ? servicePrice
+        : 0;
 
     setFormLoading(true);
     try {
@@ -927,6 +945,7 @@ export default function AgendaPage() {
         deposit_amount: Number(form.deposit_amount || 0),
         notes: form.notes.trim(),
         groomer_id: groomerId,
+        price: finalPriceToSend,
         status: normalizeStatus(form.status),
       };
       if (isEditing && selectedTurno) {
@@ -2200,6 +2219,20 @@ export default function AgendaPage() {
                   <strong>{formatCurrency(remainingAmount)}</strong>
                 </div>
               </div>
+              <label className="form-field">
+                <span>Precio final cobrado</span>
+                <input
+                  type="number"
+                  name="final_price"
+                  min="0"
+                  step="100"
+                  value={form.final_price}
+                  onChange={handleFormChange}
+                />
+                <small className="agenda-helper">
+                  Ajustá el precio total cobrado; se replica al cierre del turno.
+                </small>
+              </label>
               <label className="form-field">
                 <span>Método de pago</span>
                 <select
