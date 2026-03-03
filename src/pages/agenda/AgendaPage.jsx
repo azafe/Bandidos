@@ -6,7 +6,6 @@ import { useApiResource } from "../../hooks/useApiResource";
 import {
   createAgendaTurno,
   deleteAgendaTurno,
-  listAgendaDay,
   updateAgendaTurno,
 } from "../../services/agendaApi";
 import { apiRequest } from "../../services/apiClient";
@@ -908,36 +907,6 @@ export default function AgendaPage() {
     setFormError("");
     setFieldErrors({});
     const normalizedDate = normalizeDate(form.date);
-    let dateItems = items;
-    if (normalizedDate && normalizedDate !== selectedDate) {
-      try {
-        const { items: remoteItems } = await listAgendaDay(normalizedDate);
-        dateItems = remoteItems;
-      } catch {
-        dateItems = [];
-      }
-    }
-
-    const newStart = parseTimeToMinutes(form.time);
-    const newDuration = resolveDuration(form.duration, 60);
-    const newEnd = newStart !== null ? newStart + newDuration : null;
-    const conflict = dateItems.find((turno) => {
-      if (isEditing && String(turno.id) === String(selectedTurno?.id || "")) return false;
-      if (normalizeDate(turno.date) !== normalizedDate) return false;
-      const existingStart = parseTimeToMinutes(turno.time);
-      if (existingStart === null || newStart === null || newEnd === null) return false;
-      const existingEnd = existingStart + resolveDuration(turno.duration, 60);
-      return newStart < existingEnd && existingStart < newEnd;
-    });
-    if (conflict) {
-      const ok = window.confirm(
-        `Se superpone con otro turno (${formatTime(conflict.time)} - ${getEndTime(
-          conflict.time,
-          conflict.duration || 60
-        )}). ¿Querés continuar?`
-      );
-      if (!ok) return;
-    }
 
     setFormLoading(true);
     try {
