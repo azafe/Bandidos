@@ -297,6 +297,7 @@ export default function AgendaPage() {
     notes: "",
     groomer_id: "",
     status: "reserved",
+    base_price: "",
     final_price: "",
   });
 
@@ -569,9 +570,13 @@ export default function AgendaPage() {
     () => serviceTypes.find((service) => String(service.id) === String(form.service_type_id)),
     [serviceTypes, form.service_type_id]
   );
-  const servicePrice = Number(selectedService?.default_price || 0);
+  const computedServicePrice = Number(
+    form.base_price && String(form.base_price).trim()
+      ? Number(form.base_price)
+      : selectedService?.default_price || 0
+  );
   const depositAmount = Number(form.deposit_amount || 0);
-  const remainingAmount = Math.max(servicePrice - depositAmount, 0);
+  const remainingAmount = Math.max(computedServicePrice - depositAmount, 0);
   const durationValue = Number(form.duration);
   const durationPreview = Number.isFinite(durationValue) && durationValue > 0 ? durationValue : 0;
 
@@ -590,10 +595,13 @@ export default function AgendaPage() {
   );
 
   useEffect(() => {
-    if (!form.final_price && servicePrice > 0) {
-      setForm((prev) => ({ ...prev, final_price: String(servicePrice) }));
+    if (!form.final_price && form.base_price) {
+      setForm((prev) => ({ ...prev, final_price: prev.base_price }));
+    } else if (!form.base_price && !form.final_price && computedServicePrice > 0) {
+      setForm((prev) => ({ ...prev, final_price: String(computedServicePrice) }));
     }
-  }, [servicePrice, form.final_price]);
+  }, [form.base_price, form.final_price, computedServicePrice]);
+
 
   function openCreate() {
     setSelectedTurno(null);
@@ -611,6 +619,8 @@ export default function AgendaPage() {
       notes: "",
       groomer_id: "",
       status: "reserved",
+      base_price: "",
+      final_price: "",
     });
     setDurationMode("preset");
     setCustomDuration("");
@@ -645,6 +655,10 @@ export default function AgendaPage() {
       groomer_id: turno.groomer_id || "",
       status: normalizeStatus(turno.status),
       final_price:
+        turno.price !== null && turno.price !== undefined
+          ? String(turno.price)
+          : "",
+      base_price:
         turno.price !== null && turno.price !== undefined
           ? String(turno.price)
           : "",
@@ -687,6 +701,21 @@ export default function AgendaPage() {
     const { name, value } = e.target;
     if (formError) setFormError("");
     clearFieldError(name);
+    if (name === "service_type_id") {
+      const selected = serviceTypes.find(
+        (service) => String(service.id) === String(value)
+      );
+      const defaultPrice =
+        selected?.default_price ?? selected?.service_price ?? selected?.amount ?? 0;
+      const priceString = defaultPrice ? String(defaultPrice) : "";
+      setForm((prev) => ({
+        ...prev,
+        service_type_id: value,
+        base_price: priceString,
+        final_price: prev.final_price || priceString,
+      }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -2199,9 +2228,15 @@ export default function AgendaPage() {
               <div className="agenda-price-card">
                 <div>
                   <span>Precio del servicio</span>
-                  <strong>
-                    {servicePrice ? formatCurrency(servicePrice) : "Sin definir"}
-                  </strong>
+                  <input
+                    type="number"
+                    name="base_price"
+                    min="0"
+                    step="100"
+                    value={form.base_price}
+                    onChange={handleFormChange}
+                    placeholder="Sin definir"
+                  />
                 </div>
                 <div>
                   <span>Seña recibida</span>
