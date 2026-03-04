@@ -948,6 +948,7 @@ export default function AgendaPage() {
     setFormError("");
     setFieldErrors({});
     const normalizedDate = normalizeDate(form.date);
+    const priceValue = Number(form.final_price || form.base_price || 0);
 
     setFormLoading(true);
     try {
@@ -969,6 +970,7 @@ export default function AgendaPage() {
         notes: form.notes.trim(),
         groomer_id: groomerId,
         status: normalizeStatus(form.status),
+        price: Number.isFinite(priceValue) && priceValue > 0 ? priceValue : undefined,
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
