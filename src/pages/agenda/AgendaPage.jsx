@@ -636,9 +636,30 @@ export default function AgendaPage() {
   function openEdit(turno) {
     const normalizedDuration = resolveDuration(turno.duration, 60);
     setSelectedTurno(turno);
+
+    // PostgreSQL time columns return "HH:MM:SS" — truncate to "HH:MM" for backend validation
+    const normalizedTime = (turno.time || "").slice(0, 5);
+
+    // Use saved price if available, otherwise fall back to catalog default price
+    const savedPrice =
+      turno.price !== null && turno.price !== undefined
+        ? String(turno.price)
+        : "";
+    const catalogPrice = (() => {
+      if (savedPrice) return savedPrice;
+      const fromCatalog = serviceTypes.find(
+        (s) => String(s.id) === String(turno.service_type_id)
+      );
+      const p =
+        fromCatalog?.default_price ||
+        turno.service_type?.default_price ||
+        0;
+      return p ? String(p) : "";
+    })();
+
     setForm({
       date: normalizeDate(turno.date || selectedDate),
-      time: turno.time || "",
+      time: normalizedTime,
       duration: normalizedDuration,
       pet_id: turno.pet_id || "",
       pet_name: turno.pet_name || "",
@@ -654,14 +675,8 @@ export default function AgendaPage() {
       notes: turno.notes || "",
       groomer_id: turno.groomer_id || "",
       status: normalizeStatus(turno.status),
-      final_price:
-        turno.price !== null && turno.price !== undefined
-          ? String(turno.price)
-          : "",
-      base_price:
-        turno.price !== null && turno.price !== undefined
-          ? String(turno.price)
-          : "",
+      final_price: catalogPrice,
+      base_price: catalogPrice,
     });
     if (DURATION_OPTIONS.includes(normalizedDuration)) {
       setDurationMode("preset");
@@ -712,7 +727,8 @@ export default function AgendaPage() {
         ...prev,
         service_type_id: value,
         base_price: priceString,
-        final_price: prev.final_price || priceString,
+        // Always update final_price when service changes so price stays in sync
+        final_price: priceString,
       }));
       return;
     }
@@ -2227,30 +2243,8 @@ export default function AgendaPage() {
                   <small className="agenda-field-error">{fieldErrors.service_type_id}</small>
                 ) : null}
               </label>
-              <div className="agenda-price-card">
-                <div>
-                  <span>Precio del servicio</span>
-                  <input
-                    type="number"
-                    name="base_price"
-                    min="0"
-                    step="100"
-                    value={form.base_price}
-                    onChange={handleFormChange}
-                    placeholder="Sin definir"
-                  />
-                </div>
-                <div>
-                  <span>Seña recibida</span>
-                  <strong>{formatCurrency(depositAmount)}</strong>
-                </div>
-                <div>
-                  <span>Saldo a cobrar</span>
-                  <strong>{formatCurrency(remainingAmount)}</strong>
-                </div>
-              </div>
               <label className="form-field">
-                <span>Precio final cobrado</span>
+                <span>Precio del turno</span>
                 <input
                   type="number"
                   name="final_price"
@@ -2258,11 +2252,38 @@ export default function AgendaPage() {
                   step="100"
                   value={form.final_price}
                   onChange={handleFormChange}
+                  placeholder="Sin definir"
                 />
-                <small className="agenda-helper">
-                  Ajustá el precio total cobrado; se replica al cierre del turno.
-                </small>
+                {selectedService?.default_price && (
+                  <small className="agenda-helper">
+                    Precio de catálogo: {formatCurrency(Number(selectedService.default_price))}
+                  </small>
+                )}
               </label>
+              <div className="agenda-price-card">
+                <div>
+                  <span>Seña / anticipo</span>
+                  <input
+                    id="agenda-deposit"
+                    type="number"
+                    name="deposit_amount"
+                    min="0"
+                    step="100"
+                    value={form.deposit_amount}
+                    onChange={handleFormChange}
+                    placeholder="0"
+                    aria-invalid={Boolean(fieldErrors.deposit_amount)}
+                    style={{ width: "100%", marginTop: 4 }}
+                  />
+                  {fieldErrors.deposit_amount ? (
+                    <small className="agenda-field-error">{fieldErrors.deposit_amount}</small>
+                  ) : null}
+                </div>
+                <div>
+                  <span>Saldo a cobrar</span>
+                  <strong>{formatCurrency(remainingAmount)}</strong>
+                </div>
+              </div>
               <label className="form-field">
                 <span>Método de pago</span>
                 <select
@@ -2277,26 +2298,6 @@ export default function AgendaPage() {
                     </option>
                   ))}
                 </select>
-              </label>
-              <label
-                className={`form-field${fieldErrors.deposit_amount ? " form-field--error" : ""}`}
-              >
-                <span>Seña recibida</span>
-                <input
-                  id="agenda-deposit"
-                  type="number"
-                  name="deposit_amount"
-                  min="0"
-                  value={form.deposit_amount}
-                  onChange={handleFormChange}
-                  aria-invalid={Boolean(fieldErrors.deposit_amount)}
-                />
-                {fieldErrors.deposit_amount ? (
-                  <small className="agenda-field-error">{fieldErrors.deposit_amount}</small>
-                ) : null}
-                <small className="agenda-helper">
-                  Anticipo cobrado al reservar. Si no hubo seña, dejar en 0.
-                </small>
               </label>
               <label className="form-field">
                 <span>Groomer</span>
