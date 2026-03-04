@@ -990,10 +990,14 @@ export default function AgendaPage() {
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
+        await refetch();
+        setSelectedTurno((prev) =>
+          prev ? { ...prev, ...payload, price: payload.price ?? prev.price } : prev
+        );
       } else {
         await createAgendaTurno(payload);
+        await refetch();
       }
-      await refetch();
       setIsCreating(false);
       setIsEditing(false);
     } catch (err) {
