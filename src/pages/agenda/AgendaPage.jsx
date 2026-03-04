@@ -571,8 +571,8 @@ export default function AgendaPage() {
     [serviceTypes, form.service_type_id]
   );
   const computedServicePrice = Number(
-    form.base_price && String(form.base_price).trim()
-      ? Number(form.base_price)
+    form.final_price && String(form.final_price).trim()
+      ? Number(form.final_price)
       : selectedService?.default_price || 0
   );
   const depositAmount = Number(form.deposit_amount || 0);
@@ -594,13 +594,6 @@ export default function AgendaPage() {
     [pets, form.pet_id]
   );
 
-  useEffect(() => {
-    if (!form.final_price && form.base_price) {
-      setForm((prev) => ({ ...prev, final_price: prev.base_price }));
-    } else if (!form.base_price && !form.final_price && computedServicePrice > 0) {
-      setForm((prev) => ({ ...prev, final_price: String(computedServicePrice) }));
-    }
-  }, [form.base_price, form.final_price, computedServicePrice]);
 
 
   function openCreate() {
@@ -964,7 +957,7 @@ export default function AgendaPage() {
     setFormError("");
     setFieldErrors({});
     const normalizedDate = normalizeDate(form.date);
-    const priceValue = Number(form.final_price || form.base_price || 0);
+    const priceValue = Number(form.final_price || 0);
 
     setFormLoading(true);
     try {
