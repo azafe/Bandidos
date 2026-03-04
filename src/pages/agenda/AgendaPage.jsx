@@ -344,11 +344,11 @@ export default function AgendaPage() {
         (service) => String(service.id) === String(turno.service_type_id)
       );
       return Number(
-        fromCatalog?.default_price ||
+        turno.price ||
+          fromCatalog?.default_price ||
           turno.service_type?.default_price ||
           turno.service_price ||
           turno.amount ||
-          turno.price ||
           0
       );
     },
