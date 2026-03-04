@@ -635,7 +635,8 @@ export default function AgendaPage() {
       breed: turno.breed || "",
       owner_name: turno.owner_name || "",
       service_type_id: turno.service_type_id || "",
-      payment_method_id: turno.payment_method_id || "",
+      payment_method_id:
+        turno.payment_method_id || turno.payment_method?.id || "",
       deposit_amount:
         turno.deposit_amount !== null && turno.deposit_amount !== undefined
           ? String(turno.deposit_amount)
