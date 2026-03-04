@@ -919,13 +919,6 @@ export default function AgendaPage() {
     setFormError("");
     setFieldErrors({});
     const normalizedDate = normalizeDate(form.date);
-    const parsedFinalPrice = Number(form.final_price);
-    const finalPriceToSend =
-      Number.isFinite(parsedFinalPrice) && parsedFinalPrice > 0
-        ? parsedFinalPrice
-        : servicePrice > 0
-        ? servicePrice
-        : 0;
 
     setFormLoading(true);
     try {
@@ -946,7 +939,6 @@ export default function AgendaPage() {
         deposit_amount: Number(form.deposit_amount || 0),
         notes: form.notes.trim(),
         groomer_id: groomerId,
-        price: finalPriceToSend,
         status: normalizeStatus(form.status),
       };
       if (isEditing && selectedTurno) {
