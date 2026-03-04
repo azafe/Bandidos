@@ -1014,23 +1014,92 @@
   gap: 10px;
 }
 
-.agenda-price-card {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(17, 24, 39, 0.04);
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  font-size: 0.8rem;
+.agenda-input-currency {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: #f9f9fc;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.agenda-input-currency:focus-within {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px rgba(217, 72, 239, 0.18);
+}
+.agenda-input-currency > span {
+  padding: 9px 10px 9px 12px;
+  font-size: 0.9rem;
   color: var(--color-text-soft);
+  user-select: none;
+  background: rgba(17, 24, 39, 0.04);
+  border-right: 1px solid var(--color-border-soft);
+}
+.agenda-input-currency input {
+  border: none;
+  background: transparent;
+  padding: 9px 11px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #1b1f2f;
+  width: 100%;
+  outline: none;
+}
+.agenda-input-currency input::-webkit-outer-spin-button,
+.agenda-input-currency input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.agenda-input-currency input[type=number] { -moz-appearance: textfield; }
+
+.agenda-catalog-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-soft);
+  background: rgba(217, 72, 239, 0.06);
+  border: 1px solid rgba(217, 72, 239, 0.2);
+  border-radius: 20px;
+  padding: 2px 8px;
+  width: fit-content;
 }
 
-.agenda-price-card strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 0.95rem;
+.agenda-price-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  overflow: hidden;
+}
+.agenda-price-card__deposit {
+  padding: 12px 14px;
+  background: #f9f9fc;
+  border-right: 1px solid rgba(17, 24, 39, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agenda-price-card__remaining {
+  padding: 12px 14px;
+  background: rgba(217, 72, 239, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+.agenda-price-card__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.agenda-price-card__remaining strong {
+  font-size: 1.3rem;
+  font-weight: 700;
   color: #111827;
+  line-height: 1;
+}
+.agenda-price-card__amount--highlight {
+  color: var(--color-primary-dark) !important;
 }
 
 .agenda-helper {

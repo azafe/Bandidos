@@ -2242,43 +2242,50 @@ export default function AgendaPage() {
               </label>
               <label className="form-field">
                 <span>Precio del turno</span>
-                <input
-                  type="number"
-                  name="final_price"
-                  min="0"
-                  step="100"
-                  value={form.final_price}
-                  onChange={handleFormChange}
-                  placeholder="Sin definir"
-                />
+                <div className="agenda-input-currency">
+                  <span>$</span>
+                  <input
+                    type="number"
+                    name="final_price"
+                    min="0"
+                    step="1"
+                    value={form.final_price}
+                    onChange={handleFormChange}
+                    placeholder="0"
+                  />
+                </div>
                 {selectedService?.default_price && (
-                  <small className="agenda-helper">
-                    Precio de catálogo: {formatCurrency(Number(selectedService.default_price))}
-                  </small>
+                  <span className="agenda-catalog-badge">
+                    Catálogo: {formatCurrency(Number(selectedService.default_price))}
+                  </span>
                 )}
               </label>
               <div className="agenda-price-card">
-                <div>
-                  <span>Seña / anticipo</span>
-                  <input
-                    id="agenda-deposit"
-                    type="number"
-                    name="deposit_amount"
-                    min="0"
-                    step="100"
-                    value={form.deposit_amount}
-                    onChange={handleFormChange}
-                    placeholder="0"
-                    aria-invalid={Boolean(fieldErrors.deposit_amount)}
-                    style={{ width: "100%", marginTop: 4 }}
-                  />
-                  {fieldErrors.deposit_amount ? (
+                <div className="agenda-price-card__deposit">
+                  <span className="agenda-price-card__label">Seña / anticipo</span>
+                  <div className="agenda-input-currency">
+                    <span>$</span>
+                    <input
+                      id="agenda-deposit"
+                      type="number"
+                      name="deposit_amount"
+                      min="0"
+                      step="1"
+                      value={form.deposit_amount}
+                      onChange={handleFormChange}
+                      placeholder="0"
+                      aria-invalid={Boolean(fieldErrors.deposit_amount)}
+                    />
+                  </div>
+                  {fieldErrors.deposit_amount && (
                     <small className="agenda-field-error">{fieldErrors.deposit_amount}</small>
-                  ) : null}
+                  )}
                 </div>
-                <div>
-                  <span>Saldo a cobrar</span>
-                  <strong>{formatCurrency(remainingAmount)}</strong>
+                <div className="agenda-price-card__remaining">
+                  <span className="agenda-price-card__label">Saldo a cobrar</span>
+                  <strong className={remainingAmount > 0 ? "agenda-price-card__amount--highlight" : ""}>
+                    {formatCurrency(remainingAmount)}
+                  </strong>
                 </div>
               </div>
               <label className="form-field">
