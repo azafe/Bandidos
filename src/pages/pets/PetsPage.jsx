@@ -42,6 +42,8 @@ export default function PetsPage() {
     notes: "",
     neutered: false,
     behavior: "",
+    age: "",
+    address: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -68,6 +70,8 @@ export default function PetsPage() {
           notes: form.notes.trim(),
           neutered: Boolean(form.neutered),
           behavior: form.behavior.trim() || null,
+          age: form.age.trim() || null,
+          address: form.address.trim() || null,
         });
       } else {
         await createItem({
@@ -78,6 +82,8 @@ export default function PetsPage() {
           notes: form.notes.trim(),
           neutered: Boolean(form.neutered),
           behavior: form.behavior.trim() || null,
+          age: form.age.trim() || null,
+          address: form.address.trim() || null,
         });
       }
     } catch (err) {
@@ -95,6 +101,8 @@ export default function PetsPage() {
       notes: "",
       neutered: false,
       behavior: "",
+      age: "",
+      address: "",
     });
     setEditingId(null);
   }
@@ -120,6 +128,8 @@ export default function PetsPage() {
       notes: pet.notes || "",
       neutered: Boolean(pet.neutered),
       behavior: pet.behavior || "",
+      age: pet.age || "",
+      address: pet.address || "",
     });
     setIsEditingModal(true);
   }
@@ -139,6 +149,8 @@ export default function PetsPage() {
         notes: modalForm.notes.trim(),
         neutered: Boolean(modalForm.neutered),
         behavior: modalForm.behavior.trim() || null,
+        age: modalForm.age.trim() || null,
+        address: modalForm.address.trim() || null,
       });
       setSelectedPet((prev) =>
         prev
@@ -151,6 +163,8 @@ export default function PetsPage() {
               notes: modalForm.notes.trim(),
               neutered: Boolean(modalForm.neutered),
               behavior: modalForm.behavior.trim() || null,
+              age: modalForm.age.trim() || null,
+              address: modalForm.address.trim() || null,
             }
           : prev
       );
@@ -175,6 +189,8 @@ export default function PetsPage() {
       notes: "",
       neutered: false,
       behavior: "",
+      age: "",
+      address: "",
     });
   }
 
@@ -284,6 +300,30 @@ export default function PetsPage() {
               name="behavior"
               type="text"
               value={form.behavior}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="age">Edad</label>
+            <input
+              id="age"
+              name="age"
+              type="text"
+              placeholder="Ej: 3 años"
+              value={form.age}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-field form-field--full">
+            <label htmlFor="address">Dirección</label>
+            <input
+              id="address"
+              name="address"
+              type="text"
+              placeholder="Ej: Av. Corrientes 1234"
+              value={form.address}
               onChange={handleChange}
             />
           </div>
