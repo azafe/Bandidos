@@ -928,28 +928,69 @@
 }
 
 .agenda-turno-modal__finish {
-  border: 1px solid rgba(59, 130, 246, 0.24);
-  border-radius: 12px;
-  background: rgba(59, 130, 246, 0.08);
-  padding: 10px 12px;
+  border: 1px solid rgba(217, 72, 239, 0.22);
+  border-radius: var(--radius-md);
+  background: rgba(217, 72, 239, 0.04);
+  padding: 14px 16px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .agenda-turno-modal__finish-header h4 {
   margin: 0;
   font-size: 0.9rem;
+  font-weight: 600;
   color: #0f172a;
 }
 
 .agenda-turno-modal__finish-header p {
   margin: 2px 0 0;
   font-size: 0.79rem;
-  color: #475569;
+  color: var(--color-text-soft);
+}
+
+.agenda-finish-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  overflow: hidden;
+}
+.agenda-finish-summary__item {
+  padding: 10px 14px;
+  background: #f9f9fc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.agenda-finish-summary__item + .agenda-finish-summary__item {
+  border-left: 1px solid rgba(17, 24, 39, 0.08);
+}
+.agenda-finish-summary__item:last-child {
+  background: rgba(217, 72, 239, 0.04);
+}
+.agenda-finish-summary__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.agenda-finish-summary__value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+}
+.agenda-finish-summary__value--pending {
+  color: #d97706;
 }
 
 .agenda-finish--modal {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: 1fr 1fr;
+}
+.agenda-finish__price-field {
+  grid-column: 1 / -1;
 }
 
 .agenda-turno-modal__finish-actions {

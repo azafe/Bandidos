@@ -1854,18 +1854,24 @@ export default function AgendaPage() {
                     <h4>Cerrar y facturar turno</h4>
                     <p>Completá los datos para registrar la finalización.</p>
                   </div>
-                  <div className="agenda-price-card">
-                    <div>
-                      <span>Costo total final</span>
-                      <strong>{formatCurrency(finishTotalAmount)}</strong>
+                  <div className="agenda-finish-summary">
+                    <div className="agenda-finish-summary__item">
+                      <span className="agenda-finish-summary__label">Costo total</span>
+                      <strong className="agenda-finish-summary__value">
+                        {formatCurrency(finishTotalAmount)}
+                      </strong>
                     </div>
-                    <div>
-                      <span>Seña registrada</span>
-                      <strong>{formatCurrency(selectedTurnoDeposit)}</strong>
+                    <div className="agenda-finish-summary__item">
+                      <span className="agenda-finish-summary__label">Seña registrada</span>
+                      <strong className="agenda-finish-summary__value">
+                        {formatCurrency(selectedTurnoDeposit)}
+                      </strong>
                     </div>
-                    <div>
-                      <span>Saldo pendiente</span>
-                      <strong>{formatCurrency(finishRemainingAmount)}</strong>
+                    <div className="agenda-finish-summary__item">
+                      <span className="agenda-finish-summary__label">Saldo pendiente</span>
+                      <strong className={`agenda-finish-summary__value${finishRemainingAmount > 0 ? " agenda-finish-summary__value--pending" : ""}`}>
+                        {formatCurrency(finishRemainingAmount)}
+                      </strong>
                     </div>
                   </div>
                   <div className="agenda-finish agenda-finish--modal">
@@ -1907,19 +1913,23 @@ export default function AgendaPage() {
                         ))}
                       </select>
                     </label>
-                    <label className="form-field">
+                    <label className="form-field agenda-finish__price-field">
                       <span>Costo total final</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="100"
-                        value={finishForm.price}
-                        onChange={(e) =>
-                          setFinishForm((prev) => ({ ...prev, price: e.target.value }))
-                        }
-                      />
+                      <div className="agenda-input-currency">
+                        <span>$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={finishForm.price}
+                          onChange={(e) =>
+                            setFinishForm((prev) => ({ ...prev, price: e.target.value }))
+                          }
+                          placeholder="0"
+                        />
+                      </div>
                       <small className="agenda-helper">
-                        Ingresá el precio total del servicio para calcular saldo.
+                        Precio total para recalcular el saldo.
                       </small>
                     </label>
                   </div>

@@ -4,18 +4,19 @@ import { useEffect } from "react";
 export default function Modal({ isOpen, onClose, title, children }) {
   useEffect(() => {
     if (!isOpen) return;
-    function handleKey(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKey);
     return () => {
-      window.removeEventListener("keydown", handleKey);
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = "";
     };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKey(event) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
