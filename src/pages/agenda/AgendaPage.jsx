@@ -1855,7 +1855,15 @@ export default function AgendaPage() {
                     </div>
                     <div className="agenda-turno-modal__pair">
                       <span>Método de pago</span>
-                      <strong>{selectedTurno.payment_method?.name || "-"}</strong>
+                      <strong>
+                        {selectedTurno.payment_method?.name ||
+                          (typeof selectedTurno.payment_method === "string"
+                            ? selectedTurno.payment_method
+                            : null) ||
+                          selectedTurno.payment_method_name ||
+                          selectedTurno.paymentMethod ||
+                          "-"}
+                      </strong>
                     </div>
                   </div>
                 </article>
