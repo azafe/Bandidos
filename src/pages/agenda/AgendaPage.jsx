@@ -2084,26 +2084,14 @@ export default function AgendaPage() {
                   className={`form-field${fieldErrors.date ? " form-field--error" : ""}`}
                 >
                   <span>Fecha</span>
-                  <div className="date-field__control">
-                    <input
-                      type="text"
-                      className="date-field__display"
-                      value={formatDateDisplay(form.date)}
-                      placeholder="DD-MM-AAAA"
-                      readOnly
-                      tabIndex={-1}
-                      aria-hidden="true"
-                    />
-                    <input
-                      type="date"
-                      id="agenda-date"
-                      name="date"
-                      className="date-field__native"
-                      value={form.date}
-                      onChange={handleFormChange}
-                      aria-invalid={Boolean(fieldErrors.date)}
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    id="agenda-date"
+                    name="date"
+                    value={form.date}
+                    onChange={handleFormChange}
+                    aria-invalid={Boolean(fieldErrors.date)}
+                  />
                   {fieldErrors.date ? (
                     <small className="agenda-field-error">{fieldErrors.date}</small>
                   ) : null}
