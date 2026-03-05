@@ -875,7 +875,7 @@ export default function AgendaPage() {
     if (shouldValidate("owner_name") && !form.owner_name.trim()) {
       errors.owner_name = "Ingresá el dueño.";
     }
-    if (shouldValidate("service_type_id") && !form.service_type_id) {
+    if (isEditing && shouldValidate("service_type_id") && !form.service_type_id) {
       errors.service_type_id = "Seleccioná el servicio.";
     }
     const amount = Number(form.deposit_amount || 0);
@@ -2025,27 +2025,31 @@ export default function AgendaPage() {
         title={isEditing ? "Editar turno" : "Nuevo turno"}
       >
         <div className="agenda-form">
-          <div className="agenda-form__steps" role="tablist" aria-label="Pasos del turno">
-            {FORM_STEPS.map((step) => (
-              <button
-                key={step.key}
-                type="button"
-                role="tab"
-                className={`agenda-form__step${formStep === step.key ? " is-active" : ""}`}
-                aria-selected={formStep === step.key}
-                onClick={() => moveToFormStep(step.key)}
-              >
-                {step.label}
-              </button>
-            ))}
-          </div>
-          <p className="agenda-form__step-hint">
-            {formStep === "details"
-              ? "Definí fecha, hora y mascota. En el segundo paso completás servicio y cobro."
-              : "Completá servicio, pago y notas antes de guardar."}
-          </p>
+          {isEditing ? (
+            <div className="agenda-form__steps" role="tablist" aria-label="Pasos del turno">
+              {FORM_STEPS.map((step) => (
+                <button
+                  key={step.key}
+                  type="button"
+                  role="tab"
+                  className={`agenda-form__step${formStep === step.key ? " is-active" : ""}`}
+                  aria-selected={formStep === step.key}
+                  onClick={() => moveToFormStep(step.key)}
+                >
+                  {step.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {isEditing ? (
+            <p className="agenda-form__step-hint">
+              {formStep === "details"
+                ? "Definí fecha, hora y mascota. En el segundo paso completás servicio y cobro."
+                : "Completá servicio, pago y notas antes de guardar."}
+            </p>
+          ) : null}
           {formError ? <div className="agenda-form__error">{formError}</div> : null}
-          {formStep === "details" ? (
+          {!isEditing || formStep === "details" ? (
             <div className="agenda-form__section">
               <label
                 className={`form-field${fieldErrors.date ? " form-field--error" : ""}`}
@@ -2233,7 +2237,7 @@ export default function AgendaPage() {
                 ) : null}
               </label>
             </div>
-          ) : (
+          ) : isEditing ? (
             <div className="agenda-form__section">
               <label
                 className={`form-field${fieldErrors.service_type_id ? " form-field--error" : ""}`}
@@ -2374,9 +2378,9 @@ export default function AgendaPage() {
                 />
               </label>
             </div>
-          )}
+          ) : null}
           <div className="modal-actions agenda-form__actions">
-            {formStep === "service" ? (
+            {isEditing && formStep === "service" ? (
               <button
                 type="button"
                 className="btn-secondary"
@@ -2388,7 +2392,7 @@ export default function AgendaPage() {
             <button type="button" className="btn-secondary" onClick={closeForm}>
               Cancelar
             </button>
-            {formStep === "details" ? (
+            {isEditing && formStep === "details" ? (
               <button
                 type="button"
                 className="btn-primary"
