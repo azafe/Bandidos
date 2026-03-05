@@ -1451,6 +1451,7 @@ export default function AgendaPage() {
                       type="button"
                       className="agenda-card agenda-card--timeline"
                       onClick={() => {
+                        console.log("[turno detalle]", turno);
                         setSelectedTurno(turno);
                         setIsEditing(false);
                       }}
