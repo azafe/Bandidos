@@ -431,6 +431,7 @@ export default function AgendaPage() {
     let estimatedIncome = 0;
     let finishedIncome = 0;
     let totalDeposit = 0;
+    const byPaymentMethodMap = new Map();
 
     items.forEach((turno) => {
       const status = normalizeStatus(turno.status);
@@ -441,6 +442,9 @@ export default function AgendaPage() {
       if (status === "finished") {
         finished += 1;
         finishedIncome += amount;
+        const methodId = turno.payment_method_id || null;
+        const methodName = paymentMethods.find((m) => m.id === methodId)?.name || "Sin método";
+        byPaymentMethodMap.set(methodName, (byPaymentMethodMap.get(methodName) || 0) + amount);
       }
       if (status === "cancelled") cancelled += 1;
     });
@@ -449,6 +453,10 @@ export default function AgendaPage() {
     const completionRate = totalScheduled
       ? Math.round((finished / totalScheduled) * 100)
       : 0;
+
+    const byPaymentMethod = Array.from(byPaymentMethodMap.entries())
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
 
     return {
       totalScheduled,
@@ -460,8 +468,9 @@ export default function AgendaPage() {
       finishedIncome,
       totalDeposit,
       pendingCollection: Math.max(estimatedIncome - totalDeposit, 0),
+      byPaymentMethod,
     };
-  }, [items, getServicePrice]);
+  }, [items, getServicePrice, paymentMethods]);
 
   const closeLiquidationRows = useMemo(() => {
     const grouped = new Map();
@@ -1601,6 +1610,24 @@ export default function AgendaPage() {
                 </strong>
               </article>
             </div>
+
+            {closeSummary.byPaymentMethod.length > 0 && (
+              <div className="agenda-close-payment-breakdown">
+                <h4 className="agenda-close-payment-breakdown__title">Ingresos por método de pago</h4>
+                <div className="agenda-close-payment-breakdown__rows">
+                  {closeSummary.byPaymentMethod.map(({ name, total }) => (
+                    <div key={name} className="agenda-close-payment-breakdown__row">
+                      <span>{name}</span>
+                      <strong>{formatCurrency(total)}</strong>
+                    </div>
+                  ))}
+                  <div className="agenda-close-payment-breakdown__row agenda-close-payment-breakdown__row--total">
+                    <span>Total facturado</span>
+                    <strong>{formatCurrency(closeSummary.finishedIncome)}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="agenda-close-liquidation card">

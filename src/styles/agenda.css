@@ -266,6 +266,43 @@
   min-height: 96px;
 }
 
+.agenda-close-payment-breakdown {
+  margin-top: 16px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  padding-top: 14px;
+}
+
+.agenda-close-payment-breakdown__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #6b7280);
+  margin-bottom: 10px;
+}
+
+.agenda-close-payment-breakdown__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agenda-close-payment-breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: var(--color-text, #1f2937);
+  padding: 4px 0;
+}
+
+.agenda-close-payment-breakdown__row--total {
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 700;
+}
+
 .agenda-reminder__header {
   display: flex;
   align-items: center;
