@@ -74,6 +74,18 @@ function percentDelta(current, previous) {
 }
 
 function normalizeService(service) {
+  if (import.meta.env.DEV) {
+    console.debug("[dashboard] normalizeService raw", {
+      id: service.id,
+      status: service.status,
+      date: service.date,
+      final_price: service.final_price,
+      price: service.price,
+      service_price: service.service_price,
+      amount: service.amount,
+      default_price: service.service_type?.default_price,
+    });
+  }
   const amount =
     Number(
       service.final_price ||
