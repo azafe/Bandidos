@@ -42,10 +42,36 @@
 }
 
 .dashboard-charts {
+  margin-top: 20px;
+}
+
+.dashboard-charts__row {
   display: grid;
   gap: 16px;
-  margin-top: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-top: 16px;
+}
+
+.dashboard-charts__row--main {
+  grid-template-columns: 2fr 1fr;
+}
+
+.dashboard-charts__row--secondary {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-charts__row--main {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-charts__row--secondary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-charts__row--secondary {
+    grid-template-columns: 1fr;
+  }
 }
 
 .chart-empty {
@@ -169,6 +195,10 @@
 
 .kpi-card--negative .kpi-value {
   color: #dc2626;
+}
+
+.kpi-card--warning .kpi-value {
+  color: #d97706;
 }
 
 .kpi-helper {

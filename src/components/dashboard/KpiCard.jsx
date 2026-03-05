@@ -1,5 +1,5 @@
 // src/components/dashboard/KpiCard.jsx
-export default function KpiCard({ label, value, delta, tone, helper }) {
+export default function KpiCard({ label, value, delta, tone, helper, subtitle }) {
   const isPositive = delta >= 0;
   const badgeClass = isPositive ? "badge badge--positive" : "badge badge--negative";
   const formattedDelta = `${isPositive ? "+" : ""}${(delta * 100).toFixed(1)}%`;
@@ -12,6 +12,7 @@ export default function KpiCard({ label, value, delta, tone, helper }) {
         <span className={badgeClass}>{formattedDelta}</span>
       )}
       {helper && <span className="kpi-helper">{helper}</span>}
+      {subtitle && <span className="kpi-helper">{subtitle}</span>}
     </div>
   );
 }

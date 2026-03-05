@@ -1,31 +1,41 @@
 // src/components/dashboard/ChartsSection.jsx
-import ProfitTrendChart from "./ProfitTrendChart";
-import IncomeVsExpenseChart from "./IncomeVsExpenseChart";
+import RevenueChart from "./RevenueChart";
+import MarginChart from "./MarginChart";
+import GroomerChart from "./GroomerChart";
+import ServiceTypeChart from "./ServiceTypeChart";
 import ExpenseBreakdownChart from "./ExpenseBreakdownChart";
 
 export default function ChartsSection({ series }) {
   return (
     <section className="dashboard-charts">
-      <div className="card">
-        <h3 className="card-title">Tendencia de profit</h3>
-        <p className="card-subtitle">
-          Ganancia diaria (ingresos - gastos) con línea de equilibrio.
-        </p>
-        <ProfitTrendChart data={series.byDay} />
+      {/* Fila 1: chart principal (2/3) + margen % (1/3) */}
+      <div className="dashboard-charts__row dashboard-charts__row--main">
+        <div className="card">
+          <h3 className="card-title">Ingresos vs Gastos</h3>
+          <p className="card-subtitle">Barras diarias con línea de ganancia.</p>
+          <RevenueChart data={series.byDay} />
+        </div>
+        <div className="card">
+          <h3 className="card-title">Margen % diario</h3>
+          <p className="card-subtitle">Meta: 30% de margen</p>
+          <MarginChart data={series.marginByDay} />
+        </div>
       </div>
 
-      <div className="card">
-        <h3 className="card-title">Ingresos vs gastos</h3>
-        <p className="card-subtitle">Comparación diaria por rango.</p>
-        <IncomeVsExpenseChart data={series.byDay} />
-      </div>
-
-      <div className="card">
-        <h3 className="card-title">Distribución de gastos</h3>
-        <p className="card-subtitle">
-          Gastos diarios por categoría + gastos fijos.
-        </p>
-        <ExpenseBreakdownChart data={series.expensesByCategory} />
+      {/* Fila 2: groomer | servicios | gastos */}
+      <div className="dashboard-charts__row dashboard-charts__row--secondary">
+        <div className="card">
+          <h3 className="card-title">Ingresos por groomer</h3>
+          <GroomerChart data={series.groomerRevenue} />
+        </div>
+        <div className="card">
+          <h3 className="card-title">Ingresos por servicio</h3>
+          <ServiceTypeChart data={series.revenueByServiceType} />
+        </div>
+        <div className="card">
+          <h3 className="card-title">Distribución de gastos</h3>
+          <ExpenseBreakdownChart data={series.expensesByCategory} />
+        </div>
       </div>
     </section>
   );

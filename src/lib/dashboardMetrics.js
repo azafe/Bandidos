@@ -91,6 +91,7 @@ function normalizeService(service) {
     customerName:
       service.owner_name || service.ownerName || service.customer?.name || "",
     paymentMethod: service.paymentMethod || service.payment_method?.name || "",
+    serviceTypeName: service.service_type?.name || service.serviceTypeName || "",
   };
 }
 
@@ -183,6 +184,18 @@ function buildAlerts({ profit, income, expenses }, fixedExpenses, rangeEnd) {
   return alerts;
 }
 
+function normalizeGroomerReport(groomerReport) {
+  if (!Array.isArray(groomerReport)) return [];
+  return groomerReport
+    .map((item) => ({
+      name: item.groomer_name || item.name || "Sin nombre",
+      total: Number(item.total_income || item.total || item.amount || 0) || 0,
+      services: Number(item.services_count || item.count || 0) || 0,
+    }))
+    .filter((item) => item.total > 0)
+    .sort((a, b) => b.total - a.total);
+}
+
 export function buildDashboardMetrics({
   range,
   current,
@@ -248,6 +261,25 @@ export function buildDashboardMetrics({
   const expensesByCategory = Array.from(categoryTotals.entries()).map(
     ([name, value]) => ({ name, value })
   );
+
+  const marginByDay = byDay.map((d) => ({
+    date: d.date,
+    margin: d.income > 0 ? d.profit / d.income : 0,
+  }));
+
+  const serviceTypeTotals = new Map();
+  services.forEach((service) => {
+    const name =
+      service.serviceTypeName ||
+      service.service_type?.name ||
+      "Sin tipo";
+    serviceTypeTotals.set(name, (serviceTypeTotals.get(name) || 0) + service.amount);
+  });
+  const revenueByServiceType = Array.from(serviceTypeTotals.entries())
+    .map(([name, total]) => ({ name, total }))
+    .sort((a, b) => b.total - a.total);
+
+  const groomerRevenue = normalizeGroomerReport(current.groomerReport || []);
 
   const previousMetrics = previous
     ? buildDashboardMetrics({
@@ -322,6 +354,9 @@ export function buildDashboardMetrics({
     series: {
       byDay,
       expensesByCategory,
+      marginByDay,
+      revenueByServiceType,
+      groomerRevenue,
     },
     recentActivity,
     alerts,

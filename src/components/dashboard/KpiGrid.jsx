@@ -24,11 +24,22 @@ export default function KpiGrid({ kpis }) {
         delta={deltas.expenses}
       />
       <KpiCard
-        label="Profit"
+        label="Ganancia neta"
         value={formatCurrency(kpis.profit)}
         delta={deltas.profit}
         tone={kpis.profit >= 0 ? "positive" : "negative"}
-        helper={`Margen: ${formatPercent(kpis.margin || 0)}`}
+      />
+      <KpiCard
+        label="Margen %"
+        value={formatPercent(kpis.margin || 0)}
+        delta={deltas.margin}
+        tone={
+          kpis.margin >= 0.3
+            ? "positive"
+            : kpis.margin >= 0.1
+            ? "warning"
+            : "negative"
+        }
       />
       <KpiCard
         label="Servicios"
