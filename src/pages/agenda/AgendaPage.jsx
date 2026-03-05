@@ -281,6 +281,7 @@ export default function AgendaPage() {
     groomer_id: "",
     service_type_id: "",
     price: "",
+    payment_method_id: "",
   });
   const [form, setForm] = useState({
     date: selectedDate,
@@ -334,6 +335,7 @@ export default function AgendaPage() {
         selectedTurno.price !== null && selectedTurno.price !== undefined
           ? String(selectedTurno.price)
           : "",
+      payment_method_id: selectedTurno.payment_method_id || "",
     });
   }, [selectedTurno]);
 
@@ -1141,10 +1143,12 @@ export default function AgendaPage() {
       alert("El costo total no puede ser menor que la seña registrada.");
       return;
     }
+    const paymentMethodId = normalizeId(finishForm.payment_method_id);
     await updateStatusWithDetails(selectedTurno, "finished", {
       groomer_id: groomerId,
       service_type_id: serviceTypeId,
       price,
+      ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
     });
   }
 
@@ -2020,6 +2024,22 @@ export default function AgendaPage() {
                       <small className="agenda-helper">
                         Precio total para recalcular el saldo.
                       </small>
+                    </label>
+                    <label className="form-field">
+                      <span>Método de pago</span>
+                      <select
+                        value={finishForm.payment_method_id}
+                        onChange={(e) =>
+                          setFinishForm((prev) => ({ ...prev, payment_method_id: e.target.value }))
+                        }
+                      >
+                        <option value="">Sin especificar</option>
+                        {paymentMethods.map((method) => (
+                          <option key={method.id} value={method.id}>
+                            {method.name}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                   </div>
                   <div className="agenda-turno-modal__finish-actions">
