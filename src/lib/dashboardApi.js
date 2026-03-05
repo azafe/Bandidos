@@ -12,8 +12,11 @@ export async function fetchDashboardData(range) {
       apiRequest("/reports/by-groomer", { params }).catch(() => []),
     ]);
 
+  const servicesList = Array.isArray(services) ? services : services?.items || [];
+  console.log("[dashboard] /agenda raw response", services);
+  console.log("[dashboard] services list", servicesList);
   return {
-    services: Array.isArray(services) ? services : services?.items || [],
+    services: servicesList,
     dailyExpenses: Array.isArray(dailyExpenses)
       ? dailyExpenses
       : dailyExpenses?.items || [],
