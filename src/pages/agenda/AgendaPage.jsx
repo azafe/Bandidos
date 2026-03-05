@@ -1,5 +1,5 @@
 // src/pages/agenda/AgendaPage.jsx
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAgendaDay } from "../../hooks/useAgendaDay";
 import { useApiResource } from "../../hooks/useApiResource";
@@ -276,6 +276,7 @@ export default function AgendaPage() {
   const [isPetOpen, setIsPetOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("reserved");
   const [showFinishForm, setShowFinishForm] = useState(false);
+  const finishFormRef = useRef(null);
   const [durationMode, setDurationMode] = useState("preset");
   const [customDuration, setCustomDuration] = useState("");
   const [finishForm, setFinishForm] = useState({
@@ -337,6 +338,12 @@ export default function AgendaPage() {
           : "",
     });
   }, [selectedTurno]);
+
+  useEffect(() => {
+    if (showFinishForm && finishFormRef.current) {
+      finishFormRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [showFinishForm]);
 
   const getServicePrice = useCallback(
     (turno) => {
@@ -1849,7 +1856,7 @@ export default function AgendaPage() {
               </div>
 
               {showFinishForm ? (
-                <div className="agenda-turno-modal__finish">
+                <div className="agenda-turno-modal__finish" ref={finishFormRef}>
                   <div className="agenda-turno-modal__finish-header">
                     <h4>Cerrar y facturar turno</h4>
                     <p>Completá los datos para registrar la finalización.</p>
