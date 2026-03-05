@@ -2006,41 +2006,43 @@ export default function AgendaPage() {
                         ))}
                       </select>
                     </label>
-                    <label className="form-field agenda-finish__price-field">
-                      <span>Costo total final</span>
-                      <div className="agenda-input-currency">
-                        <span>$</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={finishForm.price}
+                    <div className="agenda-finish__price-payment-row">
+                      <label className="form-field agenda-finish__price-field">
+                        <span>Costo total final</span>
+                        <div className="agenda-input-currency">
+                          <span>$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={finishForm.price}
+                            onChange={(e) =>
+                              setFinishForm((prev) => ({ ...prev, price: e.target.value }))
+                            }
+                            placeholder="0"
+                          />
+                        </div>
+                        <small className="agenda-helper">
+                          Precio total para recalcular el saldo.
+                        </small>
+                      </label>
+                      <label className="form-field">
+                        <span>Método de pago</span>
+                        <select
+                          value={finishForm.payment_method_id}
                           onChange={(e) =>
-                            setFinishForm((prev) => ({ ...prev, price: e.target.value }))
+                            setFinishForm((prev) => ({ ...prev, payment_method_id: e.target.value }))
                           }
-                          placeholder="0"
-                        />
-                      </div>
-                      <small className="agenda-helper">
-                        Precio total para recalcular el saldo.
-                      </small>
-                    </label>
-                    <label className="form-field">
-                      <span>Método de pago</span>
-                      <select
-                        value={finishForm.payment_method_id}
-                        onChange={(e) =>
-                          setFinishForm((prev) => ({ ...prev, payment_method_id: e.target.value }))
-                        }
-                      >
-                        <option value="">Sin especificar</option>
-                        {paymentMethods.map((method) => (
-                          <option key={method.id} value={method.id}>
-                            {method.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        >
+                          <option value="">Sin especificar</option>
+                          {paymentMethods.map((method) => (
+                            <option key={method.id} value={method.id}>
+                              {method.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
                   </div>
                   <div className="agenda-turno-modal__finish-actions">
                     <button

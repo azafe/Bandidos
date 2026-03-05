@@ -1070,6 +1070,17 @@
   grid-column: 1 / -1;
 }
 
+.agenda-finish__price-payment-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.agenda-finish__price-payment-row .agenda-finish__price-field {
+  grid-column: auto;
+}
+
 .agenda-turno-modal__finish-actions {
   display: flex;
   gap: 8px;
@@ -1555,6 +1566,10 @@
   /* Price field no longer needs to span all cols when single-col */
   .agenda-finish__price-field {
     grid-column: auto;
+  }
+
+  .agenda-finish__price-payment-row {
+    grid-template-columns: 1fr;
   }
 
   /* Finish action buttons: full width, stacked */
