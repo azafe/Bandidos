@@ -25,14 +25,15 @@ const STATUS_LABELS = {
 };
 
 const DEFAULT_GROOMER_COMMISSION = 40;
-const DURATION_OPTIONS = [15, 30, 45, 60];
+const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 150];
+const DURATION_LABELS = { 15: "15 min", 30: "30 min", 45: "45 min", 60: "1 h", 90: "1 h 30", 120: "2 h", 150: "2 h 30" };
 const CUSTOM_DURATION_OPTION = "other";
 const FORM_STEPS = [
   { key: "details", label: "1. Datos del turno" },
   { key: "service", label: "2. Servicio y pago" },
 ];
 const FORM_STEP_FIELDS = {
-  details: ["date", "time", "duration", "pet_name", "owner_name"],
+  details: ["date", "time", "duration", "pet_name"],
   service: ["service_type_id", "deposit_amount", "status"],
 };
 const FORM_FIELD_IDS = {
@@ -40,7 +41,6 @@ const FORM_FIELD_IDS = {
   time: "agenda-time",
   duration: "agenda-duration",
   pet_name: "agenda-pet",
-  owner_name: "agenda-owner",
   service_type_id: "agenda-service",
   deposit_amount: "agenda-deposit",
   status: "agenda-status",
@@ -50,7 +50,6 @@ const FORM_FIELD_ORDER = [
   "time",
   "duration",
   "pet_name",
-  "owner_name",
   "service_type_id",
   "deposit_amount",
   "status",
@@ -60,7 +59,6 @@ const FORM_STEP_BY_FIELD = {
   time: "details",
   duration: "details",
   pet_name: "details",
-  owner_name: "details",
   service_type_id: "service",
   deposit_amount: "service",
   status: "service",
@@ -889,14 +887,11 @@ export default function AgendaPage() {
           errors.duration = "La duración personalizada debe ir en bloques de 15 minutos.";
         }
       } else if (!DURATION_OPTIONS.includes(duration)) {
-        errors.duration = "Seleccioná una duración válida: 15, 30, 45 o 60 minutos.";
+        errors.duration = "Seleccioná una duración válida.";
       }
     }
     if (shouldValidate("pet_name") && !form.pet_name.trim()) {
       errors.pet_name = "Ingresá la mascota.";
-    }
-    if (shouldValidate("owner_name") && !form.owner_name.trim()) {
-      errors.owner_name = "Ingresá el dueño.";
     }
     if (isEditing && shouldValidate("service_type_id") && !form.service_type_id) {
       errors.service_type_id = "Seleccioná el servicio.";
@@ -2137,29 +2132,10 @@ export default function AgendaPage() {
                       className={`agenda-duration-pill${durationMode === "preset" && form.duration === d ? " is-active" : ""}`}
                       onClick={() => handleDurationPillClick(d)}
                     >
-                      {d} min
+                      {DURATION_LABELS[d]}
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    className={`agenda-duration-pill${durationMode === "custom" ? " is-active" : ""}`}
-                    onClick={() => handleDurationPillClick(CUSTOM_DURATION_OPTION)}
-                  >
-                    Otro
-                  </button>
                 </div>
-                {durationMode === "custom" ? (
-                  <input
-                    id="agenda-duration-custom"
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="HH:MM (ej: 2:30)"
-                    value={customDuration}
-                    onChange={handleCustomDurationChange}
-                    onBlur={handleCustomDurationBlur}
-                    aria-invalid={Boolean(fieldErrors.duration)}
-                  />
-                ) : null}
                 {form.time && durationPreview ? (
                   <span className="agenda-time-badge">
                     {form.time} → {getEndTime(form.time, durationPreview)} ({durationPreview} min)
@@ -2246,31 +2222,6 @@ export default function AgendaPage() {
                 <Link className="agenda-link agenda-link--secondary" to="/pets">
                   Ir a Mascotas para crear una nueva
                 </Link>
-              </label>
-              <label className="form-field">
-                <span>Raza</span>
-                <input
-                  type="text"
-                  name="breed"
-                  value={form.breed}
-                  onChange={handleFormChange}
-                />
-              </label>
-              <label
-                className={`form-field${fieldErrors.owner_name ? " form-field--error" : ""}`}
-              >
-                <span>Dueño</span>
-                <input
-                  id="agenda-owner"
-                  type="text"
-                  name="owner_name"
-                  value={form.owner_name}
-                  onChange={handleFormChange}
-                  aria-invalid={Boolean(fieldErrors.owner_name)}
-                />
-                {fieldErrors.owner_name ? (
-                  <small className="agenda-field-error">{fieldErrors.owner_name}</small>
-                ) : null}
               </label>
             </div>
           ) : isEditing ? (
