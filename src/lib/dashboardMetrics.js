@@ -76,7 +76,8 @@ function percentDelta(current, previous) {
 function normalizeService(service) {
   const amount =
     Number(
-      service.service_type?.default_price ||
+      service.final_price ||
+        service.service_type?.default_price ||
         service.service_price ||
         service.amount ||
         service.price ||
