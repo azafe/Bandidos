@@ -1367,3 +1367,66 @@
     z-index: 20;
   }
 }
+
+@media (max-width: 520px) {
+  /* Summary row: reduce label font so 3 cols fit on narrow screens */
+  .agenda-finish-summary__label {
+    font-size: 0.62rem;
+  }
+
+  .agenda-finish-summary__value {
+    font-size: 0.92rem;
+  }
+
+  /* Finish form: stack selectors vertically */
+  .agenda-finish--modal {
+    grid-template-columns: 1fr;
+  }
+
+  /* Price field no longer needs to span all cols when single-col */
+  .agenda-finish__price-field {
+    grid-column: auto;
+  }
+
+  /* Finish action buttons: full width, stacked */
+  .agenda-turno-modal__finish-actions {
+    flex-direction: column-reverse;
+  }
+
+  .agenda-turno-modal__finish-actions .btn-primary,
+  .agenda-turno-modal__finish-actions .btn-secondary {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Bottom action buttons (Editar / Eliminar): full width */
+  .agenda-turno-modal__action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .agenda-turno-modal__action-buttons .btn-primary,
+  .agenda-turno-modal__action-buttons .btn-secondary,
+  .agenda-turno-modal__action-buttons .btn-danger {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Turno detail two-column grid: stack vertically */
+  .agenda-turno-modal__grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modal actions row: stack the status select + buttons */
+  .agenda-turno-modal__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .agenda-turno-modal__actions select,
+  .agenda-turno-modal__actions label {
+    width: 100%;
+  }
+}
