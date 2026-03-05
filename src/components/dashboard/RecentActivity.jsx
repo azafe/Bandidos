@@ -16,7 +16,7 @@ export default function RecentActivity({ items }) {
   return (
     <div className="card">
       <h3 className="card-title">Últimos movimientos</h3>
-      <p className="card-subtitle">Servicios y gastos más recientes.</p>
+      <p className="card-subtitle">Servicios, ventas y gastos más recientes.</p>
       <div className="activity-list">
         {items.map((item) => (
           <div key={item.id} className="activity-item">
@@ -24,10 +24,12 @@ export default function RecentActivity({ items }) {
               className={
                 item.type === "service"
                   ? "badge badge--positive"
+                  : item.type === "petshop"
+                  ? "badge badge--accent"
                   : "badge badge--negative"
               }
             >
-              {item.type === "service" ? "Servicio" : "Gasto"}
+              {item.type === "service" ? "Servicio" : item.type === "petshop" ? "PetShop" : "Gasto"}
             </span>
             <div className="activity-item__main">
               <div className="activity-item__title">{item.title}</div>

@@ -48,6 +48,24 @@ export default function RevenueChart({ data }) {
             return [formatCurrency(value), labels[name] || name];
           }}
           labelFormatter={(label) => formatDateLabel(label)}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null;
+            const d = payload[0]?.payload || {};
+            return (
+              <div className="recharts-custom-tooltip">
+                <p className="recharts-custom-tooltip__label">{formatDateLabel(label)}</p>
+                {d.servicesIncome !== undefined && (
+                  <p>Servicios: {formatCurrency(d.servicesIncome)}</p>
+                )}
+                {d.petshopIncome !== undefined && (
+                  <p>PetShop: {formatCurrency(d.petshopIncome)}</p>
+                )}
+                <p><strong>Ingresos: {formatCurrency(d.income)}</strong></p>
+                <p>Gastos: {formatCurrency(d.expense)}</p>
+                <p>Ganancia: {formatCurrency(d.profit)}</p>
+              </div>
+            );
+          }}
         />
         <Legend
           formatter={(value) =>

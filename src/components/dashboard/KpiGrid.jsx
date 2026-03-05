@@ -12,22 +12,40 @@ function formatPercent(value) {
 export default function KpiGrid({ kpis }) {
   const deltas = kpis.deltas || {};
   return (
-    <section className="kpi-grid">
+    <section className="kpi-grid kpi-grid--two-rows">
+      {/* Fila 1: visión financiera global */}
       <KpiCard
-        label="Ingresos"
+        label="Ingresos Totales"
         value={formatCurrency(kpis.income)}
         delta={deltas.income}
       />
       <KpiCard
-        label="Gastos"
-        value={formatCurrency(kpis.expenses)}
-        delta={deltas.expenses}
+        label="Costos Totales"
+        value={formatCurrency(kpis.totalCosts)}
+        delta={deltas.totalCosts}
       />
       <KpiCard
-        label="Ganancia neta"
+        label="Comisiones"
+        value={formatCurrency(kpis.groomerCommissions)}
+        delta={deltas.groomerCommissions}
+        tone="default"
+      />
+      <KpiCard
+        label="Ganancia Neta"
         value={formatCurrency(kpis.profit)}
         delta={deltas.profit}
         tone={kpis.profit >= 0 ? "positive" : "negative"}
+      />
+      {/* Fila 2: desglose */}
+      <KpiCard
+        label="Ingresos Servicios"
+        value={formatCurrency(kpis.servicesIncome)}
+        delta={deltas.servicesIncome}
+      />
+      <KpiCard
+        label="Ingresos PetShop"
+        value={formatCurrency(kpis.petshopIncome)}
+        delta={deltas.petshopIncome}
       />
       <KpiCard
         label="Margen %"
@@ -42,14 +60,9 @@ export default function KpiGrid({ kpis }) {
         }
       />
       <KpiCard
-        label="Servicios"
+        label="Servicios realizados"
         value={kpis.servicesCount}
         delta={deltas.servicesCount}
-      />
-      <KpiCard
-        label="Ticket promedio"
-        value={formatCurrency(kpis.avgTicket)}
-        delta={deltas.avgTicket}
       />
     </section>
   );

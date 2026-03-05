@@ -200,6 +200,22 @@ a {
   margin-top: 16px;
 }
 
+.kpi-grid--two-rows {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 900px) {
+  .kpi-grid--two-rows {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .kpi-grid--two-rows {
+    grid-template-columns: 1fr;
+  }
+}
+
 .kpi-card {
   background: var(--color-surface);
   border-radius: var(--radius-lg);

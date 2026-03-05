@@ -187,6 +187,18 @@ function buildAlerts({ profit, income, expenses }, fixedExpenses, rangeEnd) {
   return alerts;
 }
 
+const GROOMER_COMMISSION_RATE = 0.40;
+
+function normalizePetshopSale(sale) {
+  return {
+    id: sale.id,
+    date: sale.date || sale.created_at,
+    amount: Number(sale.total || 0) || 0,
+    paymentMethod: sale.payment_method?.name || sale.paymentMethod || "",
+    itemCount: Array.isArray(sale.items) ? sale.items.length : 0,
+  };
+}
+
 function normalizeGroomerReport(groomerReport) {
   if (!Array.isArray(groomerReport)) return [];
   return groomerReport
@@ -213,26 +225,38 @@ export function buildDashboardMetrics({
     .map(normalizeExpense)
     .filter((expense) => inRange(expense.date, range));
   const fixedExpenses = current.fixedExpenses.map(normalizeFixedExpense);
+  const petshopSales = (current.petshopSales || [])
+    .map(normalizePetshopSale)
+    .filter((sale) => inRange(sale.date, range));
 
   const fixedByDate = fixedExpenseOccurrences(fixedExpenses, rangeDays);
-  const income = sumBy(services, (service) => service.amount);
+  const servicesIncome = sumBy(services, (service) => service.amount);
+  const petshopIncome = sumBy(petshopSales, (sale) => sale.amount);
+  const income = servicesIncome + petshopIncome;
   const dailyExpenseTotal = sumBy(dailyExpenses, (expense) => expense.amount);
   const fixedExpenseTotal = Array.from(fixedByDate.values()).reduce(
     (sum, value) => sum + value,
     0
   );
+  const groomerCommissions = servicesIncome * GROOMER_COMMISSION_RATE;
   const expenses = dailyExpenseTotal + fixedExpenseTotal;
-  const profit = income - expenses;
+  const totalCosts = expenses + groomerCommissions;
+  const profit = income - totalCosts;
   const margin = income > 0 ? profit / income : 0;
   const servicesCount = services.length;
-  const avgTicket = servicesCount > 0 ? income / servicesCount : 0;
+  const avgTicket = servicesCount > 0 ? servicesIncome / servicesCount : 0;
 
   const byDay = rangeDays.map((day) => {
     const key = formatDateKey(day);
-    const dailyIncome = sumBy(
+    const dailyServicesIncome = sumBy(
       services.filter((service) => formatDateKey(parseDateValue(service.date)) === key),
       (service) => service.amount
     );
+    const dailyPetshopIncome = sumBy(
+      petshopSales.filter((sale) => formatDateKey(parseDateValue(sale.date)) === key),
+      (sale) => sale.amount
+    );
+    const dailyIncome = dailyServicesIncome + dailyPetshopIncome;
     const dailyExpense = sumBy(
       dailyExpenses.filter(
         (expense) => formatDateKey(parseDateValue(expense.date)) === key
@@ -240,10 +264,14 @@ export function buildDashboardMetrics({
       (expense) => expense.amount
     );
     const fixedExpense = fixedByDate.get(key) || 0;
-    const expenseTotal = dailyExpense + fixedExpense;
+    const dailyCommissions = dailyServicesIncome * GROOMER_COMMISSION_RATE;
+    const expenseTotal = dailyExpense + fixedExpense + dailyCommissions;
     return {
       date: key,
       income: dailyIncome,
+      servicesIncome: dailyServicesIncome,
+      petshopIncome: dailyPetshopIncome,
+      groomerCommissions: dailyCommissions,
       expense: expenseTotal,
       profit: dailyIncome - expenseTotal,
     };
@@ -258,6 +286,12 @@ export function buildDashboardMetrics({
     categoryTotals.set(
       "Gastos fijos",
       (categoryTotals.get("Gastos fijos") || 0) + fixedExpenseTotal
+    );
+  }
+  if (groomerCommissions > 0) {
+    categoryTotals.set(
+      "Comisiones peluqueros",
+      (categoryTotals.get("Comisiones peluqueros") || 0) + groomerCommissions
     );
   }
 
@@ -296,7 +330,11 @@ export function buildDashboardMetrics({
   const deltas = previousMetrics
     ? {
         income: percentDelta(income, previousMetrics.kpis.income),
+        servicesIncome: percentDelta(servicesIncome, previousMetrics.kpis.servicesIncome),
+        petshopIncome: percentDelta(petshopIncome, previousMetrics.kpis.petshopIncome),
         expenses: percentDelta(expenses, previousMetrics.kpis.expenses),
+        totalCosts: percentDelta(totalCosts, previousMetrics.kpis.totalCosts),
+        groomerCommissions: percentDelta(groomerCommissions, previousMetrics.kpis.groomerCommissions),
         profit: percentDelta(profit, previousMetrics.kpis.profit),
         margin: percentDelta(margin, previousMetrics.kpis.margin),
         servicesCount: percentDelta(
@@ -326,6 +364,15 @@ export function buildDashboardMetrics({
       method: expense.paymentMethod || "Sin método",
       date: expense.date,
     })),
+    ...petshopSales.map((sale) => ({
+      id: `petshop-${sale.id}`,
+      type: "petshop",
+      title: "Venta PetShop",
+      subtitle: `${sale.itemCount} artículo${sale.itemCount !== 1 ? "s" : ""}`,
+      amount: sale.amount,
+      method: sale.paymentMethod || "Sin método",
+      date: sale.date,
+    })),
   ]
     .filter((item) => item.date)
     .sort((a, b) => {
@@ -347,7 +394,11 @@ export function buildDashboardMetrics({
     range: { ...range, label: range.label },
     kpis: {
       income,
+      servicesIncome,
+      petshopIncome,
       expenses,
+      totalCosts,
+      groomerCommissions,
       profit,
       margin,
       servicesCount,
@@ -367,6 +418,7 @@ export function buildDashboardMetrics({
       income === 0 &&
       expenses === 0 &&
       servicesCount === 0 &&
-      dailyExpenses.length === 0,
+      dailyExpenses.length === 0 &&
+      petshopSales.length === 0,
   };
 }
