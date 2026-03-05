@@ -443,7 +443,9 @@ export default function AgendaPage() {
         finished += 1;
         finishedIncome += amount;
         const methodId = turno.payment_method_id || null;
-        const methodName = paymentMethods.find((m) => m.id === methodId)?.name || "Sin método";
+        const methodName = methodId
+          ? paymentMethods.find((m) => m.id === methodId)?.name || "Sin método"
+          : "Sin método";
         byPaymentMethodMap.set(methodName, (byPaymentMethodMap.get(methodName) || 0) + amount);
       }
       if (status === "cancelled") cancelled += 1;
@@ -458,6 +460,10 @@ export default function AgendaPage() {
       .map(([name, total]) => ({ name, total }))
       .sort((a, b) => b.total - a.total);
 
+    const finishedWithoutPayment = items.filter(
+      (t) => normalizeStatus(t.status) === "finished" && !t.payment_method_id
+    );
+
     return {
       totalScheduled,
       reserved,
@@ -469,6 +475,7 @@ export default function AgendaPage() {
       totalDeposit,
       pendingCollection: Math.max(estimatedIncome - totalDeposit, 0),
       byPaymentMethod,
+      finishedWithoutPayment,
     };
   }, [items, getServicePrice, paymentMethods]);
 
@@ -1626,6 +1633,29 @@ export default function AgendaPage() {
                     <strong>{formatCurrency(closeSummary.finishedIncome)}</strong>
                   </div>
                 </div>
+
+                {closeSummary.finishedWithoutPayment.length > 0 && (
+                  <div className="agenda-close-payment-breakdown__missing">
+                    <span className="agenda-close-payment-breakdown__missing-label">
+                      ⚠ {closeSummary.finishedWithoutPayment.length} turno{closeSummary.finishedWithoutPayment.length !== 1 ? "s" : ""} sin método de pago:
+                    </span>
+                    <div className="agenda-close-payment-breakdown__missing-list">
+                      {closeSummary.finishedWithoutPayment.map((turno) => (
+                        <button
+                          key={turno.id}
+                          type="button"
+                          className="agenda-close-payment-breakdown__missing-btn"
+                          onClick={() => {
+                            setSelectedTurno(null);
+                            openEdit(turno);
+                          }}
+                        >
+                          {turno.pet_name || "Mascota"} · {turno.owner_name || "Cliente"} · {(turno.time || "").slice(0, 5)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

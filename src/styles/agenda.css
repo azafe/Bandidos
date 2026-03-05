@@ -303,6 +303,46 @@
   font-weight: 700;
 }
 
+.agenda-close-payment-breakdown__missing {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agenda-close-payment-breakdown__missing-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.agenda-close-payment-breakdown__missing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agenda-close-payment-breakdown__missing-btn {
+  display: block;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 0.875rem;
+  color: #b45309;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.agenda-close-payment-breakdown__missing-btn:hover {
+  color: #92400e;
+}
+
 .agenda-reminder__header {
   display: flex;
   align-items: center;
