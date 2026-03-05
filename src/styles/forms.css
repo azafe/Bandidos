@@ -110,6 +110,16 @@
   cursor: pointer;
 }
 
+/* Chrome: expande el ícono del calendario para cubrir todo el input */
+.date-field__native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus {
