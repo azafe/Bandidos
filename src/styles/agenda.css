@@ -1209,6 +1209,98 @@
   text-decoration: underline;
 }
 
+/* ── Form layout helpers ── */
+.agenda-form__group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-soft);
+  margin-bottom: -4px;
+}
+
+.agenda-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ── Duration pills ── */
+.agenda-duration-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.agenda-duration-pill {
+  border: 1.5px solid var(--color-border-soft);
+  background: #f9f9fc;
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.agenda-duration-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.agenda-duration-pill.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(217, 72, 239, 0.3);
+}
+
+/* ── Time range badge ── */
+.agenda-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(217, 72, 239, 0.08);
+  border: 1px solid rgba(217, 72, 239, 0.2);
+  color: var(--color-primary-dark);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* ── Pet chip ── */
+.agenda-pet-chip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: rgba(217, 72, 239, 0.06);
+  border: 1px solid rgba(217, 72, 239, 0.18);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.agenda-pet-chip__name {
+  font-weight: 600;
+  color: var(--color-primary-dark);
+}
+
+.agenda-pet-chip__detail {
+  color: var(--color-text-soft);
+}
+
+@media (max-width: 520px) {
+  .agenda-form__row {
+    grid-template-columns: 1fr;
+  }
+  .agenda-duration-pill {
+    padding: 8px 14px;
+  }
+}
+
 @media (max-width: 1180px) {
   .agenda-mode-bar {
     flex-direction: column;

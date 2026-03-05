@@ -784,6 +784,29 @@ export default function AgendaPage() {
     setForm((prev) => ({ ...prev, duration }));
   }
 
+  function handleDurationPillClick(value) {
+    if (formError) setFormError("");
+    clearFieldError("duration");
+    if (value === CUSTOM_DURATION_OPTION) {
+      setDurationMode("custom");
+      const current = Number(form.duration);
+      if (
+        Number.isFinite(current) &&
+        current > 0 &&
+        !DURATION_OPTIONS.includes(current)
+      ) {
+        setCustomDuration(formatCustomDuration(current));
+      } else {
+        setCustomDuration("");
+        setForm((prev) => ({ ...prev, duration: "" }));
+      }
+      return;
+    }
+    setDurationMode("preset");
+    setCustomDuration("");
+    setForm((prev) => ({ ...prev, duration: value }));
+  }
+
   function handleCustomDurationChange(e) {
     const next = e.target.value;
     if (formError) setFormError("");
@@ -2051,76 +2074,80 @@ export default function AgendaPage() {
           {formError ? <div className="agenda-form__error">{formError}</div> : null}
           {!isEditing || formStep === "details" ? (
             <div className="agenda-form__section">
-              <label
-                className={`form-field${fieldErrors.date ? " form-field--error" : ""}`}
-              >
-                <span>Fecha</span>
-                <div className="date-field__control">
+              <div className="agenda-form__group-label">Cuándo</div>
+              <div className="agenda-form__row">
+                <label
+                  className={`form-field${fieldErrors.date ? " form-field--error" : ""}`}
+                >
+                  <span>Fecha</span>
+                  <div className="date-field__control">
+                    <input
+                      type="text"
+                      className="date-field__display"
+                      value={formatDateDisplay(form.date)}
+                      placeholder="DD-MM-AAAA"
+                      readOnly
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                    <input
+                      type="date"
+                      id="agenda-date"
+                      name="date"
+                      className="date-field__native"
+                      value={form.date}
+                      onChange={handleFormChange}
+                      aria-invalid={Boolean(fieldErrors.date)}
+                    />
+                  </div>
+                  {fieldErrors.date ? (
+                    <small className="agenda-field-error">{fieldErrors.date}</small>
+                  ) : null}
+                </label>
+                <label
+                  className={`form-field${fieldErrors.time ? " form-field--error" : ""}`}
+                >
+                  <span>Hora</span>
                   <input
+                    id="agenda-time"
                     type="text"
-                    className="date-field__display"
-                    value={formatDateDisplay(form.date)}
-                    placeholder="DD-MM-AAAA"
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
+                    name="time"
+                    inputMode="numeric"
+                    placeholder="HH:MM"
+                    value={form.time}
+                    onChange={handleTimeInputChange}
+                    onBlur={handleTimeInputBlur}
+                    aria-invalid={Boolean(fieldErrors.time)}
                   />
-                  <input
-                    type="date"
-                    id="agenda-date"
-                    name="date"
-                    className="date-field__native"
-                    value={form.date}
-                    onChange={handleFormChange}
-                    aria-invalid={Boolean(fieldErrors.date)}
-                  />
-                </div>
-                {fieldErrors.date ? (
-                  <small className="agenda-field-error">{fieldErrors.date}</small>
-                ) : null}
-              </label>
-              <label
-                className={`form-field${fieldErrors.time ? " form-field--error" : ""}`}
-              >
-                <span>Hora</span>
-                <input
-                  id="agenda-time"
-                  type="text"
-                  name="time"
-                  inputMode="numeric"
-                  placeholder="HH:MM"
-                  value={form.time}
-                  onChange={handleTimeInputChange}
-                  onBlur={handleTimeInputBlur}
-                  aria-invalid={Boolean(fieldErrors.time)}
-                />
-                <small className="agenda-helper">Horario permitido: 07:00 a 22:00.</small>
-                {fieldErrors.time ? (
-                  <small className="agenda-field-error">{fieldErrors.time}</small>
-                ) : null}
-              </label>
+                  <small className="agenda-helper">07:00 a 22:00</small>
+                  {fieldErrors.time ? (
+                    <small className="agenda-field-error">{fieldErrors.time}</small>
+                  ) : null}
+                </label>
+              </div>
               <label
                 className={`form-field${fieldErrors.duration ? " form-field--error" : ""}`}
               >
-                <span>Duración (min)</span>
-                <select
-                  id="agenda-duration"
-                  name="duration"
-                  value={
-                    durationMode === "custom"
-                      ? CUSTOM_DURATION_OPTION
-                      : String(form.duration || 60)
-                  }
-                  onChange={handleDurationModeChange}
-                  aria-invalid={Boolean(fieldErrors.duration)}
-                >
-                  {DURATION_OPTIONS.map((duration) => (
-                    <option key={duration} value={duration}>
-                      {duration}
-                    </option>
+                <span>Duración</span>
+                <div className="agenda-duration-pills">
+                  {DURATION_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`agenda-duration-pill${durationMode === "preset" && form.duration === d ? " is-active" : ""}`}
+                      onClick={() => handleDurationPillClick(d)}
+                    >
+                      {d} min
+                    </button>
                   ))}
-                  <option value={CUSTOM_DURATION_OPTION}>Otro</option>
-                </select>
+                  <button
+                    type="button"
+                    className={`agenda-duration-pill${durationMode === "custom" ? " is-active" : ""}`}
+                    onClick={() => handleDurationPillClick(CUSTOM_DURATION_OPTION)}
+                  >
+                    Otro
+                  </button>
+                </div>
                 {durationMode === "custom" ? (
                   <input
                     id="agenda-duration-custom"
@@ -2133,17 +2160,20 @@ export default function AgendaPage() {
                     aria-invalid={Boolean(fieldErrors.duration)}
                   />
                 ) : null}
-                <small className="agenda-helper">
-                  Termina {durationPreview ? getEndTime(form.time, durationPreview) : "-"}
-                </small>
+                {form.time && durationPreview ? (
+                  <span className="agenda-time-badge">
+                    {form.time} → {getEndTime(form.time, durationPreview)} ({durationPreview} min)
+                  </span>
+                ) : null}
                 {fieldErrors.duration ? (
                   <small className="agenda-field-error">{fieldErrors.duration}</small>
                 ) : null}
               </label>
+              <div className="agenda-form__group-label">Mascota</div>
               <label
                 className={`form-field${fieldErrors.pet_name ? " form-field--error" : ""}`}
               >
-                <span>Mascota</span>
+                <span>Nombre</span>
                 <div className="combo-field">
                   <input
                     type="text"
@@ -2196,9 +2226,15 @@ export default function AgendaPage() {
                   ) : null}
                 </div>
                 {selectedPetRecord ? (
-                  <small className="agenda-helper">
-                    Se completaron dueño y raza desde la ficha. Podés editarlos.
-                  </small>
+                  <div className="agenda-pet-chip">
+                    <span className="agenda-pet-chip__name">{selectedPetRecord.name}</span>
+                    {form.breed ? (
+                      <span className="agenda-pet-chip__detail">{form.breed}</span>
+                    ) : null}
+                    {form.owner_name ? (
+                      <span className="agenda-pet-chip__detail">· {form.owner_name}</span>
+                    ) : null}
+                  </div>
                 ) : (
                   <small className="agenda-helper">
                     Si la mascota no existe, podés crearla y volver al turno.
