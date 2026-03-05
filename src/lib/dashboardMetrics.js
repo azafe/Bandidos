@@ -5,7 +5,9 @@ function parseDateValue(value) {
   const raw = String(value).trim();
 
   if (raw.includes("-")) {
-    const parts = raw.split("-");
+    // Strip time component if present (e.g. "2026-03-02T00:00:00.000Z")
+    const datePart = raw.includes("T") ? raw.slice(0, 10) : raw;
+    const parts = datePart.split("-");
     if (parts.length === 3 && parts[0].length === 4) {
       const [y, m, d] = parts.map(Number);
       return new Date(y, m - 1, d);
@@ -74,18 +76,6 @@ function percentDelta(current, previous) {
 }
 
 function normalizeService(service) {
-  if (import.meta.env.DEV) {
-    console.debug("[dashboard] normalizeService raw", {
-      id: service.id,
-      status: service.status,
-      date: service.date,
-      final_price: service.final_price,
-      price: service.price,
-      service_price: service.service_price,
-      amount: service.amount,
-      default_price: service.service_type?.default_price,
-    });
-  }
   const amount =
     Number(
       service.final_price ||
