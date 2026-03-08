@@ -1,5 +1,5 @@
 // src/pages/services/ServicesListPage.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import { useApiResource } from "../../hooks/useApiResource";
@@ -88,6 +88,8 @@ export default function ServicesListPage() {
     const now = new Date();
     return `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
   });
+  const fromPickerRef = useRef(null);
+  const toPickerRef = useRef(null);
   const [isFilterCustomerOpen, setIsFilterCustomerOpen] = useState(false);
   const [isFilterPetOpen, setIsFilterPetOpen] = useState(false);
   const [isFilterServiceOpen, setIsFilterServiceOpen] = useState(false);
@@ -567,33 +569,79 @@ export default function ServicesListPage() {
           <div className="filters-grid services-filters-grid">
             <div className="form-field">
               <label htmlFor="from">Desde</label>
-              <input
-                id="from"
-                type="text"
-                placeholder="DD/MM/AAAA"
-                value={fromDisplay}
-                onChange={(e) => {
-                  setFromDisplay(e.target.value);
-                  const iso = parseDMY(e.target.value);
-                  if (iso) setFilters((prev) => ({ ...prev, from: iso }));
-                }}
-                onBlur={() => setFromDisplay(isoToDisplay(filters.from))}
-              />
+              <div className="date-field-wrapper">
+                <input
+                  id="from"
+                  type="text"
+                  placeholder="DD/MM/AAAA"
+                  value={fromDisplay}
+                  onChange={(e) => {
+                    setFromDisplay(e.target.value);
+                    const iso = parseDMY(e.target.value);
+                    if (iso) setFilters((prev) => ({ ...prev, from: iso }));
+                  }}
+                  onBlur={() => setFromDisplay(isoToDisplay(filters.from))}
+                />
+                <button
+                  type="button"
+                  className="date-field-picker-btn"
+                  tabIndex={-1}
+                  onClick={() => fromPickerRef.current?.showPicker()}
+                  aria-label="Abrir calendario"
+                >
+                  &#128197;
+                </button>
+                <input
+                  ref={fromPickerRef}
+                  type="date"
+                  className="date-field-hidden"
+                  value={filters.from}
+                  onChange={(e) => {
+                    const iso = e.target.value;
+                    setFilters((prev) => ({ ...prev, from: iso }));
+                    setFromDisplay(isoToDisplay(iso));
+                  }}
+                  tabIndex={-1}
+                />
+              </div>
             </div>
             <div className="form-field">
               <label htmlFor="to">Hasta</label>
-              <input
-                id="to"
-                type="text"
-                placeholder="DD/MM/AAAA"
-                value={toDisplay}
-                onChange={(e) => {
-                  setToDisplay(e.target.value);
-                  const iso = parseDMY(e.target.value);
-                  if (iso) setFilters((prev) => ({ ...prev, to: iso }));
-                }}
-                onBlur={() => setToDisplay(isoToDisplay(filters.to))}
-              />
+              <div className="date-field-wrapper">
+                <input
+                  id="to"
+                  type="text"
+                  placeholder="DD/MM/AAAA"
+                  value={toDisplay}
+                  onChange={(e) => {
+                    setToDisplay(e.target.value);
+                    const iso = parseDMY(e.target.value);
+                    if (iso) setFilters((prev) => ({ ...prev, to: iso }));
+                  }}
+                  onBlur={() => setToDisplay(isoToDisplay(filters.to))}
+                />
+                <button
+                  type="button"
+                  className="date-field-picker-btn"
+                  tabIndex={-1}
+                  onClick={() => toPickerRef.current?.showPicker()}
+                  aria-label="Abrir calendario"
+                >
+                  &#128197;
+                </button>
+                <input
+                  ref={toPickerRef}
+                  type="date"
+                  className="date-field-hidden"
+                  value={filters.to}
+                  onChange={(e) => {
+                    const iso = e.target.value;
+                    setFilters((prev) => ({ ...prev, to: iso }));
+                    setToDisplay(isoToDisplay(iso));
+                  }}
+                  tabIndex={-1}
+                />
+              </div>
             </div>
             <div className="form-field">
               <label htmlFor="customer_id">Cliente</label>

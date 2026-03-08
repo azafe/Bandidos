@@ -208,6 +208,36 @@
   color: #8b94a9;
 }
 
+/* === Date field with text display + hidden picker === */
+.date-field-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.date-field-wrapper input[type="text"] {
+  flex: 1;
+  padding-right: 36px;
+}
+.date-field-picker-btn {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+.date-field-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
 /* === Services Analytics Panel === */
 .services-analytics { margin-bottom: 16px; }
 .services-analytics__header { margin-bottom: 14px; }
