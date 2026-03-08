@@ -575,22 +575,10 @@ export default function ServicesListPage() {
                   type="text"
                   placeholder="DD/MM/AAAA"
                   value={fromDisplay}
-                  onChange={(e) => {
-                    setFromDisplay(e.target.value);
-                    const iso = parseDMY(e.target.value);
-                    if (iso) setFilters((prev) => ({ ...prev, from: iso }));
-                  }}
-                  onBlur={() => setFromDisplay(isoToDisplay(filters.from))}
-                />
-                <button
-                  type="button"
-                  className="date-field-picker-btn"
-                  tabIndex={-1}
+                  readOnly
                   onClick={() => fromPickerRef.current?.showPicker()}
-                  aria-label="Abrir calendario"
-                >
-                  &#128197;
-                </button>
+                  onFocus={() => fromPickerRef.current?.showPicker()}
+                />
                 <input
                   ref={fromPickerRef}
                   type="date"
@@ -613,22 +601,10 @@ export default function ServicesListPage() {
                   type="text"
                   placeholder="DD/MM/AAAA"
                   value={toDisplay}
-                  onChange={(e) => {
-                    setToDisplay(e.target.value);
-                    const iso = parseDMY(e.target.value);
-                    if (iso) setFilters((prev) => ({ ...prev, to: iso }));
-                  }}
-                  onBlur={() => setToDisplay(isoToDisplay(filters.to))}
-                />
-                <button
-                  type="button"
-                  className="date-field-picker-btn"
-                  tabIndex={-1}
+                  readOnly
                   onClick={() => toPickerRef.current?.showPicker()}
-                  aria-label="Abrir calendario"
-                >
-                  &#128197;
-                </button>
+                  onFocus={() => toPickerRef.current?.showPicker()}
+                />
                 <input
                   ref={toPickerRef}
                   type="date"
