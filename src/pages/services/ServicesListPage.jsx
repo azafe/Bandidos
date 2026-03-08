@@ -222,11 +222,11 @@ export default function ServicesListPage() {
       (item) => String(item.id) === String(service.service_type_id)
     );
     return Number(
-      fromCatalog?.default_price ||
+      service.price ||
+        fromCatalog?.default_price ||
         service.service_type?.default_price ||
         service.service_price ||
         service.amount ||
-        service.price ||
         0
     );
   }
