@@ -80,6 +80,14 @@ export default function ServicesListPage() {
   const [filterPetSearch, setFilterPetSearch] = useState("");
   const [filterServiceSearch, setFilterServiceSearch] = useState("");
   const [filterGroomerSearch, setFilterGroomerSearch] = useState("");
+  const [fromDisplay, setFromDisplay] = useState(() => {
+    const now = new Date();
+    return `01/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+  });
+  const [toDisplay, setToDisplay] = useState(() => {
+    const now = new Date();
+    return `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+  });
   const [isFilterCustomerOpen, setIsFilterCustomerOpen] = useState(false);
   const [isFilterPetOpen, setIsFilterPetOpen] = useState(false);
   const [isFilterServiceOpen, setIsFilterServiceOpen] = useState(false);
@@ -423,6 +431,19 @@ export default function ServicesListPage() {
     setFilterGroomerSearch(match?.name || "");
   }, [filters.groomer_id, employees]);
 
+  useEffect(() => { setFromDisplay(isoToDisplay(filters.from)); }, [filters.from]);
+  useEffect(() => { setToDisplay(isoToDisplay(filters.to)); }, [filters.to]);
+
+  function parseDMY(str) {
+    const match = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return null;
+    const [, d, m, y] = match.map(Number);
+    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const mm = String(m).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+
   function buildByGroomer(svcList) {
     const map = new Map();
     svcList.forEach((s) => {
@@ -548,22 +569,30 @@ export default function ServicesListPage() {
               <label htmlFor="from">Desde</label>
               <input
                 id="from"
-                type="date"
-                value={filters.from}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, from: e.target.value }))
-                }
+                type="text"
+                placeholder="DD/MM/AAAA"
+                value={fromDisplay}
+                onChange={(e) => {
+                  setFromDisplay(e.target.value);
+                  const iso = parseDMY(e.target.value);
+                  if (iso) setFilters((prev) => ({ ...prev, from: iso }));
+                }}
+                onBlur={() => setFromDisplay(isoToDisplay(filters.from))}
               />
             </div>
             <div className="form-field">
               <label htmlFor="to">Hasta</label>
               <input
                 id="to"
-                type="date"
-                value={filters.to}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, to: e.target.value }))
-                }
+                type="text"
+                placeholder="DD/MM/AAAA"
+                value={toDisplay}
+                onChange={(e) => {
+                  setToDisplay(e.target.value);
+                  const iso = parseDMY(e.target.value);
+                  if (iso) setFilters((prev) => ({ ...prev, to: iso }));
+                }}
+                onBlur={() => setToDisplay(isoToDisplay(filters.to))}
               />
             </div>
             <div className="form-field">
