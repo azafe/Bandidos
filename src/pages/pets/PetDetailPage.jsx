@@ -45,7 +45,7 @@ function formatDateDisplay(value) {
   const dd = String(parsed.getDate()).padStart(2, "0");
   const mm = String(parsed.getMonth() + 1).padStart(2, "0");
   const yyyy = parsed.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function formatPrice(value) {

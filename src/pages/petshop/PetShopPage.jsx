@@ -23,7 +23,7 @@ function formatDateDisplay(value) {
   const raw = String(value).split("T")[0];
   const [yyyy, mm, dd] = raw.split("-");
   if (!yyyy || !mm || !dd) return value;
-  return `${dd}-${mm}-${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function getDateKey(value) {
@@ -35,7 +35,7 @@ function formatDateLabel(dateKey) {
   if (!dateKey) return "-";
   const [yyyy, mm, dd] = String(dateKey).split("-");
   if (!yyyy || !mm || !dd) return dateKey;
-  return `${dd}-${mm}-${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function toNumber(value, fallback = 0) {

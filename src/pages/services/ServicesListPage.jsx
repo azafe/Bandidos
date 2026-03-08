@@ -375,7 +375,12 @@ export default function ServicesListPage() {
       ? "month"
       : "custom";
 
-  const periodLabel = `${filters.from} → ${filters.to}`;
+  function isoToDisplay(iso) {
+    if (!iso) return iso;
+    const [y, m, d] = iso.split("-");
+    return `${d}/${m}/${y}`;
+  }
+  const periodLabel = `${isoToDisplay(filters.from)} → ${isoToDisplay(filters.to)}`;
 
   function formatPrice(value) {
     if (value === null || value === undefined || value === "") return "-";
@@ -389,7 +394,7 @@ export default function ServicesListPage() {
     const dd = String(parsed.getDate()).padStart(2, "0");
     const mm = String(parsed.getMonth() + 1).padStart(2, "0");
     const yyyy = parsed.getFullYear();
-    return `${dd}-${mm}-${yyyy}`;
+    return `${dd}/${mm}/${yyyy}`;
   }
 
   useEffect(() => {

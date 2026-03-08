@@ -77,7 +77,7 @@ function formatDateDisplay(value) {
   const raw = String(value).split("T")[0];
   const [yyyy, mm, dd] = raw.split("-");
   if (!yyyy || !mm || !dd) return value;
-  return `${dd}-${mm}-${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function normalizeDate(value) {

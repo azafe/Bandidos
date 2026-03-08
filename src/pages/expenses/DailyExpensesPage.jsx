@@ -51,7 +51,7 @@ export default function DailyExpensesPage() {
     const datePart = raw.includes("T") ? raw.slice(0, 10) : raw;
     const [year, month, day] = datePart.split("-");
     if (!year || !month || !day) return raw;
-    return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+    return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
   }
 
   function getNameById(list, id) {
