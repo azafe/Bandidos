@@ -4,6 +4,10 @@ import { Link } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import GroomerChart from "../../components/dashboard/GroomerChart";
+import ServiceTypeChart from "../../components/dashboard/ServiceTypeChart";
+
+const COMMISSION_RATE = 0.40;
 
 /**
  * Convierte el string de fecha de Google Sheets
@@ -414,7 +418,36 @@ export default function ServicesListPage() {
     setFilterGroomerSearch(match?.name || "");
   }, [filters.groomer_id, employees]);
 
-  
+  function buildByGroomer(svcList) {
+    const map = new Map();
+    svcList.forEach((s) => {
+      const name = resolveGroomerName(s) || "Sin groomer";
+      const prev = map.get(name) || { name, total: 0, services: 0 };
+      map.set(name, { name, total: prev.total + getServicePrice(s), services: prev.services + 1 });
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }
+
+  function buildByServiceType(svcList) {
+    const map = new Map();
+    svcList.forEach((s) => {
+      const name = resolveServiceTypeName(s) || "Sin tipo";
+      const prev = map.get(name) || { name, total: 0 };
+      map.set(name, { name, total: prev.total + getServicePrice(s) });
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }
+
+  const finishedServices = filteredPeriod.filter(
+    (s) => s.status === "finished" || normalizeStatus(s.status) === "finished"
+  );
+  const finishedCount = finishedServices.length;
+  const totalBilled = finishedServices.reduce((acc, s) => acc + getServicePrice(s), 0);
+  const commissions = totalBilled * COMMISSION_RATE;
+  const bandidosMargin = totalBilled - commissions;
+  const avgTicket = finishedCount > 0 ? totalBilled / finishedCount : 0;
+  const byGroomer = buildByGroomer(finishedServices);
+  const byServiceType = buildByServiceType(finishedServices);
 
   return (
     <div className="page-content">
@@ -776,26 +809,53 @@ export default function ServicesListPage() {
         ) : null}
       </div>
 
-      {/* Cards resumen */}
-      <div className="services-kpi-row">
-        <article className="card services-kpi-card">
-          <h3 className="services-kpi-card__title">Servicios de hoy</h3>
-          <p className="services-kpi-card__value">{countToday}</p>
-          <p className="services-kpi-card__meta">
-            Ingresos de hoy:{" "}
-            <strong>${totalToday.toLocaleString("es-AR")}</strong>
-          </p>
-        </article>
+      {/* Panel de análisis */}
+      <div className="services-analytics card">
+        <div className="services-analytics__header">
+          <h2 className="card-title">Resumen del período</h2>
+          <p className="card-subtitle">{periodLabel} · Solo servicios finalizados.</p>
+        </div>
+        <div className="services-analytics__kpis">
+          <div className="services-analytics__kpi">
+            <span>Servicios finalizados</span>
+            <strong>{finishedCount}</strong>
+          </div>
+          <div className="services-analytics__kpi services-analytics__kpi--income">
+            <span>Facturación</span>
+            <strong>{formatPrice(totalBilled)}</strong>
+          </div>
+          <div className="services-analytics__kpi">
+            <span>Comisiones groomers</span>
+            <strong>{formatPrice(commissions)}</strong>
+            <small>40% de facturación</small>
+          </div>
+          <div className="services-analytics__kpi services-analytics__kpi--margin">
+            <span>Margen Bandidos</span>
+            <strong>{formatPrice(bandidosMargin)}</strong>
+            <small>60% de facturación</small>
+          </div>
+          <div className="services-analytics__kpi">
+            <span>Ticket promedio</span>
+            <strong>{formatPrice(avgTicket)}</strong>
+          </div>
+          <div className="services-analytics__kpi">
+            <span>Margen %</span>
+            <strong>{finishedCount > 0 ? "60%" : "-"}</strong>
+          </div>
+        </div>
 
-        <article className="card services-kpi-card">
-          <h3 className="services-kpi-card__title">Servicios del período</h3>
-          <p className="services-kpi-card__value">{countPeriod}</p>
-          <p className="services-kpi-card__meta">
-            Ingresos del período:{" "}
-            <strong>${totalPeriod.toLocaleString("es-AR")}</strong>
-            <span className="services-kpi-card__period">Período: {periodLabel}</span>
-          </p>
-        </article>
+        {finishedCount > 0 && (
+          <div className="services-analytics__charts">
+            <div className="card">
+              <h3 className="card-title">Por groomer</h3>
+              <GroomerChart data={byGroomer} />
+            </div>
+            <div className="card">
+              <h3 className="card-title">Por tipo de servicio</h3>
+              <ServiceTypeChart data={byServiceType} />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card services-panel">
