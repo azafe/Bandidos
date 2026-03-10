@@ -234,10 +234,9 @@ export function buildDashboardMetrics({
   const petshopIncome = sumBy(petshopSales, (sale) => sale.amount);
   const income = servicesIncome + petshopIncome;
   const dailyExpenseTotal = sumBy(dailyExpenses, (expense) => expense.amount);
-  const fixedExpenseTotal = Array.from(fixedByDate.values()).reduce(
-    (sum, value) => sum + value,
-    0
-  );
+  // Usamos el total mensual completo de gastos fijos activos (no solo los que vencieron en el rango)
+  // para que coincida con lo que muestra la página de Gastos Fijos.
+  const fixedExpenseTotal = sumBy(fixedExpenses.filter(isActiveFixed), (e) => e.amount);
   const groomerCommissions = servicesIncome * GROOMER_COMMISSION_RATE;
   const expenses = dailyExpenseTotal + fixedExpenseTotal;
   const totalCosts = expenses + groomerCommissions;
