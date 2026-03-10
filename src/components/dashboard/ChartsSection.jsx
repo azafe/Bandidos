@@ -11,8 +11,8 @@ export default function ChartsSection({ series }) {
       {/* Fila 1: chart principal (2/3) + margen % (1/3) */}
       <div className="dashboard-charts__row dashboard-charts__row--main">
         <div className="card">
-          <h3 className="card-title">Ingresos vs Gastos</h3>
-          <p className="card-subtitle">Barras diarias con línea de ganancia.</p>
+          <h3 className="card-title">Ingresos diarios</h3>
+          <p className="card-subtitle">Ingresos por día del período seleccionado.</p>
           <RevenueChart data={series.byDay} />
         </div>
         <div className="card">
