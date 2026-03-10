@@ -1,5 +1,6 @@
 // src/pages/employees/EmployeesPage.jsx
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 
@@ -263,6 +264,14 @@ export default function EmployeesPage() {
                     <p className="employee-card__notes">{emp.notes.length > 60 ? emp.notes.slice(0, 60) + "…" : emp.notes}</p>
                   )}
                 </div>
+                <Link
+                  to={`/employees/${emp.id}`}
+                  className="pet-card__ficha-btn"
+                  style={{ "--pet-color": color }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Ver ficha →
+                </Link>
               </div>
             );
           })}

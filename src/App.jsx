@@ -10,6 +10,7 @@ import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
 import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
+import EmployeeDetailPage from "./pages/employees/EmployeeDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
@@ -49,6 +50,7 @@ function App() {
                   <Route path="/expenses/daily" element={<DailyExpensesPage />} />
                   <Route path="/expenses/fixed" element={<FixedExpensesPage />} />
                   <Route path="/employees" element={<EmployeesPage />} />
+                  <Route path="/employees/:id" element={<EmployeeDetailPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
                   <Route
                     path="/catalog/service-types"
