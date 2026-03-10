@@ -904,6 +904,18 @@
   color: #15803d;
 }
 
+.fe-card__date-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--color-surface-alt, #f0f0f5);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .fe-card__amount {
   font-size: 1.35rem;
   font-weight: 700;

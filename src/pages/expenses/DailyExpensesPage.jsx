@@ -3,13 +3,14 @@ import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 
+const CATEGORY_COLORS = [
+  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
+  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
+];
+
 export default function DailyExpensesPage() {
   const today = new Date().toISOString().slice(0, 10);
-  const [filters, setFilters] = useState({
-    from: "",
-    to: "",
-    category_id: "",
-  });
+  const [filters, setFilters] = useState({ from: "", to: "", category_id: "" });
   const {
     items: expenses,
     loading,
@@ -21,6 +22,8 @@ export default function DailyExpensesPage() {
   const { items: categories } = useApiResource("/v2/expense-categories");
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const { items: suppliers } = useApiResource("/v2/suppliers");
+
+  const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     date: today,
     category: "",
@@ -41,6 +44,27 @@ export default function DailyExpensesPage() {
     supplier: "",
   });
 
+  // ── Cálculos ──────────────────────────────────────────────────────────────
+  const totalPeriod = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+  const topExpense = expenses.reduce(
+    (top, e) => (Number(e.amount) > Number(top?.amount || 0) ? e : top),
+    null
+  );
+
+  const byCategory = categories
+    .map((cat, idx) => {
+      const exps = expenses.filter(
+        (e) =>
+          String(e.category_id) === String(cat.id) ||
+          String(e.category?.id) === String(cat.id)
+      );
+      const total = exps.reduce((s, e) => s + Number(e.amount || 0), 0);
+      return { ...cat, total, count: exps.length, color: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] };
+    })
+    .filter((c) => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function formatCurrency(value) {
     return `$${Number(value || 0).toLocaleString("es-AR")}`;
   }
@@ -56,23 +80,38 @@ export default function DailyExpensesPage() {
 
   function getNameById(list, id) {
     if (!id) return "";
-    const match = list.find((item) => String(item.id) === String(id));
-    return match?.name || "";
+    return list.find((item) => String(item.id) === String(id))?.name || "";
   }
 
-  const totalToday = expenses.reduce((sum, exp) => {
-    if (exp.date === form.date) return sum + Number(exp.amount || 0);
-    return sum;
-  }, 0);
+  function categoryName(e) {
+    return e.category?.name || getNameById(categories, e.category_id) || "-";
+  }
+  function paymentName(e) {
+    return e.payment_method?.name || getNameById(paymentMethods, e.payment_method_id) || "-";
+  }
+  function supplierName(e) {
+    return e.supplier?.name || getNameById(suppliers, e.supplier_id) || "";
+  }
+
+  function getCategoryColor(e) {
+    const idx = categories.findIndex(
+      (c) => String(c.id) === String(e.category_id) || String(c.id) === String(e.category?.id)
+    );
+    return idx >= 0 ? CATEGORY_COLORS[idx % CATEGORY_COLORS.length] : "#8b94a9";
+  }
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  function resetForm() {
+    setForm({ date: today, category: "", description: "", amount: "", paymentMethod: "", supplier: "" });
+    setEditingId(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-
     const amountNumber = Number(form.amount);
     if (!amountNumber || amountNumber <= 0) {
       alert("Ingresá un monto válido.");
@@ -92,23 +131,15 @@ export default function DailyExpensesPage() {
       } else {
         await createItem(payload);
       }
+      resetForm();
+      setFormOpen(false);
     } catch (err) {
       alert(err.message || "No se pudo guardar el gasto.");
-      return;
     }
-
-    setForm((prev) => ({
-      ...prev,
-      description: "",
-      amount: "",
-      supplier: "",
-    }));
-    setEditingId(null);
   }
 
   async function handleDelete(id) {
-    const ok = window.confirm("¿Eliminar este gasto?");
-    if (!ok) return false;
+    if (!window.confirm("¿Eliminar este gasto?")) return false;
     try {
       await deleteItem(id);
       return true;
@@ -116,18 +147,6 @@ export default function DailyExpensesPage() {
       alert(err.message || "No se pudo eliminar el gasto.");
       return false;
     }
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setForm({
-      date: today,
-      category: "",
-      description: "",
-      amount: "",
-      paymentMethod: "",
-      supplier: "",
-    });
   }
 
   function openModalEdit(expense) {
@@ -159,19 +178,7 @@ export default function DailyExpensesPage() {
         supplier_id: modalForm.supplier || null,
       };
       await updateItem(selectedExpense.id, payload);
-      setSelectedExpense((prev) =>
-        prev
-          ? {
-              ...prev,
-              date: modalForm.date,
-              category_id: modalForm.category,
-              description: modalForm.description || "(Sin detalle)",
-              amount: amountNumber,
-              payment_method_id: modalForm.paymentMethod,
-              supplier_id: modalForm.supplier || null,
-            }
-          : prev
-      );
+      setSelectedExpense((prev) => prev ? { ...prev, ...payload } : prev);
       setIsEditingModal(false);
     } catch (err) {
       alert(err.message || "No se pudo guardar el gasto.");
@@ -183,231 +190,218 @@ export default function DailyExpensesPage() {
     setIsEditingModal(false);
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="page-content">
+
+      {/* Encabezado */}
       <header className="page-header">
         <div>
           <h1 className="page-title">Gastos diarios</h1>
           <p className="page-subtitle">
-            Registrá los gastos del día a día: shampoo, limpieza, snacks,
-            mantenimiento menor, etc.
+            Registrá los gastos del día a día: shampoo, limpieza, snacks, mantenimiento menor, etc.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div className="fixed-expenses-header-actions">
           <input
             type="date"
             value={filters.from}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, from: e.target.value }))
-            }
+            onChange={(e) => setFilters((prev) => ({ ...prev, from: e.target.value }))}
+            title="Fecha desde"
           />
           <input
             type="date"
             value={filters.to}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, to: e.target.value }))
-            }
+            onChange={(e) => setFilters((prev) => ({ ...prev, to: e.target.value }))}
+            title="Fecha hasta"
           />
           <select
             value={filters.category_id}
-            onChange={(e) =>
-              setFilters((prev) => ({ ...prev, category_id: e.target.value }))
-            }
+            onChange={(e) => setFilters((prev) => ({ ...prev, category_id: e.target.value }))}
           >
             <option value="">Todas las categorías</option>
             {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => { resetForm(); setFormOpen((v) => !v); }}
+          >
+            {formOpen ? "Cancelar" : "+ Agregar gasto"}
+          </button>
         </div>
       </header>
 
-      {/* Formulario de carga */}
-      <form className="form-card" onSubmit={handleSubmit}>
-        <h2 className="card-title">
-          {editingId ? "Editar gasto" : "Nuevo gasto"}
-        </h2>
-        <p className="card-subtitle">
-          Completa los datos del gasto para llevar el control de caja.
-        </p>
+      {error && <div className="card" style={{ color: "#f37b7b" }}>{error}</div>}
 
-        <div className="form-grid">
-          <div className="form-field">
-            <label htmlFor="date">Fecha</label>
-            <input
-              id="date"
-              type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-              required
-            />
+      {/* Panel de resumen */}
+      <div className="card fixed-expenses-summary">
+        <div className="fixed-expenses-summary__kpis">
+          <div className="fe-kpi fe-kpi--total">
+            <span>Total del período</span>
+            <strong>{formatCurrency(totalPeriod)}</strong>
           </div>
-
-          <div className="form-field">
-            <label htmlFor="category">Categoría</label>
-            <select
-              id="category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
+          <div className="fe-kpi">
+            <span>Cantidad de gastos</span>
+            <strong>{expenses.length}</strong>
           </div>
-
-          <div className="form-field">
-            <label htmlFor="description">Descripción</label>
-            <input
-              id="description"
-              type="text"
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              placeholder="Ej: Shampoo para pelaje largo"
-            />
+          <div className="fe-kpi">
+            <span>Mayor gasto</span>
+            <strong>{topExpense ? formatCurrency(topExpense.amount) : "-"}</strong>
+            {topExpense && <small>{topExpense.description || categoryName(topExpense)}</small>}
           </div>
-
-          <div className="form-field">
-            <label htmlFor="amount">Monto (ARS)</label>
-            <input
-              id="amount"
-              type="number"
-              name="amount"
-              value={form.amount}
-              onChange={handleChange}
-              min="0"
-              step="100"
-              required
-            />
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="paymentMethod">Método de pago</label>
-            <select
-              id="paymentMethod"
-              name="paymentMethod"
-              value={form.paymentMethod}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Seleccioná</option>
-              {paymentMethods.map((method) => (
-                <option key={method.id} value={method.id}>
-                  {method.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="supplier">Proveedor</label>
-            <select
-              id="supplier"
-              name="supplier"
-              value={form.supplier}
-              onChange={handleChange}
-            >
-              <option value="">Seleccioná</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
-                  {supplier.name}
-                </option>
-              ))}
-            </select>
+          <div className="fe-kpi">
+            <span>Categorías activas</span>
+            <strong>{byCategory.length}</strong>
           </div>
         </div>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary">
-            {editingId ? "Guardar cambios" : "Guardar gasto"}
-          </button>
-          {editingId && (
-            <button type="button" className="btn-secondary" onClick={cancelEdit}>
+        {byCategory.length > 0 && (
+          <div className="fixed-expenses-summary__breakdown">
+            <h3 className="card-title" style={{ marginBottom: 12 }}>Por categoría</h3>
+            <div className="fe-category-bars">
+              {byCategory.map((cat) => {
+                const pct = totalPeriod > 0 ? (cat.total / totalPeriod) * 100 : 0;
+                return (
+                  <div key={cat.id} className="fe-category-bar">
+                    <div className="fe-category-bar__label">
+                      <span className="fe-category-bar__dot" style={{ background: cat.color }} />
+                      <span className="fe-category-bar__name">{cat.name}</span>
+                      <span className="fe-category-bar__pct">{pct.toFixed(0)}%</span>
+                      <span className="fe-category-bar__amount">{formatCurrency(cat.total)}</span>
+                    </div>
+                    <div className="fe-category-bar__track">
+                      <div
+                        className="fe-category-bar__fill"
+                        style={{ width: `${pct}%`, background: cat.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Formulario colapsable */}
+      {formOpen && (
+        <form className="form-card" onSubmit={handleSubmit}>
+          <h2 className="card-title">{editingId ? "Editar gasto" : "Nuevo gasto"}</h2>
+          <div className="form-grid">
+            <div className="form-field">
+              <label htmlFor="date">Fecha</label>
+              <input id="date" type="date" name="date" value={form.date} onChange={handleChange} required />
+            </div>
+            <div className="form-field">
+              <label htmlFor="category">Categoría</label>
+              <select id="category" name="category" value={form.category} onChange={handleChange} required>
+                <option value="">Seleccioná</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="description">Descripción</label>
+              <input
+                id="description" type="text" name="description"
+                value={form.description} onChange={handleChange}
+                placeholder="Ej: Shampoo para pelaje largo"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="amount">Monto (ARS)</label>
+              <input
+                id="amount" type="number" name="amount"
+                value={form.amount} onChange={handleChange}
+                min="0" step="100" required
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="paymentMethod">Método de pago</label>
+              <select id="paymentMethod" name="paymentMethod" value={form.paymentMethod} onChange={handleChange} required>
+                <option value="">Seleccioná</option>
+                {paymentMethods.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="supplier">Proveedor</label>
+              <select id="supplier" name="supplier" value={form.supplier} onChange={handleChange}>
+                <option value="">Seleccioná</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="btn-primary">
+              {editingId ? "Guardar cambios" : "Guardar gasto"}
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => { resetForm(); setFormOpen(false); }}>
               Cancelar
             </button>
-          )}
-        </div>
-
-        <div className="expenses-total">
-          Total del día ({form.date}):{" "}
-          <strong>${totalToday.toLocaleString("es-AR")}</strong>
-        </div>
-      </form>
+          </div>
+        </form>
+      )}
 
       {/* Lista de gastos */}
-      <div className="card" style={{ marginTop: 18 }}>
-        <h2 className="card-title">Listado de gastos</h2>
-        <p className="card-subtitle">
-          Resumen de los gastos cargados. Más adelante podemos filtrar por
-          fecha, categoría y método de pago.
-        </p>
+      <div className="card" style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+          <div>
+            <h2 className="card-title">Gastos registrados</h2>
+            <p className="card-subtitle">{expenses.length} registros · Hacé clic para editar o eliminar.</p>
+          </div>
+        </div>
 
         {loading && <div className="card-subtitle">Cargando...</div>}
-        {error && (
-          <div className="card-subtitle" style={{ color: "#f37b7b" }}>
-            {error}
+
+        {!loading && expenses.length === 0 && (
+          <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
+            Sin gastos cargados. Usá el botón "+ Agregar gasto".
           </div>
         )}
 
-        <div className="list-wrapper">
-          {expenses.length === 0 ? (
-            <div className="card-subtitle" style={{ textAlign: "center" }}>
-              Sin gastos cargados.
-            </div>
-          ) : (
-            expenses.map((exp) => (
+        <div className="fe-cards-grid">
+          {expenses.map((e) => {
+            const accentColor = getCategoryColor(e);
+            return (
               <div
-                key={exp.id}
-                className="list-item"
-                onClick={() => setSelectedExpense(exp)}
+                key={e.id}
+                className="fe-card"
+                style={{ "--fe-accent": accentColor }}
+                onClick={() => setSelectedExpense(e)}
               >
-                <div className="list-item__header">
-                  <div className="list-item__title">
-                    {exp.description || "Gasto"}
+                <div className="fe-card__accent" />
+                <div className="fe-card__body">
+                  <div className="fe-card__top">
+                    <span className="fe-card__name">{e.description || "(Sin detalle)"}</span>
+                    <span className="fe-card__date-badge">{formatDate(e.date)}</span>
+                  </div>
+                  <div className="fe-card__amount">{formatCurrency(e.amount)}</div>
+                  <div className="fe-card__meta">
+                    <span className="fe-card__badge">{categoryName(e)}</span>
+                    {paymentName(e) !== "-" && (
+                      <span className="fe-card__meta-item">{paymentName(e)}</span>
+                    )}
+                    {supplierName(e) && (
+                      <span className="fe-card__meta-item">{supplierName(e)}</span>
+                    )}
                   </div>
                 </div>
-                <div className="list-item__meta">
-                  <span>Fecha: {formatDate(exp.date)}</span>
-                  <span>
-                    Categoría:{" "}
-                    {exp.category?.name ||
-                      getNameById(categories, exp.category_id) ||
-                      "-"}
-                  </span>
-                  <span>Monto: {formatCurrency(exp.amount)}</span>
-                  <span>
-                    Método:{" "}
-                    {exp.payment_method?.name ||
-                      getNameById(paymentMethods, exp.payment_method_id) ||
-                      "-"}
-                  </span>
-                  <span>
-                    Proveedor:{" "}
-                    {exp.supplier?.name ||
-                      getNameById(suppliers, exp.supplier_id) ||
-                      "-"}
-                  </span>
-                </div>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
       </div>
 
-      <Modal
-        isOpen={Boolean(selectedExpense)}
-        onClose={closeModal}
-        title="Detalle del gasto"
-      >
+      {/* Modal detalle / edición */}
+      <Modal isOpen={Boolean(selectedExpense)} onClose={closeModal} title="Detalle del gasto">
         {selectedExpense && (
           <>
             {isEditingModal ? (
@@ -417,31 +411,17 @@ export default function DailyExpensesPage() {
                   <input
                     type="date"
                     value={modalForm.date}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setModalForm((p) => ({ ...p, date: e.target.value }))}
                   />
                 </label>
                 <label className="form-field">
                   <span>Categoría</span>
                   <select
                     value={modalForm.category}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        category: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setModalForm((p) => ({ ...p, category: e.target.value }))}
                   >
                     <option value="">Seleccioná</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </label>
                 <label className="form-field">
@@ -449,136 +429,67 @@ export default function DailyExpensesPage() {
                   <input
                     type="text"
                     value={modalForm.description}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setModalForm((p) => ({ ...p, description: e.target.value }))}
                   />
                 </label>
                 <label className="form-field">
-                  <span>Monto</span>
+                  <span>Monto (ARS)</span>
                   <input
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="number" min="0" step="1"
                     value={modalForm.amount}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        amount: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setModalForm((p) => ({ ...p, amount: e.target.value }))}
                   />
                 </label>
                 <label className="form-field">
                   <span>Método de pago</span>
                   <select
                     value={modalForm.paymentMethod}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        paymentMethod: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setModalForm((p) => ({ ...p, paymentMethod: e.target.value }))}
                   >
                     <option value="">Seleccioná</option>
-                    {paymentMethods.map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.name}
-                      </option>
-                    ))}
+                    {paymentMethods.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
                 </label>
                 <label className="form-field">
                   <span>Proveedor</span>
                   <select
                     value={modalForm.supplier}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        supplier: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setModalForm((p) => ({ ...p, supplier: e.target.value }))}
                   >
                     <option value="">Seleccioná</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
+                    {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </label>
               </>
             ) : (
-              <>
-                <div>
-                  <strong>Fecha:</strong> {formatDate(selectedExpense.date)}
+              <div className="fe-modal-detail">
+                <div className="fe-modal-detail__amount">{formatCurrency(selectedExpense.amount)}</div>
+                <div className="fe-modal-detail__rows">
+                  <div><strong>Fecha</strong><span>{formatDate(selectedExpense.date)}</span></div>
+                  <div><strong>Categoría</strong><span>{categoryName(selectedExpense)}</span></div>
+                  <div><strong>Descripción</strong><span>{selectedExpense.description || "-"}</span></div>
+                  <div><strong>Método de pago</strong><span>{paymentName(selectedExpense)}</span></div>
+                  <div><strong>Proveedor</strong><span>{supplierName(selectedExpense) || "-"}</span></div>
                 </div>
-                <div>
-                  <strong>Categoría:</strong>{" "}
-                  {selectedExpense.category?.name ||
-                    getNameById(categories, selectedExpense.category_id) ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Descripción:</strong>{" "}
-                  {selectedExpense.description || "-"}
-                </div>
-                <div>
-                  <strong>Monto:</strong> {formatCurrency(selectedExpense.amount)}
-                </div>
-                <div>
-                  <strong>Método de pago:</strong>{" "}
-                  {selectedExpense.payment_method?.name ||
-                    getNameById(paymentMethods, selectedExpense.payment_method_id) ||
-                    "-"}
-                </div>
-                <div>
-                  <strong>Proveedor:</strong>{" "}
-                  {selectedExpense.supplier?.name ||
-                    getNameById(suppliers, selectedExpense.supplier_id) ||
-                    "-"}
-                </div>
-              </>
+              </div>
             )}
             <div className="modal-actions">
               {isEditingModal ? (
                 <>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsEditingModal(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleModalSave}
-                  >
-                    Guardar cambios
-                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => setIsEditingModal(false)}>Cancelar</button>
+                  <button type="button" className="btn-primary" onClick={handleModalSave}>Guardar cambios</button>
                 </>
               ) : (
                 <>
                   <button
                     type="button"
-                    className="btn-primary"
-                    onClick={() => openModalEdit(selectedExpense)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
                     className="btn-danger"
-                    onClick={async () => {
-                      const removed = await handleDelete(selectedExpense.id);
-                      if (removed) closeModal();
-                    }}
+                    onClick={async () => { const ok = await handleDelete(selectedExpense.id); if (ok) closeModal(); }}
                   >
                     Eliminar
+                  </button>
+                  <button type="button" className="btn-primary" onClick={() => openModalEdit(selectedExpense)}>
+                    Editar
                   </button>
                 </>
               )}
