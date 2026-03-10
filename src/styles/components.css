@@ -1102,6 +1102,105 @@
 }
 .pet-card__ficha-btn:hover { opacity: 0.7; }
 
+/* Pet detail page */
+.pet-detail-profile {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.pet-detail-profile__bar {
+  height: 6px;
+  width: 100%;
+}
+
+.pet-detail-profile__body {
+  display: flex;
+  gap: 32px;
+  padding: 24px;
+  flex-wrap: wrap;
+}
+
+.pet-detail-profile__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.pet-detail-profile__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pet-detail-profile__name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0 0 4px;
+}
+
+.pet-detail-profile__breed {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin: 0 0 10px;
+}
+
+.pet-detail-profile__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pet-detail-profile__info {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 1px solid var(--color-border, #e5e7eb);
+  padding-left: 32px;
+}
+
+.pet-detail-profile__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.88rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+.pet-detail-profile__row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pet-detail-profile__row-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.pet-detail-profile__row-value {
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .pet-detail-profile__body { flex-direction: column; gap: 16px; }
+  .pet-detail-profile__info { border-left: none; padding-left: 0; border-top: 1px solid var(--color-border, #e5e7eb); padding-top: 16px; }
+}
+
 /* Pet modal header */
 .pet-modal-header {
   display: flex;

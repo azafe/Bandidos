@@ -3,6 +3,23 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 
+const PET_COLORS = [
+  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
+  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
+  "#6366f1", "#ec4899",
+];
+
+function petColor(name) {
+  if (!name) return PET_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return PET_COLORS[Math.abs(hash) % PET_COLORS.length];
+}
+
+function petInitial(name) {
+  return name ? name.charAt(0).toUpperCase() : "?";
+}
+
 function parseSheetDate(dateStr) {
   if (!dateStr) return null;
   const raw = String(dateStr).trim();
@@ -20,20 +37,11 @@ function parseSheetDate(dateStr) {
   if (parts.length !== 3) return null;
   let [p1, p2, p3] = parts.map((v) => Number(v));
   if (!p1 || !p2 || !p3) return null;
-  let day;
-  let month;
-  let year;
-  if (p1 > 12) {
-    day = p1;
-    month = p2;
-  } else if (p2 > 12) {
-    month = p1;
-    day = p2;
-  } else {
-    day = p1;
-    month = p2;
-  }
-  year = p3 < 100 ? 2000 + p3 : p3;
+  let day, month;
+  if (p1 > 12) { day = p1; month = p2; }
+  else if (p2 > 12) { month = p1; day = p2; }
+  else { day = p1; month = p2; }
+  const year = p3 < 100 ? 2000 + p3 : p3;
   const d = new Date(year, month - 1, day);
   return isNaN(d.getTime()) ? null : d;
 }
@@ -42,15 +50,24 @@ function formatDateDisplay(value) {
   if (!value) return "-";
   const parsed = parseSheetDate(value);
   if (!parsed || Number.isNaN(parsed.getTime())) return value;
-  const dd = String(parsed.getDate()).padStart(2, "0");
-  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
-  const yyyy = parsed.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return `${String(parsed.getDate()).padStart(2, "0")}/${String(parsed.getMonth() + 1).padStart(2, "0")}/${parsed.getFullYear()}`;
 }
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "-";
   return `$${Number(value).toLocaleString("es-AR")}`;
+}
+
+// Ordena servicios del más reciente al más antiguo
+function sortByDate(services) {
+  return [...services].sort((a, b) => {
+    const da = parseSheetDate(a.date);
+    const db = parseSheetDate(b.date);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return db - da;
+  });
 }
 
 export default function PetDetailPage() {
@@ -81,105 +98,131 @@ export default function PetDetailPage() {
       }
     }
     load();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [id]);
 
-  const totalServices = services.length;
-  const totalRevenue = services.reduce(
-    (sum, s) => sum + (Number(s.price) || 0),
-    0
-  );
+  const sorted = sortByDate(services);
+  const totalRevenue = services.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+  const avgRevenue = services.length > 0 ? totalRevenue / services.length : 0;
+  const lastService = sorted[0];
+  const color = petColor(pet?.name);
 
   return (
     <div className="page-content">
       <header className="page-header">
         <div>
           <h1 className="page-title">Ficha de mascota</h1>
-          <p className="page-subtitle">
-            Información general e historial de servicios.
-          </p>
+          <p className="page-subtitle">Información general e historial de servicios.</p>
         </div>
-        <Link to="/pets" className="btn-secondary">
-          Volver
-        </Link>
+        <Link to="/pets" className="btn-secondary">← Volver</Link>
       </header>
 
-      {error && (
-        <div className="card" style={{ color: "#f37b7b" }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="card" style={{ color: "#f37b7b" }}>{error}</div>}
 
       {loading ? (
-        <div className="card">Cargando ficha...</div>
-      ) : (
+        <div className="card card-subtitle" style={{ padding: 32, textAlign: "center" }}>Cargando ficha...</div>
+      ) : pet && (
         <>
-          <div className="card" style={{ marginBottom: 16 }}>
-            <h2 className="card-title">{pet?.name || "Mascota"}</h2>
-            <p className="card-subtitle">
-              Dueño: {pet?.owner_name || "-"} · Celular: {pet?.owner_phone || "-"}
-            </p>
-            <div className="list-item__meta" style={{ marginTop: 8 }}>
-              <span>Raza: {pet?.breed || "-"}</span>
-              <span style={{ marginLeft: 12 }}>
-                Castrado: {pet?.neutered ? "Sí" : "No"}
-              </span>
-            </div>
-            <div className="list-item__meta" style={{ marginTop: 6 }}>
-              <span>Comportamiento: {pet?.behavior || "-"}</span>
-            </div>
-            <div className="list-item__meta" style={{ marginTop: 6 }}>
-              <span>Notas: {pet?.notes || "-"}</span>
+          {/* Perfil */}
+          <div className="pet-detail-profile">
+            <div className="pet-detail-profile__bar" style={{ background: color }} />
+            <div className="pet-detail-profile__body">
+              <div className="pet-detail-profile__left">
+                <div className="pet-detail-profile__avatar" style={{ background: color }}>
+                  {petInitial(pet.name)}
+                </div>
+                <div>
+                  <h2 className="pet-detail-profile__name">{pet.name}</h2>
+                  {pet.breed && <p className="pet-detail-profile__breed">{pet.breed}</p>}
+                  <div className="pet-detail-profile__badges">
+                    <span className={`pet-card__tag${pet.neutered ? " pet-card__tag--yes" : ""}`}>
+                      {pet.neutered ? "Castrado" : "Sin castrar"}
+                    </span>
+                    {pet.behavior && <span className="pet-card__tag">{pet.behavior}</span>}
+                    {pet.age && <span className="pet-card__tag">{pet.age}</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="pet-detail-profile__info">
+                {[
+                  { label: "Dueño", value: pet.owner_name },
+                  { label: "Celular", value: pet.owner_phone },
+                  { label: "Dirección", value: pet.address },
+                  { label: "Notas", value: pet.notes },
+                ].filter((r) => r.value).map(({ label, value }) => (
+                  <div key={label} className="pet-detail-profile__row">
+                    <span className="pet-detail-profile__row-label">{label}</span>
+                    <span className="pet-detail-profile__row-value">{value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="cards-row" style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-            <div className="card" style={{ flex: 1 }}>
-              <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
-                Servicios totales
-              </h3>
-              <p style={{ fontSize: "2rem", fontWeight: 600 }}>{totalServices}</p>
+          {/* KPIs */}
+          <div className="card fixed-expenses-summary" style={{ marginBottom: 16 }}>
+            <div className="fixed-expenses-summary__kpis">
+              <div className="fe-kpi fe-kpi--total">
+                <span>Ingresos acumulados</span>
+                <strong>{formatPrice(totalRevenue)}</strong>
+              </div>
+              <div className="fe-kpi">
+                <span>Servicios totales</span>
+                <strong>{services.length}</strong>
+              </div>
+              <div className="fe-kpi">
+                <span>Promedio por servicio</span>
+                <strong>{services.length > 0 ? formatPrice(Math.round(avgRevenue)) : "-"}</strong>
+              </div>
+              <div className="fe-kpi">
+                <span>Último servicio</span>
+                <strong>{lastService ? formatDateDisplay(lastService.date) : "-"}</strong>
+                {lastService && <small>{lastService.service_type?.name || "Servicio"}</small>}
+              </div>
             </div>
-            <div className="card" style={{ flex: 1 }}>
-              <h3 style={{ fontSize: "0.95rem", marginBottom: 8 }}>
-                Ingresos acumulados
-              </h3>
-              <p style={{ fontSize: "2rem", fontWeight: 600 }}>
-                ${totalRevenue.toLocaleString("es-AR")}
+          </div>
+
+          {/* Historial */}
+          <div className="card">
+            <div style={{ marginBottom: 16 }}>
+              <h2 className="card-title">Historial de servicios</h2>
+              <p className="card-subtitle">
+                {services.length} {services.length === 1 ? "servicio registrado" : "servicios registrados"} · Del más reciente al más antiguo.
               </p>
             </div>
-          </div>
 
-          <div className="card">
-            <h2 className="card-title">Historial de servicios</h2>
-            <p className="card-subtitle">
-              Todos los servicios registrados para esta mascota.
-            </p>
-            <div className="list-wrapper" style={{ marginTop: 10 }}>
-              {services.length === 0 ? (
-                <div className="card-subtitle" style={{ textAlign: "center" }}>
-                  No hay servicios registrados para esta mascota.
-                </div>
-              ) : (
-                services.map((service) => (
-                  <div key={service.id} className="list-item">
-                    <div className="list-item__header">
-                      <div className="list-item__title">
-                        {service.service_type?.name || "Servicio"}
+            {services.length === 0 ? (
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
+                No hay servicios registrados para esta mascota.
+              </div>
+            ) : (
+              <div className="fe-cards-grid">
+                {sorted.map((service) => (
+                  <div key={service.id} className="fe-card" style={{ "--fe-accent": color }}>
+                    <div className="fe-card__accent" />
+                    <div className="fe-card__body">
+                      <div className="fe-card__top">
+                        <span className="fe-card__name">
+                          {service.service_type?.name || "Servicio"}
+                        </span>
+                        <span className="fe-card__date-badge">
+                          {formatDateDisplay(service.date)}
+                        </span>
+                      </div>
+                      <div className="fe-card__amount">{formatPrice(service.price)}</div>
+                      <div className="fe-card__meta">
+                        {service.groomer?.name && (
+                          <span className="fe-card__badge">{service.groomer.name}</span>
+                        )}
+                        {service.payment_method?.name && (
+                          <span className="fe-card__meta-item">{service.payment_method.name}</span>
+                        )}
                       </div>
                     </div>
-                    <div className="list-item__meta">
-                      <span>Fecha: {formatDateDisplay(service.date)}</span>
-                      <span>Groomer: {service.groomer?.name || "-"}</span>
-                      <span>Método: {service.payment_method?.name || "-"}</span>
-                      <span>Precio: {formatPrice(service.price)}</span>
-                    </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}
