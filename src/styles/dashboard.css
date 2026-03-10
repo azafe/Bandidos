@@ -467,8 +467,9 @@
   gap: 24px;
   align-items: center;
   border-radius: var(--radius-md, 14px);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-left: 4px solid #ef4444;
+  background: var(--color-surface);
   padding: 20px 24px;
 }
 
