@@ -1223,9 +1223,100 @@
   flex-shrink: 0;
 }
 
+/* ── Employee cards ───────────────────────────────────────────────────── */
+.employee-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.employee-card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.employee-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.employee-card--inactive { opacity: 0.55; }
+
+.employee-card__top-bar { height: 5px; width: 100%; }
+
+.employee-card__body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+.employee-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.employee-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.employee-card__header-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-card__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.employee-card__role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.employee-card__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.employee-card__contact-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.employee-card__notes {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
 @media (max-width: 640px) {
   .fe-cards-grid { grid-template-columns: 1fr; }
   .fixed-expenses-header-actions { flex-direction: column; align-items: stretch; }
   .pet-cards-grid { grid-template-columns: 1fr; }
   .pets-search-input { min-width: 0; width: 100%; }
+  .employee-cards-grid { grid-template-columns: 1fr; }
 }
