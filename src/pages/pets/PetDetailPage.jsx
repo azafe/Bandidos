@@ -83,13 +83,15 @@ export default function PetDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const [petData, servicesData] = await Promise.all([
+        const today = new Date().toISOString().slice(0, 10);
+        const [petData, agendaData] = await Promise.all([
           apiRequest(`/v2/pets/${id}`),
-          apiRequest("/v2/services", { params: { pet_id: id } }),
+          apiRequest("/agenda", { params: { from: "2020-01-01", to: today } }),
         ]);
         if (!active) return;
         setPet(petData);
-        setServices(Array.isArray(servicesData) ? servicesData : servicesData?.items || []);
+        const all = Array.isArray(agendaData) ? agendaData : agendaData?.items || [];
+        setServices(all.filter((s) => String(s.pet_id) === String(id)));
       } catch (err) {
         if (!active) return;
         setError(err.message || "No se pudo cargar la ficha de la mascota.");
