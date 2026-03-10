@@ -40,7 +40,8 @@ export default function KpiGrid({ kpis }) {
   const totalCosts = kpis.totalCosts || 0;
 
   // Barras de desglose de costos (proporción visual)
-  const expensePct = totalCosts > 0 ? (kpis.expenses / totalCosts) * 100 : 0;
+  const dailyPct      = totalCosts > 0 ? ((kpis.dailyExpenseTotal || 0) / totalCosts) * 100 : 0;
+  const fixedPct      = totalCosts > 0 ? ((kpis.fixedExpenseTotal || 0) / totalCosts) * 100 : 0;
   const commissionPct = totalCosts > 0 ? (kpis.groomerCommissions / totalCosts) * 100 : 0;
 
   return (
@@ -86,13 +87,22 @@ export default function KpiGrid({ kpis }) {
               </div>
             )}
 
-            {/* Gastos operativos */}
+            {/* Gastos diarios */}
             <div className="kpi-pnl__row kpi-pnl__row--expense">
               <div className="kpi-pnl__row-left">
                 <span className="kpi-pnl__dot kpi-pnl__dot--expense" />
-                <span>− Gastos operativos</span>
+                <span>− Gastos diarios</span>
               </div>
-              <span className="kpi-pnl__amount">{fmt(kpis.expenses)}</span>
+              <span className="kpi-pnl__amount">{fmt(kpis.dailyExpenseTotal)}</span>
+            </div>
+
+            {/* Gastos fijos */}
+            <div className="kpi-pnl__row kpi-pnl__row--expense">
+              <div className="kpi-pnl__row-left">
+                <span className="kpi-pnl__dot kpi-pnl__dot--expense" />
+                <span>− Gastos fijos</span>
+              </div>
+              <span className="kpi-pnl__amount">{fmt(kpis.fixedExpenseTotal)}</span>
             </div>
 
             {/* Comisiones */}
@@ -111,9 +121,14 @@ export default function KpiGrid({ kpis }) {
             {totalCosts > 0 && (
               <div className="kpi-pnl__bar-track">
                 <div
-                  className="kpi-pnl__bar-segment kpi-pnl__bar-segment--expense"
-                  style={{ width: `${expensePct}%` }}
-                  title={`Gastos: ${expensePct.toFixed(0)}%`}
+                  className="kpi-pnl__bar-segment kpi-pnl__bar-segment--daily"
+                  style={{ width: `${dailyPct}%` }}
+                  title={`Gastos diarios: ${dailyPct.toFixed(0)}%`}
+                />
+                <div
+                  className="kpi-pnl__bar-segment kpi-pnl__bar-segment--fixed"
+                  style={{ width: `${fixedPct}%` }}
+                  title={`Gastos fijos: ${fixedPct.toFixed(0)}%`}
                 />
                 <div
                   className="kpi-pnl__bar-segment kpi-pnl__bar-segment--commission"

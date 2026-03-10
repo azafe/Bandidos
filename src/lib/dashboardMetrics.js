@@ -397,6 +397,8 @@ export function buildDashboardMetrics({
       servicesIncome,
       petshopIncome,
       expenses,
+      dailyExpenseTotal,
+      fixedExpenseTotal,
       totalCosts,
       groomerCommissions,
       profit,

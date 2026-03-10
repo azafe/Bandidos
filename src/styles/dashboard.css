@@ -360,7 +360,8 @@
   gap: 2px;
 }
 .kpi-pnl__bar-segment { height: 100%; border-radius: 99px; transition: width 0.4s; }
-.kpi-pnl__bar-segment--expense    { background: #f97316; }
+.kpi-pnl__bar-segment--daily      { background: #f97316; }
+.kpi-pnl__bar-segment--fixed      { background: #ef4444; }
 .kpi-pnl__bar-segment--commission { background: #a855f7; }
 
 .kpi-pnl__row--result {
