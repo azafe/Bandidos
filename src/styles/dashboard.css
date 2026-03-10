@@ -310,7 +310,8 @@
   flex-shrink: 0;
 }
 .kpi-pnl__dot--income     { background: #22c55e; }
-.kpi-pnl__dot--expense    { background: #f97316; }
+.kpi-pnl__dot--daily      { background: #f97316; }
+.kpi-pnl__dot--fixed      { background: #ef4444; }
 .kpi-pnl__dot--commission { background: #a855f7; }
 
 .kpi-pnl__tag {
@@ -344,12 +345,64 @@
 }
 
 .kpi-pnl__row--income .kpi-pnl__amount     { color: #16a34a; }
-.kpi-pnl__row--expense .kpi-pnl__amount    { color: #ea580c; }
+.kpi-pnl__row--daily .kpi-pnl__amount      { color: #ea580c; }
+.kpi-pnl__row--fixed .kpi-pnl__amount      { color: #dc2626; }
 .kpi-pnl__row--commission .kpi-pnl__amount { color: #7e22ce; }
 .kpi-pnl__row--positive .kpi-pnl__amount--result { color: #16a34a; }
 .kpi-pnl__row--negative .kpi-pnl__amount--result { color: #dc2626; }
 
 /* Barra visual de composición de costos */
+/* Progreso hacia equilibrio en el hero */
+.kpi-hero__breakeven-hint {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.kpi-hero__breakeven-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+
+.kpi-hero__breakeven-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: var(--color-surface-alt, rgba(0,0,0,0.08));
+  overflow: hidden;
+}
+
+.kpi-hero__breakeven-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #ef4444;
+  transition: width 0.5s ease;
+}
+
+/* Leyenda de la barra de costos */
+.kpi-pnl__bar-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.kpi-pnl__legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.kpi-pnl__legend-dot--daily      { background: #f97316; }
+.kpi-pnl__legend-dot--fixed      { background: #ef4444; }
+.kpi-pnl__legend-dot--commission { background: #a855f7; }
+
 .kpi-pnl__bar-track {
   display: flex;
   height: 5px;

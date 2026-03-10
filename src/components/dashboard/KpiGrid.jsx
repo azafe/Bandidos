@@ -1,7 +1,7 @@
 // src/components/dashboard/KpiGrid.jsx
 
 function fmt(value) {
-  return `$${Number(value || 0).toLocaleString("es-AR")}`;
+  return `$${Math.round(Number(value || 0)).toLocaleString("es-AR")}`;
 }
 
 function fmtPct(ratio) {
@@ -11,7 +11,6 @@ function fmtPct(ratio) {
 
 function Delta({ value }) {
   if (value === null || value === undefined) return null;
-  // Suprimimos deltas disparatados (>500%) — son ruido cuando el período anterior era ~0
   if (Math.abs(value) > 5) return null;
   const positive = value >= 0;
   return (
@@ -40,15 +39,20 @@ export default function KpiGrid({ kpis }) {
   const isPositive = profit >= 0;
   const margin = kpis.margin || 0;
   const totalCosts = kpis.totalCosts || 0;
+  const avgTicket = Math.round(kpis.avgTicket || 0);
 
   // Punto de equilibrio
-  const netPerService = (kpis.avgTicket || 0) * (1 - COMMISSION_RATE);
+  const netPerService = avgTicket * (1 - COMMISSION_RATE);
   const servicesNeeded = netPerService > 0 ? Math.ceil(Math.abs(profit) / netPerService) : null;
+  const totalServicesForBreakEven = (kpis.servicesCount || 0) + (servicesNeeded || 0);
+  const breakEvenProgress = totalServicesForBreakEven > 0
+    ? Math.min(100, ((kpis.servicesCount || 0) / totalServicesForBreakEven) * 100)
+    : 0;
 
   // Barras de desglose de costos (proporción visual)
   const dailyPct      = totalCosts > 0 ? ((kpis.dailyExpenseTotal || 0) / totalCosts) * 100 : 0;
   const fixedPct      = totalCosts > 0 ? ((kpis.fixedExpenseTotal || 0) / totalCosts) * 100 : 0;
-  const commissionPct = totalCosts > 0 ? (kpis.groomerCommissions / totalCosts) * 100 : 0;
+  const commissionPct = totalCosts > 0 ? ((kpis.groomerCommissions || 0) / totalCosts) * 100 : 0;
 
   return (
     <section className="kpi-section">
@@ -67,6 +71,22 @@ export default function KpiGrid({ kpis }) {
           <div className={`kpi-hero__pill ${isPositive ? "kpi-hero__pill--ok" : "kpi-hero__pill--loss"}`}>
             {isPositive ? "En ganancia" : "En pérdida"}
           </div>
+
+          {/* Mini progreso hacia equilibrio */}
+          {!isPositive && servicesNeeded !== null && (
+            <div className="kpi-hero__breakeven-hint">
+              <div className="kpi-hero__breakeven-label">
+                <span>{kpis.servicesCount} servicios realizados</span>
+                <span>{servicesNeeded} más para equilibrio</span>
+              </div>
+              <div className="kpi-hero__breakeven-bar">
+                <div
+                  className="kpi-hero__breakeven-fill"
+                  style={{ width: `${breakEvenProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* P&L Breakdown */}
@@ -94,18 +114,18 @@ export default function KpiGrid({ kpis }) {
             )}
 
             {/* Gastos diarios */}
-            <div className="kpi-pnl__row kpi-pnl__row--expense">
+            <div className="kpi-pnl__row kpi-pnl__row--daily">
               <div className="kpi-pnl__row-left">
-                <span className="kpi-pnl__dot kpi-pnl__dot--expense" />
+                <span className="kpi-pnl__dot kpi-pnl__dot--daily" />
                 <span>− Gastos diarios</span>
               </div>
               <span className="kpi-pnl__amount">{fmt(kpis.dailyExpenseTotal)}</span>
             </div>
 
             {/* Gastos fijos */}
-            <div className="kpi-pnl__row kpi-pnl__row--expense">
+            <div className="kpi-pnl__row kpi-pnl__row--fixed">
               <div className="kpi-pnl__row-left">
-                <span className="kpi-pnl__dot kpi-pnl__dot--expense" />
+                <span className="kpi-pnl__dot kpi-pnl__dot--fixed" />
                 <span>− Gastos fijos</span>
               </div>
               <span className="kpi-pnl__amount">{fmt(kpis.fixedExpenseTotal)}</span>
@@ -115,7 +135,7 @@ export default function KpiGrid({ kpis }) {
             <div className="kpi-pnl__row kpi-pnl__row--commission">
               <div className="kpi-pnl__row-left">
                 <span className="kpi-pnl__dot kpi-pnl__dot--commission" />
-                <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <span>− Comisiones groomers</span>
                   <span className="kpi-pnl__tag">40% de servicios</span>
                 </div>
@@ -125,23 +145,30 @@ export default function KpiGrid({ kpis }) {
 
             {/* Barra visual de composición de costos */}
             {totalCosts > 0 && (
-              <div className="kpi-pnl__bar-track">
-                <div
-                  className="kpi-pnl__bar-segment kpi-pnl__bar-segment--daily"
-                  style={{ width: `${dailyPct}%` }}
-                  title={`Gastos diarios: ${dailyPct.toFixed(0)}%`}
-                />
-                <div
-                  className="kpi-pnl__bar-segment kpi-pnl__bar-segment--fixed"
-                  style={{ width: `${fixedPct}%` }}
-                  title={`Gastos fijos: ${fixedPct.toFixed(0)}%`}
-                />
-                <div
-                  className="kpi-pnl__bar-segment kpi-pnl__bar-segment--commission"
-                  style={{ width: `${commissionPct}%` }}
-                  title={`Comisiones: ${commissionPct.toFixed(0)}%`}
-                />
-              </div>
+              <>
+                <div className="kpi-pnl__bar-track">
+                  <div
+                    className="kpi-pnl__bar-segment kpi-pnl__bar-segment--daily"
+                    style={{ width: `${dailyPct}%` }}
+                    title={`Gastos diarios: ${dailyPct.toFixed(0)}%`}
+                  />
+                  <div
+                    className="kpi-pnl__bar-segment kpi-pnl__bar-segment--fixed"
+                    style={{ width: `${fixedPct}%` }}
+                    title={`Gastos fijos: ${fixedPct.toFixed(0)}%`}
+                  />
+                  <div
+                    className="kpi-pnl__bar-segment kpi-pnl__bar-segment--commission"
+                    style={{ width: `${commissionPct}%` }}
+                    title={`Comisiones: ${commissionPct.toFixed(0)}%`}
+                  />
+                </div>
+                <div className="kpi-pnl__bar-legend">
+                  <span><span className="kpi-pnl__legend-dot kpi-pnl__legend-dot--daily"/>Diarios {dailyPct.toFixed(0)}%</span>
+                  <span><span className="kpi-pnl__legend-dot kpi-pnl__legend-dot--fixed"/>Fijos {fixedPct.toFixed(0)}%</span>
+                  <span><span className="kpi-pnl__legend-dot kpi-pnl__legend-dot--commission"/>Comisiones {commissionPct.toFixed(0)}%</span>
+                </div>
+              </>
             )}
 
             {/* Resultado */}
@@ -162,9 +189,8 @@ export default function KpiGrid({ kpis }) {
             <span className="kpi-breakeven__eyebrow">Punto de equilibrio</span>
             <div className="kpi-breakeven__value">{servicesNeeded} servicios más</div>
             <p className="kpi-breakeven__desc">
-              Con un ticket promedio de <strong>{fmt(kpis.avgTicket)}</strong> y descontando el <strong>40%</strong> de comisión
-              al groomer, cada servicio aporta <strong>{fmt(Math.round(netPerService))}</strong> neto.
-              Para cubrir la pérdida de <strong>{fmt(Math.abs(profit))}</strong> necesitás {servicesNeeded} servicios adicionales.
+              Ticket promedio <strong>{fmt(avgTicket)}</strong> · comisión groomer <strong>40%</strong> · aporte neto por servicio <strong>{fmt(Math.round(netPerService))}</strong>.
+              Con {servicesNeeded} servicios adicionales cubrís la pérdida de <strong>{fmt(Math.abs(profit))}</strong>.
             </p>
           </div>
           <div className="kpi-breakeven__right">
@@ -196,7 +222,7 @@ export default function KpiGrid({ kpis }) {
         />
         <SecondaryKpi
           label="Ticket promedio"
-          value={fmt(kpis.avgTicket)}
+          value={fmt(avgTicket)}
           delta={deltas.avgTicket}
         />
         <SecondaryKpi
