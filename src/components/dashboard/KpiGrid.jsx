@@ -32,12 +32,18 @@ function SecondaryKpi({ label, value, delta, note }) {
   );
 }
 
+const COMMISSION_RATE = 0.40;
+
 export default function KpiGrid({ kpis }) {
   const deltas = kpis.deltas || {};
   const profit = kpis.profit || 0;
   const isPositive = profit >= 0;
   const margin = kpis.margin || 0;
   const totalCosts = kpis.totalCosts || 0;
+
+  // Punto de equilibrio
+  const netPerService = (kpis.avgTicket || 0) * (1 - COMMISSION_RATE);
+  const servicesNeeded = netPerService > 0 ? Math.ceil(Math.abs(profit) / netPerService) : null;
 
   // Barras de desglose de costos (proporción visual)
   const dailyPct      = totalCosts > 0 ? ((kpis.dailyExpenseTotal || 0) / totalCosts) * 100 : 0;
@@ -148,6 +154,38 @@ export default function KpiGrid({ kpis }) {
           </div>
         </div>
       </div>
+
+      {/* ── Insight: punto de equilibrio ─────────────────────────────── */}
+      {!isPositive && servicesNeeded !== null && (
+        <div className="kpi-breakeven">
+          <div className="kpi-breakeven__left">
+            <span className="kpi-breakeven__eyebrow">Punto de equilibrio</span>
+            <div className="kpi-breakeven__value">{servicesNeeded} servicios más</div>
+            <p className="kpi-breakeven__desc">
+              Con un ticket promedio de <strong>{fmt(kpis.avgTicket)}</strong> y descontando el <strong>40%</strong> de comisión
+              al groomer, cada servicio aporta <strong>{fmt(Math.round(netPerService))}</strong> neto.
+              Para cubrir la pérdida de <strong>{fmt(Math.abs(profit))}</strong> necesitás {servicesNeeded} servicios adicionales.
+            </p>
+          </div>
+          <div className="kpi-breakeven__right">
+            <div className="kpi-breakeven__formula">
+              <div className="kpi-breakeven__formula-row">
+                <span>Pérdida a cubrir</span>
+                <span className="kpi-breakeven__formula-val kpi-breakeven__formula-val--loss">{fmt(Math.abs(profit))}</span>
+              </div>
+              <div className="kpi-breakeven__formula-row">
+                <span>Aporte neto por servicio</span>
+                <span className="kpi-breakeven__formula-val">{fmt(Math.round(netPerService))}</span>
+              </div>
+              <div className="kpi-breakeven__formula-divider" />
+              <div className="kpi-breakeven__formula-row kpi-breakeven__formula-row--result">
+                <span>Servicios necesarios</span>
+                <span className="kpi-breakeven__formula-val kpi-breakeven__formula-val--highlight">{servicesNeeded}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Fila secundaria: métricas de operación ────────────────────── */}
       <div className="kpi-secondary">
