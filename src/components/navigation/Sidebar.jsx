@@ -95,6 +95,14 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           Tipos de Servicio
         </NavLink>
 
+        <NavLink
+          to="/suppliers"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={handleNavigate}
+        >
+          Proveedores
+        </NavLink>
+
         {showBackofficeLinks && (
           <>
             <NavLink
@@ -111,14 +119,6 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               onClick={handleNavigate}
             >
               Categoría Gastos
-            </NavLink>
-
-            <NavLink
-              to="/suppliers"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Proveedores
             </NavLink>
 
             {user?.role === "admin" && (
