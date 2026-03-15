@@ -1356,20 +1356,6 @@ export default function AgendaPage() {
                 <span>Finalizados</span>
                 <strong>{summary.finished}</strong>
               </div>
-              <div className="fe-kpi">
-                <span>Próximo</span>
-                {nextTurno ? (
-                  <>
-                    <strong>{formatTime(nextTurno.time)}</strong>
-                    <small>{nextTurno.pet_name || "Mascota"}</small>
-                  </>
-                ) : (
-                  <>
-                    <strong>—</strong>
-                    <small>Sin turnos</small>
-                  </>
-                )}
-              </div>
             </div>
 
             <div className="agenda-filter-chips">
