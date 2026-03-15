@@ -1306,8 +1306,9 @@ export default function AgendaPage() {
           </div>
 
           {viewMode === "operation" ? (
-            <div className="agenda-search agenda-search--primary agenda-command__search">
+            <div className="agenda-command__search">
               <input
+                className="pets-search-input"
                 type="text"
                 placeholder="Buscar por mascota, dueño o groomer..."
                 value={search}
@@ -1342,23 +1343,33 @@ export default function AgendaPage() {
 
         {viewMode === "operation" ? (
           <>
-            <div className="agenda-kpi-strip">
-              <span className="agenda-chip agenda-chip--neutral">
-                Turnos: <strong>{summary.total}</strong>
-              </span>
-              <span className="agenda-chip agenda-chip--pending">
-                Pendientes {summary.reserved}
-              </span>
-              <span className="agenda-chip agenda-chip--ok">
-                Finalizados {summary.finished}
-              </span>
-              {nextTurno ? (
-                <span className="agenda-chip agenda-chip--next">
-                  Próximo: {formatTime(nextTurno.time)} · {nextTurno.pet_name || "Mascota"}
-                </span>
-              ) : (
-                <span className="agenda-chip agenda-chip--next">Sin turnos para hoy</span>
-              )}
+            <div className="fixed-expenses-summary__kpis agenda-kpi-row">
+              <div className="fe-kpi">
+                <span>Turnos</span>
+                <strong>{summary.total}</strong>
+              </div>
+              <div className="fe-kpi">
+                <span>Pendientes</span>
+                <strong>{summary.reserved}</strong>
+              </div>
+              <div className="fe-kpi fe-kpi--total">
+                <span>Finalizados</span>
+                <strong>{summary.finished}</strong>
+              </div>
+              <div className="fe-kpi">
+                <span>Próximo</span>
+                {nextTurno ? (
+                  <>
+                    <strong>{formatTime(nextTurno.time)}</strong>
+                    <small>{nextTurno.pet_name || "Mascota"}</small>
+                  </>
+                ) : (
+                  <>
+                    <strong>—</strong>
+                    <small>Sin turnos</small>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="agenda-filter-chips">

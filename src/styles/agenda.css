@@ -38,7 +38,17 @@
 .agenda-daybar__label {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--color-text, #111827);
+}
+
+.agenda-kpi-row {
+  border-top: 1px solid var(--color-border, rgba(17,24,39,0.08));
+  padding-top: 12px;
+  margin-bottom: 0;
+}
+
+.agenda-command__search input.pets-search-input {
+  width: 100%;
 }
 
 .agenda-finish {
