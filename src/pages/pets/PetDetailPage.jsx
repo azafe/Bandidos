@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
+import Modal from "../../components/ui/Modal";
 
 const PET_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -58,6 +59,32 @@ function formatPrice(value) {
   return `$${Number(value).toLocaleString("es-AR")}`;
 }
 
+function formatTime(value) {
+  if (!value) return null;
+  return String(value).slice(0, 5);
+}
+
+function formatDuration(minutes) {
+  const m = Number(minutes);
+  if (!m || !Number.isFinite(m)) return null;
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem > 0 ? `${h} h ${rem} min` : `${h} h`;
+}
+
+const STATUS_LABELS = {
+  reserved:  "Reservado",
+  finished:  "Finalizado",
+  cancelled: "Cancelado",
+};
+
+const STATUS_COLORS = {
+  reserved:  { bg: "rgba(59,130,246,0.12)", color: "#1d4ed8" },
+  finished:  { bg: "rgba(34,197,94,0.15)",  color: "#15803d" },
+  cancelled: { bg: "rgba(248,113,113,0.15)", color: "#b91c1c" },
+};
+
 // Ordena servicios del más reciente al más antiguo
 function sortByDate(services) {
   return [...services].sort((a, b) => {
@@ -76,6 +103,7 @@ export default function PetDetailPage() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedService, setSelectedService] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -200,7 +228,12 @@ export default function PetDetailPage() {
             ) : (
               <div className="fe-cards-grid">
                 {sorted.map((service) => (
-                  <div key={service.id} className="fe-card" style={{ "--fe-accent": color }}>
+                  <div
+                    key={service.id}
+                    className="fe-card"
+                    style={{ "--fe-accent": color, cursor: "pointer" }}
+                    onClick={() => setSelectedService(service)}
+                  >
                     <div className="fe-card__accent" />
                     <div className="fe-card__body">
                       <div className="fe-card__top">
@@ -228,6 +261,76 @@ export default function PetDetailPage() {
           </div>
         </>
       )}
+
+      {/* Modal detalle de servicio */}
+      <Modal
+        isOpen={Boolean(selectedService)}
+        onClose={() => setSelectedService(null)}
+        title="Detalle del servicio"
+      >
+        {selectedService && (() => {
+          const s = selectedService;
+          const status = s.status || "reserved";
+          const statusStyle = STATUS_COLORS[status] || STATUS_COLORS.reserved;
+          const deposit = Number(s.deposit_amount) || 0;
+          const price = Number(s.price) || 0;
+          const remaining = Math.max(0, price - deposit);
+          return (
+            <div className="fe-modal-detail">
+              {/* Hero */}
+              <div className="pet-modal-header">
+                <div className="pet-modal-avatar" style={{ background: color }}>
+                  {petInitial(pet?.name)}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "1.15rem" }}>
+                    {s.service_type?.name || "Servicio"}
+                  </div>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginTop: 4,
+                      padding: "2px 10px",
+                      borderRadius: 999,
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      background: statusStyle.bg,
+                      color: statusStyle.color,
+                    }}
+                  >
+                    {STATUS_LABELS[status] || status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="fe-modal-detail__rows">
+                <div><strong>Fecha</strong><span>{formatDateDisplay(s.date)}</span></div>
+                {formatTime(s.time) && (
+                  <div><strong>Hora</strong><span>{formatTime(s.time)}</span></div>
+                )}
+                {formatDuration(s.duration) && (
+                  <div><strong>Duración</strong><span>{formatDuration(s.duration)}</span></div>
+                )}
+                <div><strong>Groomer</strong><span>{s.groomer?.name || "-"}</span></div>
+                <div><strong>Precio</strong><span>{formatPrice(price)}</span></div>
+                {deposit > 0 && (
+                  <div><strong>Seña</strong><span>{formatPrice(deposit)}</span></div>
+                )}
+                {deposit > 0 && (
+                  <div><strong>Saldo restante</strong><span>{formatPrice(remaining)}</span></div>
+                )}
+                <div><strong>Método de pago</strong><span>{s.payment_method?.name || "-"}</span></div>
+                {s.notes && (
+                  <div style={{ flexDirection: "column", alignItems: "flex-start" }}>
+                    <strong>Notas</strong>
+                    <span style={{ marginTop: 4, fontSize: "0.88rem" }}>{s.notes}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }
