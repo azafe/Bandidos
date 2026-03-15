@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
+
+const PAGE_SIZE = 24;
 
 const PET_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -23,6 +25,7 @@ function petInitial(name) {
 
 export default function PetsPage() {
   const [filters, setFilters] = useState({ q: "" });
+  const [page, setPage] = useState(1);
   const {
     items: pets,
     loading,
@@ -32,6 +35,30 @@ export default function PetsPage() {
     deleteItem,
   } = useApiResource("/v2/pets", filters);
   const { user } = useAuth();
+
+  const totalPages = Math.ceil(pets.length / PAGE_SIZE);
+  const paginatedPets = useMemo(
+    () => pets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [pets, page]
+  );
+
+  function handleFilterChange(q) {
+    setFilters({ q });
+    setPage(1);
+  }
+
+  function pageNumbers(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = new Set([1, total, current]);
+    if (current > 1) pages.add(current - 1);
+    if (current < total) pages.add(current + 1);
+    return [...pages].sort((a, b) => a - b).reduce((acc, n, i, arr) => {
+      if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
+      acc.push(n);
+      return acc;
+    }, []);
+  }
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
@@ -162,7 +189,7 @@ export default function PetsPage() {
             type="text"
             placeholder="Buscar por mascota, dueño o celular…"
             value={filters.q}
-            onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
+            onChange={(e) => handleFilterChange(e.target.value)}
             className="pets-search-input"
           />
           <button
@@ -243,7 +270,7 @@ export default function PetsPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
           <div>
             <h2 className="card-title">Mascotas registradas</h2>
-            <p className="card-subtitle">{pets.length} registros · Hacé clic para ver detalle.</p>
+            <p className="card-subtitle">{pets.length} registros · Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, pets.length)} · Hacé clic para ver detalle.</p>
           </div>
         </div>
 
@@ -256,7 +283,7 @@ export default function PetsPage() {
         )}
 
         <div className="pet-cards-grid">
-          {pets.map((pet) => {
+          {paginatedPets.map((pet) => {
             const color = petColor(pet.name);
             return (
               <div
@@ -316,6 +343,45 @@ export default function PetsPage() {
             );
           })}
         </div>
+
+        {totalPages > 1 && (
+          <div className="pets-pagination">
+            <button
+              type="button"
+              className="pets-pagination__btn"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              ← Anterior
+            </button>
+
+            <div className="pets-pagination__pages">
+              {pageNumbers(page, totalPages).map((n, i) =>
+                n === "…" ? (
+                  <span key={`ellipsis-${i}`} className="pets-pagination__ellipsis">…</span>
+                ) : (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`pets-pagination__btn pets-pagination__btn--page${page === n ? " is-active" : ""}`}
+                    onClick={() => setPage(n)}
+                  >
+                    {n}
+                  </button>
+                )
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="pets-pagination__btn"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Siguiente →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal detalle / edición */}

@@ -995,6 +995,64 @@
   gap: 12px;
 }
 
+/* ── Paginación ────────────────────────────────────────────────────────────── */
+.pets-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 20px;
+  flex-wrap: wrap;
+}
+
+.pets-pagination__pages {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.pets-pagination__btn {
+  border: 1px solid var(--color-border, rgba(17,24,39,0.12));
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.pets-pagination__btn:hover:not(:disabled) {
+  background: rgba(217, 72, 239, 0.08);
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.pets-pagination__btn--page {
+  min-width: 36px;
+  padding: 7px 10px;
+  text-align: center;
+}
+
+.pets-pagination__btn--page.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.pets-pagination__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pets-pagination__ellipsis {
+  padding: 0 4px;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
 .pet-card {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border, #e5e7eb);
