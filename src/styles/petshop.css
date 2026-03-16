@@ -297,6 +297,8 @@
 
 .petshop-stepper input {
   text-align: center;
+  width: 100%;
+  min-width: 0; /* prevent grid cell blowout */
 }
 
 .petshop-stepper__btn {
