@@ -704,46 +704,37 @@ export default function ServicesListPage() {
                   onFocus={() => setIsFilterPetOpen(true)}
                   onBlur={() => setTimeout(() => setIsFilterPetOpen(false), 120)}
                   autoComplete="off"
-                  disabled={!filters.customer_id}
                 />
                 {isFilterPetOpen ? (
                   <div className="combo-field__list" role="listbox">
-                    {!filters.customer_id ? (
-                      <div className="combo-field__empty">
-                        Seleccioná un cliente primero
-                      </div>
+                    <button
+                      type="button"
+                      className="combo-field__option"
+                      onMouseDown={() => {
+                        setFilters((prev) => ({ ...prev, pet_id: "" }));
+                        setFilterPetSearch("");
+                        setIsFilterPetOpen(false);
+                      }}
+                    >
+                      Todas
+                    </button>
+                    {filteredFilterPets.length === 0 ? (
+                      <div className="combo-field__empty">Sin resultados</div>
                     ) : (
-                      <>
+                      filteredFilterPets.map((p) => (
                         <button
+                          key={p.id}
                           type="button"
                           className="combo-field__option"
                           onMouseDown={() => {
-                            setFilters((prev) => ({ ...prev, pet_id: "" }));
-                            setFilterPetSearch("");
+                            setFilters((prev) => ({ ...prev, pet_id: p.id }));
+                            setFilterPetSearch(p.name || "");
                             setIsFilterPetOpen(false);
                           }}
                         >
-                          Todas
+                          {p.name}
                         </button>
-                        {filteredFilterPets.length === 0 ? (
-                          <div className="combo-field__empty">Sin resultados</div>
-                        ) : (
-                          filteredFilterPets.map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              className="combo-field__option"
-                              onMouseDown={() => {
-                                setFilters((prev) => ({ ...prev, pet_id: p.id }));
-                                setFilterPetSearch(p.name || "");
-                                setIsFilterPetOpen(false);
-                              }}
-                            >
-                              {p.name}
-                            </button>
-                          ))
-                        )}
-                      </>
+                      ))
                     )}
                   </div>
                 ) : null}
