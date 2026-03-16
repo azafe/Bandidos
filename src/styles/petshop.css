@@ -157,10 +157,29 @@
   color: var(--color-text-muted);
 }
 
-/* Quantity + price + total + delete row */
+/* Quantity + price + subtotal + delete row */
+.petshop-item-controls {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.petshop-item-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.petshop-item-field__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted, #6b7280);
+}
+
 .petshop-item-row {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  display: flex;
   gap: 8px;
   align-items: center;
 }
@@ -174,20 +193,56 @@
 }
 
 .petshop-stepper {
-  width: 100%;
-  max-width: 120px;
+  width: 120px;
 }
 
-.petshop-item-row__price {
-  width: 100%;
+/* Price input with $ prefix */
+.petshop-price-field {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: #f9f9fc;
+  overflow: hidden;
+}
+
+.petshop-price-field__prefix {
+  padding: 8px 8px 8px 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: rgba(17,24,39,0.04);
+  border-right: 1px solid var(--color-border-soft);
+  user-select: none;
+}
+
+.petshop-price-field input {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  width: 100px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.petshop-price-field input:focus {
+  outline: none;
 }
 
 .petshop-item-row__total {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #16a34a;
   white-space: nowrap;
 }
 
-.petshop-item-row--invalid input {
+.petshop-item-delete {
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+
+.petshop-item-card--invalid .petshop-stepper input,
+.petshop-item-card--invalid .petshop-price-field {
   border-color: rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.05);
 }

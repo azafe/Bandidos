@@ -650,57 +650,65 @@ export default function PetShopPage() {
                       </div>
                     </div>
 
-                    {/* Cantidad, precio, total, eliminar */}
-                    <div className="petshop-item-row">
-                      <div className="petshop-stepper" role="group" aria-label="Cantidad">
-                        <button
-                          type="button"
-                          className="petshop-stepper__btn"
-                          onClick={() => adjustSaleQuantity(index, -1)}
-                          aria-label="Disminuir cantidad"
-                        >
-                          −
-                        </button>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(e) => updateSaleItem(index, { quantity: e.target.value })}
-                          onBlur={(e) => {
-                            const next = Math.max(1, toNumber(e.target.value, 1));
-                            updateSaleItem(index, { quantity: next });
-                          }}
-                          aria-label="Cantidad"
-                        />
-                        <button
-                          type="button"
-                          className="petshop-stepper__btn"
-                          onClick={() => adjustSaleQuantity(index, 1)}
-                          aria-label="Aumentar cantidad"
-                        >
-                          +
-                        </button>
+                    {/* Cantidad, precio, subtotal, eliminar */}
+                    <div className="petshop-item-controls">
+                      <div className="petshop-item-field">
+                        <span className="petshop-item-field__label">Cantidad</span>
+                        <div className="petshop-stepper" role="group" aria-label="Cantidad">
+                          <button
+                            type="button"
+                            className="petshop-stepper__btn"
+                            onClick={() => adjustSaleQuantity(index, -1)}
+                            aria-label="Disminuir cantidad"
+                          >−</button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => updateSaleItem(index, { quantity: e.target.value })}
+                            onBlur={(e) => {
+                              const next = Math.max(1, toNumber(e.target.value, 1));
+                              updateSaleItem(index, { quantity: next });
+                            }}
+                            aria-label="Cantidad"
+                          />
+                          <button
+                            type="button"
+                            className="petshop-stepper__btn"
+                            onClick={() => adjustSaleQuantity(index, 1)}
+                            aria-label="Aumentar cantidad"
+                          >+</button>
+                        </div>
                       </div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="100"
-                        value={item.unit_price}
-                        onChange={(e) => updateSaleItem(index, { unit_price: e.target.value })}
-                        aria-label="Precio unitario"
-                        className="petshop-item-row__price"
-                      />
-                      <span className="petshop-item-row__total">
-                        {formatCurrency(toNumber(item.quantity) * toNumber(item.unit_price))}
-                      </span>
+
+                      <div className="petshop-item-field">
+                        <span className="petshop-item-field__label">Precio unit.</span>
+                        <div className="petshop-price-field">
+                          <span className="petshop-price-field__prefix">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="100"
+                            value={item.unit_price}
+                            onChange={(e) => updateSaleItem(index, { unit_price: e.target.value })}
+                            aria-label="Precio unitario"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="petshop-item-field">
+                        <span className="petshop-item-field__label">Subtotal</span>
+                        <span className="petshop-item-row__total">
+                          {formatCurrency(toNumber(item.quantity) * toNumber(item.unit_price))}
+                        </span>
+                      </div>
+
                       <button
                         type="button"
-                        className="petshop-icon-button petshop-icon-button--ghost"
+                        className="petshop-icon-button petshop-icon-button--ghost petshop-item-delete"
                         onClick={() => setSaleItems((prev) => prev.filter((_, idx) => idx !== index))}
                         aria-label="Quitar ítem"
-                      >
-                        🗑
-                      </button>
+                      >🗑</button>
                     </div>
 
                     {isInvalid && (
