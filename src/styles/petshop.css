@@ -159,10 +159,10 @@
 
 /* Quantity + price + subtotal + delete row */
 .petshop-item-controls {
-  display: grid;
-  grid-template-columns: max-content max-content 1fr max-content;
-  gap: 8px;
-  align-items: end;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .petshop-item-field {
@@ -171,12 +171,26 @@
   gap: 4px;
 }
 
+.petshop-item-field--subtotal {
+  flex: 1;
+  min-width: 72px;
+}
+
 .petshop-item-field__label {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted, #6b7280);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.petshop-item-op {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #9ca3af);
+  padding-bottom: 11px;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .petshop-item-row {
@@ -194,7 +208,21 @@
 }
 
 .petshop-stepper {
-  width: 132px;
+  width: 120px;
+}
+
+/* Hide native number spinners inside petshop controls */
+.petshop-stepper input::-webkit-inner-spin-button,
+.petshop-stepper input::-webkit-outer-spin-button,
+.petshop-price-field input::-webkit-inner-spin-button,
+.petshop-price-field input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.petshop-stepper input,
+.petshop-price-field input {
+  -moz-appearance: textfield;
 }
 
 /* Price input with $ prefix */
@@ -233,13 +261,14 @@
 .petshop-item-row__total {
   font-weight: 700;
   font-size: 1rem;
-  color: #16a34a;
+  color: #111827;
   white-space: nowrap;
+  padding: 8px 0;
 }
 
 .petshop-item-delete {
-  align-self: end;
-  margin-bottom: 1px;
+  align-self: flex-end;
+  flex-shrink: 0;
 }
 
 .petshop-item-card--invalid .petshop-stepper input,

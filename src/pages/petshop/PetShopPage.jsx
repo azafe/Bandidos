@@ -526,7 +526,6 @@ export default function PetShopPage() {
             <p className="card-subtitle">
               Registrá ventas de productos físicos y ajustá el stock.
             </p>
-            <div className="petshop-section-label">Fecha</div>
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="sale_date">Fecha</label>
@@ -681,6 +680,8 @@ export default function PetShopPage() {
                         </div>
                       </div>
 
+                      <span className="petshop-item-op" aria-hidden="true">×</span>
+
                       <div className="petshop-item-field">
                         <span className="petshop-item-field__label">Precio unit.</span>
                         <div className="petshop-price-field">
@@ -696,7 +697,9 @@ export default function PetShopPage() {
                         </div>
                       </div>
 
-                      <div className="petshop-item-field">
+                      <span className="petshop-item-op" aria-hidden="true">=</span>
+
+                      <div className="petshop-item-field petshop-item-field--subtotal">
                         <span className="petshop-item-field__label">Subtotal</span>
                         <span className="petshop-item-row__total">
                           {formatCurrency(toNumber(item.quantity) * toNumber(item.unit_price))}
@@ -725,7 +728,6 @@ export default function PetShopPage() {
             </div>
           </div>
 
-            <div className="petshop-section-label">Método de pago</div>
             <div className="form-grid">
               <div className="form-field">
                 <label htmlFor="sale_payment">Método de pago</label>
@@ -754,10 +756,9 @@ export default function PetShopPage() {
               </div>
             </div>
 
-            <div className="petshop-section-label">Notas (opcional)</div>
             <div className="form-grid">
               <div className="form-field form-field--full">
-                <label htmlFor="sale_notes">Notas</label>
+                <label htmlFor="sale_notes">Notas (opcional)</label>
                 <textarea
                   id="sale_notes"
                   rows={3}
