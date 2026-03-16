@@ -825,92 +825,79 @@ export default function PetShopPage() {
             {salesError && <div className="petshop-error">{salesError}</div>}
             {salesLoading ? (
               <div className="card-subtitle">Cargando ventas...</div>
-            ) : sales.length === 0 ? (
-              <div className="card-subtitle">Sin ventas registradas.</div>
+            ) : salesByDay.length === 0 ? (
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "32px 0" }}>
+                No hay ventas en este período.
+              </div>
             ) : (
               <div className="petshop-sales-groups">
                 {salesByDay.map((group) => (
                   <div key={group.dateKey} className="petshop-sales-group">
-                    <div className="petshop-sales-group__header">
-                      <span>{group.label}</span>
-                      <strong className="petshop-amount">
-                        Total día: {formatCurrency(group.total)}
-                      </strong>
+                    <div className="petshop-day-header">
+                      <span className="petshop-day-header__date">{group.label}</span>
+                      <span className="petshop-day-header__divider" />
+                      <span className="petshop-day-header__total">{formatCurrency(group.total)}</span>
                     </div>
-                    <div className="services-list">
+                    <div className="petshop-sales-list">
                       {group.items.map((sale) => {
                         const isTestSale = String(sale.notes || "")
                           .toLowerCase()
                           .includes("prueba");
+                        const openSaleModal = () => {
+                          setSelectedSale(sale);
+                          setSaleModalForm({
+                            date: sale.date || todayISO(),
+                            payment_method_id: sale.payment_method_id || "",
+                            notes: sale.notes || "",
+                            items: (sale.items || []).map((item) => ({
+                              product_id: item.product_id,
+                              quantity: item.quantity,
+                              unit_price:
+                                item.unit_price !== null &&
+                                item.unit_price !== undefined
+                                  ? String(item.unit_price)
+                                  : "",
+                            })),
+                          });
+                          setIsEditingSaleModal(false);
+                        };
                         return (
                           <div
                             key={sale.id}
-                            className="service-item petshop-clickable"
-                            onClick={() => {
-                              setSelectedSale(sale);
-                              setSaleModalForm({
-                                date: sale.date || todayISO(),
-                                payment_method_id: sale.payment_method_id || "",
-                                notes: sale.notes || "",
-                                items: (sale.items || []).map((item) => ({
-                                  product_id: item.product_id,
-                                  quantity: item.quantity,
-                                  unit_price:
-                                    item.unit_price !== null &&
-                                    item.unit_price !== undefined
-                                      ? String(item.unit_price)
-                                      : "",
-                                })),
-                              });
-                              setIsEditingSaleModal(false);
-                            }}
+                            className="petshop-sale-card petshop-clickable"
+                            onClick={openSaleModal}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(event) => {
                               if (event.key === "Enter" || event.key === " ") {
                                 event.preventDefault();
-                                setSelectedSale(sale);
-                                setSaleModalForm({
-                                  date: sale.date || todayISO(),
-                                  payment_method_id: sale.payment_method_id || "",
-                                  notes: sale.notes || "",
-                                  items: (sale.items || []).map((item) => ({
-                                    product_id: item.product_id,
-                                    quantity: item.quantity,
-                                    unit_price:
-                                      item.unit_price !== null &&
-                                      item.unit_price !== undefined
-                                        ? String(item.unit_price)
-                                        : "",
-                                  })),
-                                });
-                                setIsEditingSaleModal(false);
+                                openSaleModal();
                               }
                             }}
                           >
-                            <div className="service-item__body">
-                              <div className="petshop-sale-card__title-row">
-                                <div className="service-item__title">
+                            <div className="petshop-sale-card__accent" />
+                            <div className="petshop-sale-card__body">
+                              <div className="petshop-sale-card__top">
+                                <span className="petshop-sale-card__title">
                                   {getSaleTitle(sale)}
-                                </div>
-                                <div className="petshop-amount">
+                                </span>
+                                <span className="petshop-sale-card__total petshop-amount">
                                   {formatCurrency(sale.total)}
-                                </div>
+                                </span>
                               </div>
-                              <div className="service-item__meta">
-                                <span>{formatDateDisplay(sale.date)}</span>
-                                <span>{getSaleQuantity(sale)} u.</span>
-                                <span>{formatPaymentMethod(sale.payment_method_id)}</span>
-                              </div>
-                              <div className="service-item__badges">
-                                {isTestSale ? (
+                              <div className="petshop-sale-card__meta">
+                                <span className="petshop-sale-card__qty">{getSaleQuantity(sale)} u.</span>
+                                <span className="petshop-sale-card__method">
+                                  {formatPaymentMethod(sale.payment_method_id)}
+                                </span>
+                                {isTestSale && (
                                   <span className="service-badge service-badge--muted">
                                     Venta de prueba
                                   </span>
-                                ) : null}
-                                {sale.notes ? (
-                                  <span className="service-badge">{sale.notes}</span>
-                                ) : null}
+                                )}
+                                {sale.notes && !isTestSale && (
+                                  <span className="petshop-sale-card__notes">{sale.notes}</span>
+                                )}
                               </div>
                             </div>
                           </div>

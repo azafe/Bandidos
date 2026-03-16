@@ -438,20 +438,115 @@
   margin-bottom: 16px;
 }
 
-.petshop-sales-group__header {
+/* Day header — timeline separator */
+.petshop-day-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 0.82rem;
-  color: var(--color-text-soft);
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
+  margin-top: 4px;
 }
 
-.petshop-sale-card__title-row {
+.petshop-day-header__date {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-soft);
+  white-space: nowrap;
+}
+
+.petshop-day-header__divider {
+  flex: 1;
+  height: 1px;
+  background: rgba(17, 24, 39, 0.08);
+}
+
+.petshop-day-header__total {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0f766e;
+  white-space: nowrap;
+}
+
+/* Sales list grid */
+.petshop-sales-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* Sale card */
+.petshop-sale-card {
   display: flex;
-  align-items: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  box-shadow: 0 2px 8px rgba(12, 14, 23, 0.06);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.petshop-sale-card__accent {
+  width: 4px;
+  flex-shrink: 0;
+  background: #0f766e;
+}
+
+.petshop-sale-card__body {
+  flex: 1;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.petshop-sale-card__top {
+  display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
+}
+
+.petshop-sale-card__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.petshop-sale-card__total {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.petshop-sale-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.petshop-sale-card__method {
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.petshop-sale-card__notes {
+  font-style: italic;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .petshop-sales-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .petshop-product-card__header {
