@@ -185,10 +185,12 @@
 }
 
 .petshop-item-op {
-  font-size: 0.9rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  height: 36px;           /* matches input height */
+  font-size: 0.95rem;
+  font-weight: 500;
   color: var(--color-text-muted, #9ca3af);
-  padding-bottom: 11px;
   flex-shrink: 0;
   user-select: none;
 }
@@ -259,16 +261,19 @@
 }
 
 .petshop-item-row__total {
+  display: flex;
+  align-items: center;
+  height: 36px;           /* matches input height */
   font-weight: 700;
   font-size: 1rem;
   color: #111827;
   white-space: nowrap;
-  padding: 8px 0;
 }
 
 .petshop-item-delete {
-  align-self: flex-end;
+  align-self: flex-end;   /* sits at bottom of the flex row */
   flex-shrink: 0;
+  margin-bottom: 0;
 }
 
 .petshop-item-card--invalid .petshop-stepper input,
