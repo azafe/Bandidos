@@ -103,6 +103,7 @@ export default function PetDetailPage() {
   const [services, setServices] = useState([]);
   const [employeesById, setEmployeesById] = useState(new Map());
   const [paymentMethodsById, setPaymentMethodsById] = useState(new Map());
+  const [serviceTypesById, setServiceTypesById] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -114,11 +115,12 @@ export default function PetDetailPage() {
         setLoading(true);
         setError(null);
         const today = new Date().toISOString().slice(0, 10);
-        const [petData, agendaData, employeesData, paymentData] = await Promise.all([
+        const [petData, agendaData, employeesData, paymentData, serviceTypesData] = await Promise.all([
           apiRequest(`/v2/pets/${id}`),
           apiRequest("/agenda", { params: { from: "2020-01-01", to: today } }),
           apiRequest("/v2/employees"),
           apiRequest("/v2/payment-methods"),
+          apiRequest("/v2/service-types"),
         ]);
         if (!active) return;
         setPet(petData);
@@ -128,6 +130,8 @@ export default function PetDetailPage() {
         setEmployeesById(new Map(emps.map((e) => [String(e.id), e])));
         const methods = Array.isArray(paymentData) ? paymentData : paymentData?.items || [];
         setPaymentMethodsById(new Map(methods.map((m) => [String(m.id), m])));
+        const types = Array.isArray(serviceTypesData) ? serviceTypesData : serviceTypesData?.items || [];
+        setServiceTypesById(new Map(types.map((t) => [String(t.id), t])));
       } catch (err) {
         if (!active) return;
         setError(err.message || "No se pudo cargar la ficha de la mascota.");
@@ -145,6 +149,10 @@ export default function PetDetailPage() {
 
   function resolvePaymentMethod(s) {
     return s.payment_method?.name || paymentMethodsById.get(String(s.payment_method_id))?.name || null;
+  }
+
+  function resolveServiceType(s) {
+    return s.service_type?.name || serviceTypesById.get(String(s.service_type_id))?.name || null;
   }
 
   const sorted = sortByDate(services);
@@ -223,7 +231,7 @@ export default function PetDetailPage() {
               <div className="fe-kpi">
                 <span>Último servicio</span>
                 <strong>{lastService ? formatDateDisplay(lastService.date) : "-"}</strong>
-                {lastService && <small>{lastService.service_type?.name || "Servicio"}</small>}
+                {lastService && <small>{resolveServiceType(lastService) || "Servicio"}</small>}
               </div>
             </div>
           </div>
@@ -254,7 +262,7 @@ export default function PetDetailPage() {
                     <div className="fe-card__body">
                       <div className="fe-card__top">
                         <span className="fe-card__name">
-                          {service.service_type?.name || "Servicio"}
+                          {resolveServiceType(service) || "Servicio"}
                         </span>
                         <span className="fe-card__date-badge">
                           {formatDateDisplay(service.date)}
@@ -302,7 +310,7 @@ export default function PetDetailPage() {
                 <div>
                   <p className="agenda-turno-modal__eyebrow">{formatDateDisplay(s.date)}{time ? ` · ${time}` : ""}{duration ? ` · ${duration}` : ""}</p>
                   <h3 className="agenda-turno-modal__title">
-                    {s.pet_name || pet?.name || "Mascota"} — {s.service_type?.name || "Servicio"}
+                    {s.pet_name || pet?.name || "Mascota"} — {resolveServiceType(s) || "Servicio"}
                   </h3>
                   <p className="agenda-turno-modal__subtitle">
                     {s.owner_name || "-"}{s.breed ? ` · ${s.breed}` : ""}
