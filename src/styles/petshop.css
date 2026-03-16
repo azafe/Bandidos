@@ -102,14 +102,69 @@
   background: rgba(17, 24, 39, 0.06);
 }
 
+/* Item card: wraps the two combo rows + quantity row */
+.petshop-item-card {
+  border: 1px solid var(--color-border-soft, rgba(17,24,39,0.1));
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+  background: rgba(255,255,255,0.6);
+}
+
+.petshop-item-card--invalid {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.03);
+}
+
+/* Two combo inputs side by side */
+.petshop-product-combos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.petshop-product-combos .combo-field {
+  position: relative;
+}
+
+.petshop-product-combos input {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  background: #f9f9fc;
+  font-family: inherit;
+}
+
+.petshop-product-combos input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(217,72,239,0.12);
+}
+
+.petshop-combo-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.petshop-combo-option__sku,
+.petshop-combo-option__name {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+/* Quantity + price + total + delete row */
 .petshop-item-row {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: auto 1fr auto auto;
   gap: 8px;
   align-items: center;
 }
 
-.petshop-item-row select,
 .petshop-item-row input {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-soft);
@@ -118,37 +173,20 @@
   background: #f9f9fc;
 }
 
-.petshop-item-row select {
-  min-width: 0;
-  grid-column: span 6;
-}
-
-.petshop-item-row__product {
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
 .petshop-stepper {
-  grid-column: span 2;
   width: 100%;
   max-width: 120px;
 }
 
 .petshop-item-row__price {
-  grid-column: span 2;
   width: 100%;
 }
 
 .petshop-item-row__total {
-  grid-column: span 1;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.petshop-icon-button {
-  grid-column: span 1;
-}
-
-.petshop-item-row--invalid select,
 .petshop-item-row--invalid input {
   border-color: rgba(239, 68, 68, 0.35);
   background: rgba(239, 68, 68, 0.05);
@@ -395,16 +433,12 @@
     grid-auto-rows: auto;
   }
 
-  .petshop-item-row select {
-    grid-column: span 6;
+  .petshop-product-combos {
+    grid-template-columns: 1fr;
   }
 
-  .petshop-stepper {
-    grid-column: span 3;
-  }
-
-  .petshop-item-row__price {
-    grid-column: span 3;
+  .petshop-item-row {
+    grid-template-columns: auto 1fr auto auto;
   }
 
   .petshop-item-row__total {

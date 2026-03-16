@@ -101,8 +101,9 @@ export default function PetShopPage() {
     notes: "",
   });
   const [saleItems, setSaleItems] = useState([
-    { product_id: "", quantity: 1, unit_price: "" },
+    { product_id: "", quantity: 1, unit_price: "", nameSearch: "", skuSearch: "" },
   ]);
+  const [openCombo, setOpenCombo] = useState(null); // { index, type: "name"|"sku" }
   const [saleSubmitting, setSaleSubmitting] = useState(false);
   const [saleSuccess, setSaleSuccess] = useState(false);
   const [saleError, setSaleError] = useState("");
@@ -305,10 +306,9 @@ export default function PetShopPage() {
     const product = products.find((p) => String(p.id) === String(productId));
     updateSaleItem(index, {
       product_id: productId,
-      unit_price:
-        product && product.price !== null && product.price !== undefined
-          ? String(product.price)
-          : "",
+      unit_price: product?.price != null ? String(product.price) : "",
+      nameSearch: product?.name || "",
+      skuSearch: product?.sku || "",
     });
   }
 
@@ -364,7 +364,7 @@ export default function PetShopPage() {
         payment_method_id: "",
         notes: "",
       });
-      setSaleItems([{ product_id: "", quantity: 1, unit_price: "" }]);
+      setSaleItems([{ product_id: "", quantity: 1, unit_price: "", nameSearch: "", skuSearch: "" }]);
       await refreshSales();
       await refreshProducts();
       setSaleSuccess(true);
@@ -551,7 +551,7 @@ export default function PetShopPage() {
                   onClick={() =>
                     setSaleItems((prev) => [
                       ...prev,
-                      { product_id: "", quantity: 1, unit_price: "" },
+                      { product_id: "", quantity: 1, unit_price: "", nameSearch: "", skuSearch: "" },
                     ])
                   }
                 >
@@ -562,26 +562,96 @@ export default function PetShopPage() {
                 const hasProduct = Boolean(item.product_id);
                 const hasQty = toNumber(item.quantity) > 0;
                 const isInvalid = !hasProduct || !hasQty;
+                const nameOpen = openCombo?.index === index && openCombo?.type === "name";
+                const skuOpen  = openCombo?.index === index && openCombo?.type === "sku";
+                const filteredByName = products.filter((p) =>
+                  !item.nameSearch || p.name?.toLowerCase().includes(item.nameSearch.toLowerCase())
+                );
+                const filteredBySku = products.filter((p) =>
+                  !item.skuSearch || (p.sku || "").toLowerCase().includes(item.skuSearch.toLowerCase())
+                );
                 return (
-                  <div key={`${index}-${item.product_id || "item"}`}>
-                    <div
-                      className={`petshop-item-row${
-                        isInvalid ? " petshop-item-row--invalid" : ""
-                      }`}
-                    >
-                      <select
-                        value={item.product_id}
-                        onChange={(e) => handleSaleItemProduct(index, e.target.value)}
-                        aria-label="Producto"
-                        className="petshop-item-row__product"
-                      >
-                        <option value="">Producto</option>
-                        {products.map((product) => (
-                          <option key={product.id} value={product.id}>
-                            {product.name}
-                          </option>
-                        ))}
-                      </select>
+                  <div key={`${index}-${item.product_id || "item"}`} className={`petshop-item-card${isInvalid ? " petshop-item-card--invalid" : ""}`}>
+
+                    {/* Búsqueda de producto: nombre + SKU */}
+                    <div className="petshop-product-combos">
+                      <div className="combo-field">
+                        <input
+                          type="text"
+                          placeholder="Buscar por nombre…"
+                          value={item.nameSearch}
+                          autoComplete="off"
+                          onChange={(e) => {
+                            updateSaleItem(index, { nameSearch: e.target.value, product_id: "", skuSearch: "" });
+                            setOpenCombo({ index, type: "name" });
+                          }}
+                          onFocus={() => setOpenCombo({ index, type: "name" })}
+                          onBlur={() => setTimeout(() => setOpenCombo(null), 150)}
+                        />
+                        {nameOpen && (
+                          <div className="combo-field__list" role="listbox">
+                            {filteredByName.length === 0 ? (
+                              <div className="combo-field__empty">Sin resultados</div>
+                            ) : (
+                              filteredByName.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  className="combo-field__option petshop-combo-option"
+                                  onMouseDown={() => {
+                                    handleSaleItemProduct(index, p.id);
+                                    setOpenCombo(null);
+                                  }}
+                                >
+                                  <span>{p.name}</span>
+                                  {p.sku && <small className="petshop-combo-option__sku">SKU: {p.sku}</small>}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="combo-field">
+                        <input
+                          type="text"
+                          placeholder="Buscar por SKU / código…"
+                          value={item.skuSearch}
+                          autoComplete="off"
+                          onChange={(e) => {
+                            updateSaleItem(index, { skuSearch: e.target.value, product_id: "", nameSearch: "" });
+                            setOpenCombo({ index, type: "sku" });
+                          }}
+                          onFocus={() => setOpenCombo({ index, type: "sku" })}
+                          onBlur={() => setTimeout(() => setOpenCombo(null), 150)}
+                        />
+                        {skuOpen && (
+                          <div className="combo-field__list" role="listbox">
+                            {filteredBySku.length === 0 ? (
+                              <div className="combo-field__empty">Sin resultados</div>
+                            ) : (
+                              filteredBySku.map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  className="combo-field__option petshop-combo-option"
+                                  onMouseDown={() => {
+                                    handleSaleItemProduct(index, p.id);
+                                    setOpenCombo(null);
+                                  }}
+                                >
+                                  <span>{p.sku || "-"}</span>
+                                  <small className="petshop-combo-option__name">{p.name}</small>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Cantidad, precio, total, eliminar */}
+                    <div className="petshop-item-row">
                       <div className="petshop-stepper" role="group" aria-label="Cantidad">
                         <button
                           type="button"
@@ -595,9 +665,7 @@ export default function PetShopPage() {
                           type="number"
                           min="1"
                           value={item.quantity}
-                          onChange={(e) =>
-                            updateSaleItem(index, { quantity: e.target.value })
-                          }
+                          onChange={(e) => updateSaleItem(index, { quantity: e.target.value })}
                           onBlur={(e) => {
                             const next = Math.max(1, toNumber(e.target.value, 1));
                             updateSaleItem(index, { quantity: next });
@@ -618,33 +686,28 @@ export default function PetShopPage() {
                         min="0"
                         step="100"
                         value={item.unit_price}
-                        onChange={(e) =>
-                          updateSaleItem(index, { unit_price: e.target.value })
-                        }
+                        onChange={(e) => updateSaleItem(index, { unit_price: e.target.value })}
                         aria-label="Precio unitario"
                         className="petshop-item-row__price"
                       />
                       <span className="petshop-item-row__total">
-                        {formatCurrency(
-                          toNumber(item.quantity) * toNumber(item.unit_price)
-                        )}
+                        {formatCurrency(toNumber(item.quantity) * toNumber(item.unit_price))}
                       </span>
                       <button
                         type="button"
                         className="petshop-icon-button petshop-icon-button--ghost"
-                        onClick={() =>
-                          setSaleItems((prev) => prev.filter((_, idx) => idx !== index))
-                        }
+                        onClick={() => setSaleItems((prev) => prev.filter((_, idx) => idx !== index))}
                         aria-label="Quitar ítem"
                       >
                         🗑
                       </button>
                     </div>
-                    {isInvalid ? (
+
+                    {isInvalid && (
                       <div className="petshop-item-row__hint">
-                        {hasProduct ? "Ingresá cantidad válida." : "Seleccioná un producto."}
+                        {hasProduct ? "Ingresá cantidad válida." : "Buscá y seleccioná un producto."}
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 );
               })}
