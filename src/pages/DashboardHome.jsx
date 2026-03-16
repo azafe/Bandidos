@@ -4,8 +4,6 @@ import { Link } from "react-router-dom";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
 import KpiGrid from "../components/dashboard/KpiGrid";
 import ChartsSection from "../components/dashboard/ChartsSection";
-import RecentActivity from "../components/dashboard/RecentActivity";
-import AlertsPanel from "../components/dashboard/AlertsPanel";
 import SkeletonDashboard from "../components/dashboard/SkeletonDashboard";
 import { fetchDashboardData } from "../lib/dashboardApi";
 import { buildDashboardMetrics } from "../lib/dashboardMetrics";
@@ -192,14 +190,6 @@ export default function DashboardHome() {
 
       <ChartsSection series={metrics.series} />
 
-      <section className="dashboard-bottom">
-        <div className="dashboard-bottom__main">
-          <RecentActivity items={metrics.recentActivity} />
-        </div>
-        <div className="dashboard-bottom__side">
-          <AlertsPanel alerts={metrics.alerts} />
-        </div>
-      </section>
     </div>
   );
 }
