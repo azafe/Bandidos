@@ -159,9 +159,10 @@
 
 /* Quantity + price + subtotal + delete row */
 .petshop-item-controls {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: max-content max-content 1fr max-content;
+  gap: 8px;
+  align-items: end;
 }
 
 .petshop-item-field {
@@ -193,7 +194,7 @@
 }
 
 .petshop-stepper {
-  width: 120px;
+  width: 132px;
 }
 
 /* Price input with $ prefix */
@@ -237,7 +238,7 @@
 }
 
 .petshop-item-delete {
-  align-self: flex-end;
+  align-self: end;
   margin-bottom: 1px;
 }
 
