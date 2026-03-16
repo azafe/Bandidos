@@ -912,8 +912,11 @@ export default function PetShopPage() {
 
           <Modal
             isOpen={Boolean(selectedSale)}
-            onClose={() => setSelectedSale(null)}
-            title="Detalle de venta"
+            onClose={() => {
+              setSelectedSale(null);
+              setIsEditingSaleModal(false);
+            }}
+            title={isEditingSaleModal ? "Editar venta" : "Detalle de venta"}
           >
             {selectedSale && (
               <>
