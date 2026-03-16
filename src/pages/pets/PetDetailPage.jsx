@@ -101,6 +101,8 @@ export default function PetDetailPage() {
   const { id } = useParams();
   const [pet, setPet] = useState(null);
   const [services, setServices] = useState([]);
+  const [employeesById, setEmployeesById] = useState(new Map());
+  const [paymentMethodsById, setPaymentMethodsById] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -112,14 +114,20 @@ export default function PetDetailPage() {
         setLoading(true);
         setError(null);
         const today = new Date().toISOString().slice(0, 10);
-        const [petData, agendaData] = await Promise.all([
+        const [petData, agendaData, employeesData, paymentData] = await Promise.all([
           apiRequest(`/v2/pets/${id}`),
           apiRequest("/agenda", { params: { from: "2020-01-01", to: today } }),
+          apiRequest("/v2/employees"),
+          apiRequest("/v2/payment-methods"),
         ]);
         if (!active) return;
         setPet(petData);
         const all = Array.isArray(agendaData) ? agendaData : agendaData?.items || [];
         setServices(all.filter((s) => String(s.pet_id) === String(id)));
+        const emps = Array.isArray(employeesData) ? employeesData : employeesData?.items || [];
+        setEmployeesById(new Map(emps.map((e) => [String(e.id), e])));
+        const methods = Array.isArray(paymentData) ? paymentData : paymentData?.items || [];
+        setPaymentMethodsById(new Map(methods.map((m) => [String(m.id), m])));
       } catch (err) {
         if (!active) return;
         setError(err.message || "No se pudo cargar la ficha de la mascota.");
@@ -130,6 +138,14 @@ export default function PetDetailPage() {
     load();
     return () => { active = false; };
   }, [id]);
+
+  function resolveGroomer(s) {
+    return s.groomer?.name || employeesById.get(String(s.groomer_id))?.name || null;
+  }
+
+  function resolvePaymentMethod(s) {
+    return s.payment_method?.name || paymentMethodsById.get(String(s.payment_method_id))?.name || null;
+  }
 
   const sorted = sortByDate(services);
   const totalRevenue = services.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
@@ -246,11 +262,11 @@ export default function PetDetailPage() {
                       </div>
                       <div className="fe-card__amount">{formatPrice(service.price)}</div>
                       <div className="fe-card__meta">
-                        {service.groomer?.name && (
-                          <span className="fe-card__badge">{service.groomer.name}</span>
+                        {resolveGroomer(service) && (
+                          <span className="fe-card__badge">{resolveGroomer(service)}</span>
                         )}
-                        {service.payment_method?.name && (
-                          <span className="fe-card__meta-item">{service.payment_method.name}</span>
+                        {resolvePaymentMethod(service) && (
+                          <span className="fe-card__meta-item">{resolvePaymentMethod(service)}</span>
                         )}
                       </div>
                     </div>
@@ -311,7 +327,7 @@ export default function PetDetailPage() {
                 {formatDuration(s.duration) && (
                   <div><strong>Duración</strong><span>{formatDuration(s.duration)}</span></div>
                 )}
-                <div><strong>Groomer</strong><span>{s.groomer?.name || "-"}</span></div>
+                <div><strong>Groomer</strong><span>{resolveGroomer(s) || "-"}</span></div>
                 <div><strong>Precio</strong><span>{formatPrice(price)}</span></div>
                 {deposit > 0 && (
                   <div><strong>Seña</strong><span>{formatPrice(deposit)}</span></div>
@@ -319,7 +335,7 @@ export default function PetDetailPage() {
                 {deposit > 0 && (
                   <div><strong>Saldo restante</strong><span>{formatPrice(remaining)}</span></div>
                 )}
-                <div><strong>Método de pago</strong><span>{s.payment_method?.name || "-"}</span></div>
+                <div><strong>Método de pago</strong><span>{resolvePaymentMethod(s) || "-"}</span></div>
                 {s.notes && (
                   <div style={{ flexDirection: "column", alignItems: "flex-start" }}>
                     <strong>Notas</strong>
