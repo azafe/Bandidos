@@ -291,57 +291,80 @@ export default function PetDetailPage() {
           const deposit = Number(s.deposit_amount) || 0;
           const price = Number(s.price) || 0;
           const remaining = Math.max(0, price - deposit);
+          const groomer = resolveGroomer(s);
+          const payment = resolvePaymentMethod(s);
+          const time = formatTime(s.time);
+          const duration = formatDuration(s.duration);
           return (
-            <div className="fe-modal-detail">
+            <div className="agenda-turno-modal">
               {/* Hero */}
-              <div className="pet-modal-header">
-                <div className="pet-modal-avatar" style={{ background: color }}>
-                  {petInitial(pet?.name)}
-                </div>
+              <div className="agenda-turno-modal__hero">
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "1.15rem" }}>
-                    {s.service_type?.name || "Servicio"}
-                  </div>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      marginTop: 4,
-                      padding: "2px 10px",
-                      borderRadius: 999,
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      background: statusStyle.bg,
-                      color: statusStyle.color,
-                    }}
-                  >
-                    {STATUS_LABELS[status] || status}
-                  </span>
+                  <p className="agenda-turno-modal__eyebrow">{formatDateDisplay(s.date)}{time ? ` · ${time}` : ""}{duration ? ` · ${duration}` : ""}</p>
+                  <h3 className="agenda-turno-modal__title">
+                    {s.pet_name || pet?.name || "Mascota"} — {s.service_type?.name || "Servicio"}
+                  </h3>
+                  <p className="agenda-turno-modal__subtitle">
+                    {s.owner_name || "-"}{s.breed ? ` · ${s.breed}` : ""}
+                    {groomer ? ` · Groomer: ${groomer}` : ""}
+                  </p>
                 </div>
+                <span
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: 999,
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    background: statusStyle.bg,
+                    color: statusStyle.color,
+                    whiteSpace: "nowrap",
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  {STATUS_LABELS[status] || status}
+                </span>
               </div>
 
-              <div className="fe-modal-detail__rows">
-                <div><strong>Fecha</strong><span>{formatDateDisplay(s.date)}</span></div>
-                {formatTime(s.time) && (
-                  <div><strong>Hora</strong><span>{formatTime(s.time)}</span></div>
-                )}
-                {formatDuration(s.duration) && (
-                  <div><strong>Duración</strong><span>{formatDuration(s.duration)}</span></div>
-                )}
-                <div><strong>Groomer</strong><span>{resolveGroomer(s) || "-"}</span></div>
-                <div><strong>Precio</strong><span>{formatPrice(price)}</span></div>
-                {deposit > 0 && (
-                  <div><strong>Seña</strong><span>{formatPrice(deposit)}</span></div>
-                )}
-                {deposit > 0 && (
-                  <div><strong>Saldo restante</strong><span>{formatPrice(remaining)}</span></div>
-                )}
-                <div><strong>Método de pago</strong><span>{resolvePaymentMethod(s) || "-"}</span></div>
-                {s.notes && (
-                  <div style={{ flexDirection: "column", alignItems: "flex-start" }}>
-                    <strong>Notas</strong>
-                    <span style={{ marginTop: 4, fontSize: "0.88rem" }}>{s.notes}</span>
+              {/* Métricas */}
+              <div className="agenda-turno-modal__metrics">
+                <article className="agenda-turno-modal__metric">
+                  <span>Precio del servicio</span>
+                  <strong>{formatPrice(price)}</strong>
+                </article>
+                <article className="agenda-turno-modal__metric">
+                  <span>Seña registrada</span>
+                  <strong>{deposit > 0 ? formatPrice(deposit) : "-"}</strong>
+                </article>
+                <article className="agenda-turno-modal__metric">
+                  <span>Saldo pendiente</span>
+                  <strong className={remaining > 0 ? "agenda-turno-modal__balance--pending" : "agenda-turno-modal__balance--clear"}>
+                    {formatPrice(remaining)}
+                  </strong>
+                </article>
+              </div>
+
+              {/* Paneles */}
+              <div className="agenda-turno-modal__grid">
+                <article className="agenda-turno-modal__panel">
+                  <h4>Detalle operativo</h4>
+                  <div className="agenda-turno-modal__pairs">
+                    <div className="agenda-turno-modal__pair"><span>Fecha</span><strong>{formatDateDisplay(s.date)}</strong></div>
+                    {time && <div className="agenda-turno-modal__pair"><span>Hora</span><strong>{time}</strong></div>}
+                    {duration && <div className="agenda-turno-modal__pair"><span>Duración</span><strong>{duration}</strong></div>}
+                    <div className="agenda-turno-modal__pair"><span>Mascota</span><strong>{s.pet_name || pet?.name || "-"}</strong></div>
+                    <div className="agenda-turno-modal__pair"><span>Dueño</span><strong>{s.owner_name || "-"}</strong></div>
+                    <div className="agenda-turno-modal__pair"><span>Raza</span><strong>{s.breed || "-"}</strong></div>
+                    <div className="agenda-turno-modal__pair"><span>Groomer</span><strong>{groomer || "-"}</strong></div>
+                    <div className="agenda-turno-modal__pair"><span>Método de pago</span><strong>{payment || "-"}</strong></div>
                   </div>
-                )}
+                </article>
+
+                <article className="agenda-turno-modal__panel">
+                  <h4>Notas</h4>
+                  <p className={`agenda-turno-modal__notes${s.notes ? "" : " is-empty"}`}>
+                    {s.notes || "Sin notas para este turno."}
+                  </p>
+                </article>
               </div>
             </div>
           );
