@@ -559,26 +559,109 @@
   }
 }
 
-.petshop-product-card__header {
+/* Product grid */
+.petshop-product-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .petshop-product-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Product card */
+.petshop-product-card {
   display: flex;
-  align-items: flex-start;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  box-shadow: 0 2px 8px rgba(12, 14, 23, 0.06);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.petshop-product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(12, 14, 23, 0.12);
+}
+
+.petshop-product-card__accent {
+  width: 4px;
+  flex-shrink: 0;
+  background: #0f766e;
+}
+
+.petshop-product-card--critical .petshop-product-card__accent {
+  background: #b91c1c;
+}
+
+.petshop-product-card__body {
+  flex: 1;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.petshop-product-card__top {
+  display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 10px;
 }
 
-.petshop-product-card__stock {
-  font-size: 1.4rem;
+.petshop-product-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.petshop-product-card__name {
+  font-size: 0.92rem;
   font-weight: 600;
   color: #111827;
-  margin-top: 8px;
+}
+
+.petshop-product-card__sku {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: rgba(17, 24, 39, 0.06);
+  padding: 1px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.petshop-product-card__stock {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.petshop-product-card__stock--critical {
+  color: #b91c1c;
 }
 
 .petshop-product-card__meta {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
   color: var(--color-text-soft);
-  font-size: 0.8rem;
-  margin-top: 4px;
+}
+
+.petshop-product-card__price {
+  margin-left: auto;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .service-badge--critical {

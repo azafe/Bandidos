@@ -1244,57 +1244,61 @@ export default function PetShopPage() {
           </form>
 
           <div className="card">
-            <h2 className="card-title">Productos cargados</h2>
-            <p className="card-subtitle">
-              Stock crítico: {lowStockProducts.length} productos.
-            </p>
+            <div className="petshop-list__header">
+              <h2 className="card-title">Productos cargados</h2>
+              {lowStockProducts.length > 0 && (
+                <span className="service-badge service-badge--critical">
+                  {lowStockProducts.length} con stock crítico
+                </span>
+              )}
+            </div>
             {productsError && <div className="petshop-error">{productsError}</div>}
             {productsLoading ? (
               <div className="card-subtitle">Cargando productos...</div>
             ) : products.length === 0 ? (
-              <div className="card-subtitle">Sin productos cargados.</div>
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "32px 0" }}>
+                No hay productos cargados.
+              </div>
             ) : (
-              <div className="services-list">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="service-item petshop-clickable"
-                    onClick={() => openProductModal(product)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        openProductModal(product);
-                      }
-                    }}
-                  >
-                    <div className="service-item__body">
-                      <div className="petshop-product-card__header">
-                        <div>
-                          <div className="service-item__title">{product.name}</div>
-                          <div className="service-item__meta">
-                            SKU: {product.sku || "-"}
+              <div className="petshop-product-grid">
+                {products.map((product) => {
+                  const isCritical = toNumber(product.stock) <= toNumber(product.stock_min);
+                  return (
+                    <div
+                      key={product.id}
+                      className={`petshop-product-card petshop-clickable${isCritical ? " petshop-product-card--critical" : ""}`}
+                      onClick={() => openProductModal(product)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openProductModal(product);
+                        }
+                      }}
+                    >
+                      <div className="petshop-product-card__accent" />
+                      <div className="petshop-product-card__body">
+                        <div className="petshop-product-card__top">
+                          <div className="petshop-product-card__name-row">
+                            <span className="petshop-product-card__name">{product.name}</span>
+                            {product.sku && (
+                              <span className="petshop-product-card__sku">{product.sku}</span>
+                            )}
                           </div>
-                        </div>
-                        {toNumber(product.stock) <= toNumber(product.stock_min) ? (
-                          <span className="service-badge service-badge--critical">
-                            Crítico
+                          <span className={`petshop-product-card__stock${isCritical ? " petshop-product-card__stock--critical" : ""}`}>
+                            {product.stock ?? 0} u.
                           </span>
-                        ) : null}
-                      </div>
-                      <div className="petshop-product-card__stock">
-                        {product.stock ?? 0}
-                      </div>
-                      <div className="petshop-product-card__meta">
-                        <span>Mín: {product.stock_min ?? 0}</span>
-                        <span className="petshop-amount">
-                          {formatCurrency(product.price)}
-                        </span>
+                        </div>
+                        <div className="petshop-product-card__meta">
+                          <span>Mín: {product.stock_min ?? 0} u.</span>
+                          {product.cost ? <span>Costo: {formatCurrency(product.cost)}</span> : null}
+                          <span className="petshop-product-card__price petshop-amount">{formatCurrency(product.price)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
