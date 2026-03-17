@@ -22,6 +22,7 @@ import PaymentMethodsPage from "./pages/catalog/PaymentMethodsPage";
 import ExpenseCategoriesPage from "./pages/catalog/ExpenseCategoriesPage";
 import UsersPage from "./pages/admin/UsersPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
+import RecordatoriosPage from "./pages/reminders/RecordatoriosPage";
 
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -66,6 +67,7 @@ function App() {
                   />
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/petshop" element={<PetShopPage />} />
+                  <Route path="/recordatorios" element={<RecordatoriosPage />} />
                 </Routes>
               </MainLayout>
             </ProtectedRoute>

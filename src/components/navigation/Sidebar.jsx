@@ -48,6 +48,34 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
+          to="/recordatorios"
+          className={({ isActive }) => makeClassName(isActive)}
+          onClick={() => {
+            localStorage.setItem("bandidos_vio_recordatorios", "true");
+            handleNavigate();
+          }}
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          Recordatorios
+          {!localStorage.getItem("bandidos_vio_recordatorios") && (
+            <span
+              style={{
+                background: "#ef4444",
+                color: "white",
+                fontSize: "10px",
+                fontWeight: "600",
+                padding: "2px 6px",
+                borderRadius: "10px",
+                marginLeft: "6px",
+                lineHeight: 1.4,
+              }}
+            >
+              NUEVO
+            </span>
+          )}
+        </NavLink>
+
+        <NavLink
           to="/pets"
           className={({ isActive }) => makeClassName(isActive)}
           onClick={handleNavigate}
