@@ -292,7 +292,7 @@ export default function EmployeeDetailPage() {
                   <div className="fe-card__accent" />
                   <div className="fe-card__body">
                     <div className="fe-card__top">
-                      <span className="fe-card__name">{s.service_type?.name || "Servicio"}</span>
+                      <span className="fe-card__name">{s.service_type?.name || s.service_name || s.type_name || s.type || "Servicio"}</span>
                       <span className="fe-card__date-badge">{formatDate(s.date)}</span>
                     </div>
                     <div className="fe-card__amount">{fmt(resolvePrice(s))}</div>
