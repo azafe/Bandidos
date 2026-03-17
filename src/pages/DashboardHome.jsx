@@ -5,6 +5,7 @@ import DashboardHeader from "../components/dashboard/DashboardHeader";
 import KpiGrid from "../components/dashboard/KpiGrid";
 import ChartsSection from "../components/dashboard/ChartsSection";
 import SkeletonDashboard from "../components/dashboard/SkeletonDashboard";
+import DecisionCenter from "../components/dashboard/DecisionCenter";
 import { fetchDashboardData } from "../lib/dashboardApi";
 import { buildDashboardMetrics } from "../lib/dashboardMetrics";
 import "../styles/dashboard.css";
@@ -45,6 +46,7 @@ export default function DashboardHome() {
   const previousRange = useMemo(() => getPreviousRange(range), [range]);
 
   const [metrics, setMetrics] = useState(null);
+  const [rawFixedExpenses, setRawFixedExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -66,6 +68,7 @@ export default function DashboardHome() {
           categories: currentData.categories,
         });
         setMetrics(computed);
+        setRawFixedExpenses(currentData.fixedExpenses || []);
       } catch (err) {
         if (!active) return;
         setError(err.message || "No se pudo cargar el dashboard.");
@@ -150,6 +153,8 @@ export default function DashboardHome() {
       <KpiGrid kpis={metrics.kpis} />
 
       <ChartsSection series={metrics.series} />
+
+      <DecisionCenter kpis={metrics.kpis} fixedExpenses={rawFixedExpenses} />
 
     </div>
   );
