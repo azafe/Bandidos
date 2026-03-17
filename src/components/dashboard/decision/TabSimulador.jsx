@@ -42,7 +42,7 @@ export default function TabSimulador({ kpis, fixedBreakdown }) {
   const targetIncome = simCosts / (1 - sim.targetMargin);
   const gap = targetIncome - simIncome;
   const gapPct = simIncome > 0 ? gap / simIncome : 0;
-  const extraClients = kpis.avgTicket > 0 ? Math.ceil(Math.max(gap, 0) / kpis.avgTicket) : 0;
+  const extraServicios = kpis.avgTicket > 0 ? Math.ceil(Math.max(gap, 0) / kpis.avgTicket) : 0;
 
   function update(field, value) {
     setSim((prev) => ({ ...prev, [field]: value }));
@@ -175,35 +175,37 @@ export default function TabSimulador({ kpis, fixedBreakdown }) {
         </div>
 
         {/* Tabla comparativa */}
-        <table className="cd-compare-table">
-          <thead>
-            <tr>
-              <th>Concepto</th>
-              <th>Actual</th>
-              <th>Simulado</th>
-              <th>Δ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const diff = row.simVal - row.actual;
-              const better = row.isCost ? diff < 0 : diff > 0;
-              return (
-                <tr key={row.label}>
-                  <td>{row.label}</td>
-                  <td>{row.isMargin ? pct(row.actual) : fmt(row.actual)}</td>
-                  <td>{row.isMargin ? pct(row.simVal) : fmt(row.simVal)}</td>
-                  <td className={diff === 0 ? "" : better ? "cd-compare-table__diff--pos" : "cd-compare-table__diff--neg"}>
-                    {diff === 0 ? "—"
-                      : row.isMargin
-                        ? `${diff > 0 ? "+" : ""}${(diff * 100).toFixed(1)}pp`
-                        : `${diff > 0 ? "+" : ""}${fmt(diff)}`}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table className="cd-compare-table">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Act.</th>
+                <th>Sim.</th>
+                <th>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const diff = row.simVal - row.actual;
+                const better = row.isCost ? diff < 0 : diff > 0;
+                return (
+                  <tr key={row.label}>
+                    <td>{row.label}</td>
+                    <td>{row.isMargin ? pct(row.actual) : fmt(row.actual)}</td>
+                    <td>{row.isMargin ? pct(row.simVal) : fmt(row.simVal)}</td>
+                    <td className={diff === 0 ? "" : better ? "cd-compare-table__diff--pos" : "cd-compare-table__diff--neg"}>
+                      {diff === 0 ? "—"
+                        : row.isMargin
+                          ? `${diff > 0 ? "+" : ""}${(diff * 100).toFixed(1)}pp`
+                          : `${diff > 0 ? "+" : ""}${fmt(diff)}`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
         {/* Panel ¿qué necesitás? */}
         <div className={`cd-target-panel${gap > 0 ? " cd-target-panel--gap" : ""}`}>
@@ -227,8 +229,8 @@ export default function TabSimulador({ kpis, fixedBreakdown }) {
                 <span>{pct(gapPct)}</span>
               </div>
               <div className="cd-target-panel__row">
-                <span>Como clientes adicionales</span>
-                <span>{extraClients} clientes</span>
+                <span>Servicios adicionales a vender</span>
+                <span>{extraServicios} servicios</span>
               </div>
             </>
           )}
