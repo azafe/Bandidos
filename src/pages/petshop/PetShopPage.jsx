@@ -46,6 +46,7 @@ function toNumber(value, fallback = 0) {
 
 export default function PetShopPage() {
   const [activeTab, setActiveTab] = useState("sales");
+  const [productSearch, setProductSearch] = useState("");
 
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
 
@@ -171,6 +172,16 @@ export default function PetShopPage() {
     (product) => toNumber(product.stock) <= toNumber(product.stock_min)
   );
   const hasCriticalStock = lowStockProducts.length > 0;
+
+  const filteredProducts = productSearch.trim()
+    ? products.filter((p) => {
+        const q = productSearch.trim().toLowerCase();
+        return (
+          (p.name && p.name.toLowerCase().includes(q)) ||
+          (p.sku && p.sku.toLowerCase().includes(q))
+        );
+      })
+    : products;
 
   useEffect(() => {
     if (!saleSuccess) return;
@@ -1252,6 +1263,13 @@ export default function PetShopPage() {
                 </span>
               )}
             </div>
+            <input
+              className="petshop-product-search"
+              type="search"
+              placeholder="Buscar por nombre o SKU…"
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+            />
             {productsError && <div className="petshop-error">{productsError}</div>}
             {productsLoading ? (
               <div className="card-subtitle">Cargando productos...</div>
@@ -1259,9 +1277,13 @@ export default function PetShopPage() {
               <div className="card-subtitle" style={{ textAlign: "center", padding: "32px 0" }}>
                 No hay productos cargados.
               </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "32px 0" }}>
+                Sin resultados para &ldquo;{productSearch}&rdquo;.
+              </div>
             ) : (
               <div className="petshop-product-grid">
-                {products.map((product) => {
+                {filteredProducts.map((product) => {
                   const isCritical = toNumber(product.stock) <= toNumber(product.stock_min);
                   return (
                     <div
