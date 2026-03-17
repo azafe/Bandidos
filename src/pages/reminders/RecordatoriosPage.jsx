@@ -268,8 +268,12 @@ export default function RecordatoriosPage() {
             recordatorios.map((turno) => {
               const { petId, petName, ownerName, ownerPhone } = getPetInfo(turno);
               const yaEnviado = Boolean(enviados[petId]);
-              const diasColor =
-                turno.dias >= 60 ? "#b91c1c" : turno.dias >= 30 ? "#d97706" : undefined;
+              const diasBadgeStyle =
+                turno.dias >= 90
+                  ? { background: "#b91c1c18", color: "#b91c1c" }
+                  : turno.dias >= 60
+                  ? { background: "#d9770618", color: "#d97706" }
+                  : { background: "var(--color-primary-light)", color: "var(--color-primary)" };
 
               return (
                 <div
@@ -289,12 +293,9 @@ export default function RecordatoriosPage() {
                   {/* Col 2: Fecha último turno */}
                   <div className="recordatorio-item__date">{formatFecha(turno.date)}</div>
 
-                  {/* Col 3: Días (badge con color) */}
+                  {/* Col 3: Días (badge con color siempre) */}
                   <div className="recordatorio-item__days">
-                    <span
-                      className="service-badge"
-                      style={diasColor ? { background: diasColor + "18", color: diasColor } : undefined}
-                    >
+                    <span className="service-badge" style={diasBadgeStyle}>
                       {turno.dias}d
                     </span>
                   </div>
@@ -313,10 +314,13 @@ export default function RecordatoriosPage() {
                         type="button"
                         className="btn-primary"
                         style={{
-                          background: "#25D366",
-                          boxShadow: "0 6px 16px rgba(37,211,102,0.35)",
+                          background: "linear-gradient(135deg, #25D366, #128C7E)",
+                          boxShadow: "0 4px 14px rgba(37,211,102,0.4)",
                           fontSize: 13,
-                          padding: "8px 14px",
+                          padding: "8px 18px",
+                          borderRadius: 999,
+                          fontWeight: 600,
+                          letterSpacing: "0.02em",
                         }}
                         onClick={(e) => { e.stopPropagation(); abrirModal(turno); }}
                       >

@@ -1512,6 +1512,37 @@
 /* ─── Recordatorios: layout tabla en desktop ─── */
 .recordatorio-header {
   display: none;
+  position: relative;
+}
+
+.recordatorio-header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 45%, transparent 100%);
+}
+
+/* Acento izquierdo en cada fila */
+.recordatorio-item {
+  box-shadow: inset 3px 0 0 var(--color-primary), 0 10px 24px rgba(12, 14, 23, 0.12) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.recordatorio-item:hover {
+  transform: translateY(-2px) !important;
+  box-shadow:
+    inset 3px 0 0 var(--color-primary),
+    0 0 0 1.5px rgba(217, 72, 239, 0.25),
+    0 16px 32px rgba(12, 14, 23, 0.18) !important;
+}
+
+/* Nombre de mascota con color primario */
+.recordatorio-item .service-item__title {
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 @media (min-width: 760px) {
@@ -1519,11 +1550,11 @@
     display: grid;
     grid-template-columns: 1fr 130px 80px 150px 140px;
     gap: 12px;
-    padding: 0 16px 8px;
+    padding: 0 16px 12px;
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--color-text-soft);
   }
 
@@ -1535,7 +1566,6 @@
   }
 
   .recordatorio-item__date,
-  .recordatorio-item__days,
   .recordatorio-item__phone {
     font-size: 0.85rem;
     color: var(--color-text-soft);
