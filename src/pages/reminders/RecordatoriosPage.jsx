@@ -156,27 +156,7 @@ export default function RecordatoriosPage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Recordatorios de Turno</h1>
-          <p className="page-subtitle">
-            Clientes que llevan más de{" "}
-            <input
-              type="number"
-              min={1}
-              max={365}
-              value={diasMin}
-              onChange={(e) => setDiasMin(Number(e.target.value) || 1)}
-              style={{
-                width: 52,
-                padding: "2px 6px",
-                borderRadius: 6,
-                border: "1px solid #d1d5db",
-                fontWeight: 600,
-                textAlign: "center",
-                display: "inline-block",
-                margin: "0 4px",
-              }}
-            />{" "}
-            días sin turno.
-          </p>
+          <p className="page-subtitle">Enviá mensajes de WhatsApp a clientes que llevan tiempo sin turno.</p>
         </div>
       </header>
 
@@ -186,31 +166,57 @@ export default function RecordatoriosPage() {
         </div>
       )}
 
+      {/* Selector de período */}
+      <div className="card filters-card" style={{ marginBottom: 16 }}>
+        <div className="filters-period-quick">
+          <span>Sin turno hace más de</span>
+          {[30, 60, 90].map((d) => (
+            <button
+              key={d}
+              type="button"
+              className={`filters-period-pill${diasMin === d ? " is-active" : ""}`}
+              onClick={() => setDiasMin(d)}
+            >
+              {d} días
+            </button>
+          ))}
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={diasMin}
+            onChange={(e) => setDiasMin(Number(e.target.value) || 1)}
+            style={{
+              width: 60,
+              padding: "4px 8px",
+              borderRadius: "var(--radius-sm)",
+              border: "1px solid var(--color-border-soft)",
+              fontSize: 13,
+              fontWeight: 600,
+              textAlign: "center",
+              background: "var(--color-surface)",
+              color: "var(--color-text)",
+            }}
+          />
+          <span>días</span>
+        </div>
+      </div>
+
       {/* KPI cards */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-        <div className="card" style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}>
-          <div style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 4 }}>
-            Pendientes
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: pendientes.length > 0 ? "#b91c1c" : undefined }}>
+      <div className="services-analytics__kpis" style={{ marginBottom: 24 }}>
+        <div className="services-analytics__kpi">
+          <span>Pendientes</span>
+          <strong style={{ color: pendientes.length > 0 ? "#b91c1c" : undefined }}>
             {loading ? "…" : pendientes.length}
-          </div>
+          </strong>
         </div>
-        <div className="card" style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}>
-          <div style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 4 }}>
-            Enviados hoy
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700, color: "#15803d" }}>
-            {enviadosHoy}
-          </div>
+        <div className="services-analytics__kpi services-analytics__kpi--income">
+          <span>Enviados hoy</span>
+          <strong>{enviadosHoy}</strong>
         </div>
-        <div className="card" style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}>
-          <div style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 4 }}>
-            Días promedio
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 700 }}>
-            {loading ? "…" : diasPromedio}
-          </div>
+        <div className="services-analytics__kpi">
+          <span>Días promedio</span>
+          <strong>{loading ? "…" : diasPromedio}</strong>
         </div>
       </div>
 
@@ -222,7 +228,9 @@ export default function RecordatoriosPage() {
             <p className="card-subtitle">
               {loading
                 ? "Cargando turnos…"
-                : `${recordatorios.length} mascota${recordatorios.length !== 1 ? "s" : ""} sin turno en los últimos ${diasMin} días.`}
+                : recordatorios.length === 0
+                ? `No hay mascotas con más de ${diasMin} días sin turno.`
+                : `${pendientes.length} pendiente${pendientes.length !== 1 ? "s" : ""} · ${recordatorios.length} en total`}
             </p>
           </div>
         </div>
