@@ -7,167 +7,135 @@ const PALETTE = [
   "#22c55e", "#06b6d4", "#ec4899", "#84cc16", "#f43f5e",
 ];
 
-export default function TabGastosFijos({ kpis, fixedBreakdown, onBreakdownChange }) {
+export default function TabGastosFijos({ kpis, fixedBreakdown }) {
   const { income, dailyExpenseTotal, groomerCommissions, fixedExpenseTotal } = kpis;
-  const commissionRate = kpis.servicesIncome > 0 ? groomerCommissions / kpis.servicesIncome : 0.40;
 
-  const total = fixedBreakdown.reduce((s, i) => s + (Number(i.value) || 0), 0);
-  const diff  = total - fixedExpenseTotal;
+  const total = fixedBreakdown.reduce((s, i) => s + (Number(i.value) || 0), 0) || fixedExpenseTotal;
+  const items = fixedBreakdown.filter((i) => Number(i.value) > 0);
 
-  // Punto de equilibrio: ingreso mínimo para cubrir todos los costos (margen = 0)
-  // fixed / (1 - (daily + commissions%) )
-  // commissions% = commissionRate * (servicesIncome / income) ≈ commissionRate (approx for variable part)
+  // Punto de equilibrio
   const variableRate = income > 0 ? (dailyExpenseTotal + groomerCommissions) / income : 0;
   const breakEven = variableRate < 1 ? total / (1 - variableRate) : null;
 
-  // Insight: cuánto bajar fijos para llegar al 30%
-  // target: income * 0.30 = income - comisiones - diarios - fijos_target
-  // fijos_target = income * (1 - 0.30) - comisiones - diarios
+  // Gap para 30%
   const targetFixed = income * (1 - 0.30) - groomerCommissions - dailyExpenseTotal;
   const fixedGap = total - targetFixed;
 
   // Mayor gasto
-  const biggest = fixedBreakdown.length > 0
-    ? fixedBreakdown.reduce((a, b) => ((Number(b.value) || 0) > (Number(a.value) || 0) ? b : a), fixedBreakdown[0])
+  const biggest = items.length > 0
+    ? items.reduce((a, b) => (Number(b.value) > Number(a.value) ? b : a), items[0])
     : null;
 
-  function updateItem(id, field, value) {
-    onBreakdownChange(
-      fixedBreakdown.map((item) => (item.id === id ? { ...item, [field]: value } : item))
-    );
-  }
-
-  function removeItem(id) {
-    onBreakdownChange(fixedBreakdown.filter((item) => item.id !== id));
-  }
-
-  function addItem() {
-    const newId = Date.now();
-    onBreakdownChange([...fixedBreakdown, { id: newId, label: "Nuevo ítem", value: 0 }]);
-  }
-
-  const diffClass =
-    diff === 0 ? "cd-fe-sidebar__diff--green"
-    : Math.abs(diff) < 100 ? "cd-fe-sidebar__diff--orange"
-    : "cd-fe-sidebar__diff--red";
+  const fixedOverIncome = income > 0 ? total / income : 0;
 
   return (
-    <div className="cd-fe-layout">
-      {/* Lista editable */}
-      <div>
-        <div className="cd-fe-list">
-          {fixedBreakdown.map((item, idx) => (
-            <div className="cd-fe-item" key={item.id}>
-              <div
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  background: PALETTE[idx % PALETTE.length],
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                type="text"
-                value={item.label}
-                onChange={(e) => updateItem(item.id, "label", e.target.value)}
-              />
-              <input
-                type="number"
-                min="0"
-                value={item.value}
-                onChange={(e) => updateItem(item.id, "value", Number(e.target.value) || 0)}
-              />
-              <button
-                type="button"
-                className="cd-fe-item__delete"
-                onClick={() => removeItem(item.id)}
-                title="Eliminar"
-              >
-                ×
-              </button>
-            </div>
-          ))}
+    <div className="cd-fe-analytics">
+
+      {/* Métricas superiores */}
+      <div className="cd-fe-metrics">
+        <div className="cd-fe-metric-card">
+          <span className="cd-fe-metric-card__label">Total gastos fijos</span>
+          <span className="cd-fe-metric-card__value" style={{ color: "#ef4444" }}>{fmt(total)}</span>
+          {income > 0 && <span className="cd-fe-metric-card__sub">{pct(fixedOverIncome)} de los ingresos</span>}
         </div>
-        <button type="button" className="cd-fe-add" onClick={addItem}>
-          + Agregar ítem
-        </button>
+        {breakEven != null && (
+          <div className="cd-fe-metric-card">
+            <span className="cd-fe-metric-card__label">Punto de equilibrio</span>
+            <span className="cd-fe-metric-card__value">{fmt(breakEven)}</span>
+            <span className="cd-fe-metric-card__sub">Ingresos mínimos para no perder</span>
+          </div>
+        )}
+        <div className="cd-fe-metric-card">
+          <span className="cd-fe-metric-card__label">Para llegar al 30% de margen</span>
+          <span
+            className="cd-fe-metric-card__value"
+            style={{ color: fixedGap > 0 ? "#ef4444" : "#16a34a" }}
+          >
+            {fixedGap > 0 ? `Bajar ${fmt(fixedGap)}` : "¡Ya en rango!"}
+          </span>
+          <span className="cd-fe-metric-card__sub">
+            {fixedGap > 0
+              ? `Fijos objetivo: ${fmt(Math.max(targetFixed, 0))}`
+              : `Excedente: ${fmt(Math.abs(fixedGap))}`}
+          </span>
+        </div>
       </div>
 
-      {/* Sidebar */}
-      <div className="cd-fe-sidebar">
-        {/* Distribución visual */}
-        {total > 0 && (
-          <div className="cd-fe-sidebar__card">
-            <div className="cd-fe-sidebar__label">Distribución</div>
-            <div className="cd-dist-bar">
-              {fixedBreakdown.map((item, idx) => {
-                const v = Number(item.value) || 0;
-                if (!v) return null;
+      {/* Gráfico de distribución */}
+      {items.length > 0 ? (
+        <div className="cd-fe-chart">
+          <div className="cd-fe-chart__title">Distribución de gastos fijos</div>
+
+          {/* Barra apilada grande */}
+          <div className="cd-fe-stacked">
+            {items.map((item, idx) => (
+              <div
+                key={item.id}
+                className="cd-fe-stacked__seg"
+                style={{ flex: Number(item.value) / total, background: PALETTE[idx % PALETTE.length] }}
+                title={`${item.label}: ${fmt(Number(item.value))}`}
+              />
+            ))}
+          </div>
+
+          {/* Barras por ítem */}
+          <div className="cd-fe-bars">
+            {items
+              .slice()
+              .sort((a, b) => Number(b.value) - Number(a.value))
+              .map((item, idx) => {
+                const val = Number(item.value);
+                const originalIdx = fixedBreakdown.findIndex((i) => i.id === item.id);
+                const color = PALETTE[originalIdx % PALETTE.length];
                 return (
-                  <div
-                    key={item.id}
-                    className="cd-dist-bar__seg"
-                    style={{ flex: v / total, background: PALETTE[idx % PALETTE.length] }}
-                    title={`${item.label}: ${fmt(v)}`}
-                  />
-                );
-              })}
-            </div>
-            <div className="cd-dist-legend">
-              {fixedBreakdown.map((item, idx) => {
-                const v = Number(item.value) || 0;
-                if (!v) return null;
-                return (
-                  <div className="cd-dist-legend__item" key={item.id}>
-                    <div className="cd-dist-legend__dot" style={{ background: PALETTE[idx % PALETTE.length] }} />
-                    <span className="cd-dist-legend__label">{item.label}</span>
-                    <span className="cd-dist-legend__val">{pct(v / total)}</span>
+                  <div className="cd-fe-bar-row" key={item.id}>
+                    <div className="cd-fe-bar-row__header">
+                      <div className="cd-fe-bar-row__dot" style={{ background: color }} />
+                      <span className="cd-fe-bar-row__label">{item.label}</span>
+                      <span className="cd-fe-bar-row__amount">{fmt(val)}</span>
+                      <span className="cd-fe-bar-row__pct">{pct(val / total)}</span>
+                    </div>
+                    <div className="cd-fe-bar-row__track">
+                      <div
+                        className="cd-fe-bar-row__fill"
+                        style={{ width: `${(val / total) * 100}%`, background: color }}
+                      />
+                    </div>
                   </div>
                 );
               })}
-            </div>
           </div>
-        )}
-
-        {/* Total */}
-        <div className="cd-fe-sidebar__card">
-          <div className="cd-fe-sidebar__label">Total gastos fijos</div>
-          <div className="cd-fe-sidebar__value">{fmt(total)}</div>
-          {income > 0 && (
-            <div className="cd-fe-sidebar__sub">{pct(total / income)} de ingresos</div>
-          )}
-          {diff !== 0 && (
-            <div className={`cd-fe-sidebar__diff ${diffClass}`}>
-              {diff > 0 ? `+${fmt(diff)}` : fmt(diff)} vs registrado ({fmt(fixedExpenseTotal)})
-            </div>
-          )}
-          {diff === 0 && (
-            <div className="cd-fe-sidebar__diff cd-fe-sidebar__diff--green">
-              Coincide con los registros
-            </div>
-          )}
         </div>
+      ) : (
+        <div className="cd-fe-empty">
+          No hay ítems de gastos fijos registrados para este período.
+        </div>
+      )}
 
-        {/* Punto de equilibrio */}
-        {breakEven != null && (
-          <div className="cd-fe-sidebar__card">
-            <div className="cd-fe-sidebar__label">Punto de equilibrio</div>
-            <div className="cd-fe-sidebar__value">{fmt(breakEven)}</div>
-            <div className="cd-fe-sidebar__sub">Ingresos mínimos para no perder</div>
+      {/* Diagnóstico */}
+      {biggest && (
+        <div className="cd-diag" style={{ marginTop: 20 }}>
+          <div className="cd-diag__title">Diagnóstico</div>
+
+          <div className={`cd-diag__item cd-diag__item--${fixedOverIncome > 0.50 ? "red" : fixedOverIncome > 0.35 ? "orange" : "green"}`}>
+            <strong>Peso de los fijos</strong>
+            Los gastos fijos representan el {pct(fixedOverIncome)} de los ingresos.
+            {fixedOverIncome > 0.50
+              ? " Esto es crítico (>50%). Revisá contratos y alquileres urgente."
+              : fixedOverIncome > 0.35
+                ? " Está elevado (>35%). Buscá oportunidades de reducción."
+                : " Bien posicionado."}
           </div>
-        )}
 
-        {/* Insight */}
-        {biggest && (
-          <div className="cd-fe-insight">
-            Tu mayor gasto es <strong>{biggest.label}</strong> ({fmt(Number(biggest.value) || 0)}).
+          <div className={`cd-diag__item cd-diag__item--${fixedGap > 0 ? "orange" : "green"}`}>
+            <strong>Mayor gasto: {biggest.label}</strong>
+            Representa el {pct(Number(biggest.value) / total)} del total de fijos ({fmt(Number(biggest.value))}).
             {fixedGap > 0
-              ? ` Para llegar al 30% de margen, los fijos deberían bajar ${fmt(fixedGap)}.`
-              : " ¡Los fijos ya están en rango para un margen del 30%!"}
+              ? ` Para alcanzar el 30% de margen, los fijos deberían bajar ${fmt(fixedGap)} en total.`
+              : " Los fijos están dentro del rango para un margen del 30%."}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
