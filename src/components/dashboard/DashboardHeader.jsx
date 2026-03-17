@@ -1,6 +1,4 @@
 // src/components/dashboard/DashboardHeader.jsx
-import { Link } from "react-router-dom";
-
 export default function DashboardHeader({
   monthOffset,
   range,
@@ -49,14 +47,6 @@ export default function DashboardHeader({
           )}
         </div>
 
-        <div className="dashboard-header__cta">
-          <Link to="/services/new">
-            <button className="btn-primary">+ Registrar servicio</button>
-          </Link>
-          <Link to="/expenses/daily">
-            <button className="btn-secondary">+ Registrar gasto</button>
-          </Link>
-        </div>
       </div>
     </header>
   );
