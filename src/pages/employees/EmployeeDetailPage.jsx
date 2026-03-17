@@ -69,12 +69,30 @@ export default function EmployeeDetailPage() {
   const { id } = useParams();
   const [employee, setEmployee] = useState(null);
   const [services, setServices]  = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading]    = useState(true);
   const [error, setError]        = useState(null);
   const [range, setRange]        = useState(getMonthRange);
   const [rangeType, setRangeType] = useState("month");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo]     = useState("");
+
+  // Carga service types una sola vez
+  useEffect(() => {
+    apiRequest("/v2/service-types").then((data) => {
+      setServiceTypes(Array.isArray(data) ? data : data?.items || []);
+    }).catch(() => {});
+  }, []);
+
+  function resolveServiceTypeName(s) {
+    return (
+      s.service_type?.name ||
+      s.service_name ||
+      s.type ||
+      serviceTypes.find((t) => String(t.id) === String(s.service_type_id))?.name ||
+      "Servicio"
+    );
+  }
 
   // Carga al montar o cuando cambia el rango
   useEffect(() => {
@@ -131,7 +149,7 @@ export default function EmployeeDetailPage() {
 
   // Conteo por tipo de servicio
   const byType = services.reduce((acc, s) => {
-    const name = s.service_type?.name || "Sin tipo";
+    const name = resolveServiceTypeName(s) || "Sin tipo";
     acc[name] = (acc[name] || 0) + 1;
     return acc;
   }, {});
@@ -292,7 +310,7 @@ export default function EmployeeDetailPage() {
                   <div className="fe-card__accent" />
                   <div className="fe-card__body">
                     <div className="fe-card__top">
-                      <span className="fe-card__name">{s.service_type?.name || s.service_name || s.type_name || s.type || "Servicio"}</span>
+                      <span className="fe-card__name">{resolveServiceTypeName(s)}</span>
                       <span className="fe-card__date-badge">{formatDate(s.date)}</span>
                     </div>
                     <div className="fe-card__amount">{fmt(resolvePrice(s))}</div>
