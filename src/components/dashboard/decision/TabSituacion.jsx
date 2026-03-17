@@ -49,10 +49,10 @@ export default function TabSituacion({ kpis }) {
   return (
     <div>
       {/* KPIs */}
-      <div className="cd-kpi-row">
+      <div className="cd-kpi-row cd-kpi-row--5">
         <div className="cd-kpi-box">
           <span className="cd-kpi-box__label">Ingresos totales</span>
-          <span className={`cd-kpi-box__value cd-kpi-box__value--income`}>{fmt(income)}</span>
+          <span className="cd-kpi-box__value cd-kpi-box__value--income">{fmt(income)}</span>
         </div>
         <div className="cd-kpi-box">
           <span className="cd-kpi-box__label">Costos totales</span>
@@ -61,6 +61,14 @@ export default function TabSituacion({ kpis }) {
         <div className="cd-kpi-box">
           <span className="cd-kpi-box__label">Ganancia neta</span>
           <span className={`cd-kpi-box__value cd-kpi-box__value--profit${profit < 0 ? " negative" : ""}`}>{fmt(profit)}</span>
+        </div>
+        <div className="cd-kpi-box">
+          <span className="cd-kpi-box__label">Servicios realizados</span>
+          <span className="cd-kpi-box__value">{servicesCount}</span>
+        </div>
+        <div className="cd-kpi-box">
+          <span className="cd-kpi-box__label">Ticket promedio</span>
+          <span className="cd-kpi-box__value">{fmt(avgTicket)}</span>
         </div>
       </div>
 

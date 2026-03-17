@@ -38,6 +38,10 @@
   margin-bottom: 20px;
 }
 
+.cd-kpi-row--5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .cd-kpi-box {
   background: rgba(16, 19, 31, 0.04);
   border-radius: var(--radius-md);
@@ -755,8 +759,9 @@
 
 /* ── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
-  .cd-kpi-row {
-    grid-template-columns: 1fr;
+  .cd-kpi-row,
+  .cd-kpi-row--5 {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .cd-split {

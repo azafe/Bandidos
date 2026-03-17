@@ -2,8 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
-import KpiGrid from "../components/dashboard/KpiGrid";
-import ChartsSection from "../components/dashboard/ChartsSection";
 import SkeletonDashboard from "../components/dashboard/SkeletonDashboard";
 import DecisionCenter from "../components/dashboard/DecisionCenter";
 import { fetchDashboardData } from "../lib/dashboardApi";
@@ -149,10 +147,6 @@ export default function DashboardHome() {
         range={range}
         onMonthOffsetChange={setMonthOffset}
       />
-
-      <KpiGrid kpis={metrics.kpis} />
-
-      <ChartsSection series={metrics.series} />
 
       <DecisionCenter kpis={metrics.kpis} fixedExpenses={rawFixedExpenses} />
 
