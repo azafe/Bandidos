@@ -201,12 +201,19 @@
   align-items: center;
 }
 
+.petshop-item-row select {
+  flex: 1;
+  min-width: 0;
+}
+
 .petshop-item-row input {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-soft);
   padding: 8px 10px;
   font-size: 0.85rem;
   background: #f9f9fc;
+  min-width: 0;
+  width: 72px;
 }
 
 .petshop-stepper {
