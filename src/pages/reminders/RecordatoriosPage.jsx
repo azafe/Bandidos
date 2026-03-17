@@ -236,6 +236,15 @@ export default function RecordatoriosPage() {
         </div>
 
         <div className="services-list">
+          {!loading && recordatorios.length > 0 && (
+            <div className="recordatorio-header">
+              <div>Mascota / Dueño</div>
+              <div>Último turno</div>
+              <div>Días</div>
+              <div>Teléfono</div>
+              <div></div>
+            </div>
+          )}
           {loading ? (
             <div className="services-skeleton">
               {Array.from({ length: 4 }).map((_, idx) => (
@@ -265,35 +274,40 @@ export default function RecordatoriosPage() {
               return (
                 <div
                   key={petId ?? turno.id}
-                  className="service-item"
+                  className="service-item recordatorio-item"
                   style={{ opacity: yaEnviado ? 0.45 : 1, transition: "opacity 0.3s" }}
                   onClick={() => !yaEnviado && abrirModal(turno)}
                 >
-                  <div className="service-item__body">
+                  {/* Col 1: Mascota + Dueño */}
+                  <div>
                     <div className="service-item__title">{petName}</div>
-                    <div className="service-item__meta">
-                      <span>{ownerName}</span>
-                      <span>Último turno: {formatFecha(turno.date)}</span>
-                      <span>{ownerPhone || "Sin teléfono"}</span>
-                    </div>
-                    <div className="service-item__badges">
-                      <span
-                        className="service-badge"
-                        style={
-                          diasColor
-                            ? { background: diasColor + "18", color: diasColor }
-                            : undefined
-                        }
-                      >
-                        {turno.dias} días sin turno
-                      </span>
+                    <div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)", marginTop: 2 }}>
+                      {ownerName}
                     </div>
                   </div>
-                  <div className="service-item__side">
+
+                  {/* Col 2: Fecha último turno */}
+                  <div className="recordatorio-item__date">{formatFecha(turno.date)}</div>
+
+                  {/* Col 3: Días (badge con color) */}
+                  <div className="recordatorio-item__days">
+                    <span
+                      className="service-badge"
+                      style={diasColor ? { background: diasColor + "18", color: diasColor } : undefined}
+                    >
+                      {turno.dias}d
+                    </span>
+                  </div>
+
+                  {/* Col 4: Teléfono */}
+                  <div className="recordatorio-item__phone">
+                    {ownerPhone || <span style={{ color: "#b91c1c" }}>Sin tel.</span>}
+                  </div>
+
+                  {/* Col 5: Acción */}
+                  <div className="recordatorio-item__action">
                     {yaEnviado ? (
-                      <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>
-                        ✓ Enviado
-                      </span>
+                      <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
                     ) : (
                       <button
                         type="button"
@@ -304,10 +318,7 @@ export default function RecordatoriosPage() {
                           fontSize: 13,
                           padding: "8px 14px",
                         }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirModal(turno);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); abrirModal(turno); }}
                       >
                         WhatsApp
                       </button>
