@@ -23,16 +23,29 @@
   gap: 16px;
 }
 
-.dashboard-header__presets {
+.dashboard-month-nav {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
-.dashboard-header__dates {
+.dashboard-month-nav__arrow {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.2rem;
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.dashboard-month-nav__label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 160px;
+  text-align: center;
 }
 
 .dashboard-header__cta {

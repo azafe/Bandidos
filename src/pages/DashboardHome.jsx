@@ -13,75 +13,40 @@ function formatDate(date) {
   return date.toISOString().slice(0, 10);
 }
 
-function getTodayRange() {
-  const today = new Date();
-  const value = formatDate(today);
-  return { from: value, to: value, label: "Hoy" };
-}
-
-function getWeekRange() {
-  const today = new Date();
-  const from = new Date(today);
-  from.setDate(today.getDate() - 6);
-  return {
-    from: formatDate(from),
-    to: formatDate(today),
-    label: "Últimos 7 días",
-  };
-}
-
-function getMonthRange() {
+function getMonthRange(offset = 0) {
   const now = new Date();
-  const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  const year = now.getFullYear();
+  const month = now.getMonth() + offset; // Date normalizes negative values
+  const from = new Date(year, month, 1);
+  const to = new Date(year, month + 1, 0); // last day of month
+  const today = new Date();
+  const effectiveTo = to > today ? today : to;
   return {
     from: formatDate(from),
-    to: formatDate(now),
-    label: "Mes en curso",
+    to: formatDate(effectiveTo),
+    label: from.toLocaleDateString("es-AR", { month: "long", year: "numeric" }),
   };
-}
-
-function daysBetween(from, to) {
-  const start = new Date(from);
-  const end = new Date(to);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  return Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
 }
 
 function getPreviousRange(range) {
-  const totalDays = daysBetween(range.from, range.to);
-  const end = new Date(range.from);
-  end.setDate(end.getDate() - 1);
-  const start = new Date(end);
-  start.setDate(end.getDate() - (totalDays - 1));
+  const from = new Date(range.from);
+  const prevMonthEnd = new Date(from.getFullYear(), from.getMonth(), 0);
+  const prevMonthStart = new Date(from.getFullYear(), from.getMonth() - 1, 1);
   return {
-    from: formatDate(start),
-    to: formatDate(end),
-    label: "Período anterior",
+    from: formatDate(prevMonthStart),
+    to: formatDate(prevMonthEnd),
+    label: "Mes anterior",
   };
 }
 
 export default function DashboardHome() {
-  const [rangeType, setRangeType] = useState("month");
-  const [range, setRange] = useState(() => getMonthRange());
+  const [monthOffset, setMonthOffset] = useState(0);
+  const range = useMemo(() => getMonthRange(monthOffset), [monthOffset]);
+  const previousRange = useMemo(() => getPreviousRange(range), [range]);
+
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (rangeType === "today") setRange(getTodayRange());
-    if (rangeType === "week") setRange(getWeekRange());
-    if (rangeType === "month") setRange(getMonthRange());
-    if (rangeType === "custom") {
-      setRange((prev) => ({ ...prev, label: "Personalizado" }));
-    }
-  }, [rangeType]);
-
-  function handleRangeChange(nextRange) {
-    setRange({ ...nextRange, label: "Personalizado" });
-  }
-
-  const previousRange = useMemo(() => getPreviousRange(range), [range]);
 
   useEffect(() => {
     let active = true;
@@ -119,10 +84,9 @@ export default function DashboardHome() {
     return (
       <div className="page-content">
         <DashboardHeader
-          rangeType={rangeType}
+          monthOffset={monthOffset}
           range={range}
-          onRangeTypeChange={setRangeType}
-          onRangeChange={handleRangeChange}
+          onMonthOffsetChange={setMonthOffset}
         />
         <SkeletonDashboard />
       </div>
@@ -133,10 +97,9 @@ export default function DashboardHome() {
     return (
       <div className="page-content">
         <DashboardHeader
-          rangeType={rangeType}
+          monthOffset={monthOffset}
           range={range}
-          onRangeTypeChange={setRangeType}
-          onRangeChange={handleRangeChange}
+          onMonthOffsetChange={setMonthOffset}
         />
         <div className="dashboard-error card">
           <h3 className="card-title">No pudimos cargar el dashboard</h3>
@@ -150,10 +113,9 @@ export default function DashboardHome() {
     return (
       <div className="page-content">
         <DashboardHeader
-          rangeType={rangeType}
+          monthOffset={monthOffset}
           range={range}
-          onRangeTypeChange={setRangeType}
-          onRangeChange={handleRangeChange}
+          onMonthOffsetChange={setMonthOffset}
         />
         <div className="dashboard-empty card">
           <h3 className="card-title">Sin datos en este período</h3>
@@ -180,10 +142,9 @@ export default function DashboardHome() {
   return (
     <div className="page-content">
       <DashboardHeader
-        rangeType={rangeType}
+        monthOffset={monthOffset}
         range={range}
-        onRangeTypeChange={setRangeType}
-        onRangeChange={handleRangeChange}
+        onMonthOffsetChange={setMonthOffset}
       />
 
       <KpiGrid kpis={metrics.kpis} />
