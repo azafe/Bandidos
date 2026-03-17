@@ -21,6 +21,10 @@
   margin-bottom: 16px;
 }
 
+.cd-tabs .tab {
+  color: #ffffff;
+}
+
 .cd-panel {
   background: var(--color-surface);
   border: 1px solid rgba(255, 255, 255, 0.6);

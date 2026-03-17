@@ -44,8 +44,6 @@ export default function DecisionCenter({ kpis, fixedExpenses }) {
 
   return (
     <div className="cd-section">
-      <h2 className="cd-section__header">Centro de Decisiones</h2>
-
       <div className="cd-tabs services-tabs">
         {TABS.map((label, idx) => (
           <button

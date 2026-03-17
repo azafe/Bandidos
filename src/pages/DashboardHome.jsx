@@ -123,18 +123,6 @@ export default function DashboardHome() {
           <p className="card-subtitle">
             Empezá registrando un servicio o un gasto para ver tus métricas.
           </p>
-          <div className="modal-actions">
-            <Link to="/services/new">
-              <button className="btn-primary" type="button">
-                + Registrar servicio
-              </button>
-            </Link>
-            <Link to="/expenses/daily">
-              <button className="btn-secondary" type="button">
-                + Registrar gasto
-              </button>
-            </Link>
-          </div>
         </div>
       </div>
     );
