@@ -5,7 +5,6 @@ import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 
 const DAYS_RANGE = 180;
-const LS_KEY = "bandidos_vio_recordatorios";
 
 function toISODateLocal(date) {
   const yyyy = date.getFullYear();
@@ -38,9 +37,7 @@ export default function RecordatoriosPage() {
   const [error, setError] = useState(null);
   const [selected, setSelected] = useState(null);
   const [mensajeEdit, setMensajeEdit] = useState("");
-  const [copiado, setCopiado] = useState({});
   const [copiadoModal, setCopiadoModal] = useState(false);
-  const [seleccionados, setSeleccionados] = useState({});
 
   const { items: pets } = useApiResource("/v2/pets");
 
@@ -71,7 +68,6 @@ export default function RecordatoriosPage() {
 
   const getPetInfo = (turno) => {
     const petId = turno.pet_id ?? turno.pet?.id;
-    // Try embedded first, then join from pets list
     const petName =
       turno.pet?.name ??
       turno.pet_name ??
@@ -124,20 +120,6 @@ export default function RecordatoriosPage() {
       )
     : 0;
 
-  const todosSeleccionados =
-    pendientes.length > 0 &&
-    pendientes.every((r) => seleccionados[r.pet_id ?? r.pet?.id]);
-
-  function toggleSeleccionarTodos() {
-    if (todosSeleccionados) {
-      setSeleccionados({});
-    } else {
-      const all = {};
-      pendientes.forEach((r) => { all[r.pet_id ?? r.pet?.id] = true; });
-      setSeleccionados(all);
-    }
-  }
-
   function abrirModal(turno) {
     const { petName, ownerName, ownerPhone } = getPetInfo(turno);
     setSelected({ turno, petName, ownerName, ownerPhone });
@@ -155,39 +137,18 @@ export default function RecordatoriosPage() {
     setEnviados((prev) => ({ ...prev, [petId]: true }));
   }
 
-  function copiarFila(turno) {
-    const { petId, petName, ownerName } = getPetInfo(turno);
-    const msg = buildMensaje(ownerName, petName, turno.dias);
-    navigator.clipboard.writeText(msg).catch(() => {});
-    setCopiado((prev) => ({ ...prev, [petId]: true }));
-    setTimeout(() => setCopiado((prev) => ({ ...prev, [petId]: false })), 2000);
-  }
-
   function abrirWhatsApp(phone, mensaje, petId) {
     const tel = limpiarTelefono(phone);
     if (!tel) {
       alert("Este cliente no tiene teléfono cargado.");
       return;
     }
-    const url = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(
+      `https://wa.me/${tel}?text=${encodeURIComponent(mensaje)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
     marcarEnviado(petId);
-  }
-
-  function enviarATodos() {
-    if (pendientes.length === 0) return;
-    pendientes.forEach((r) => {
-      const { petId, petName, ownerName, ownerPhone } = getPetInfo(r);
-      const tel = limpiarTelefono(ownerPhone);
-      if (!tel) return;
-      const msg = buildMensaje(ownerName, petName, r.dias);
-      window.open(
-        `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`,
-        "_blank",
-        "noopener,noreferrer"
-      );
-      marcarEnviado(petId);
-    });
   }
 
   return (
@@ -217,15 +178,6 @@ export default function RecordatoriosPage() {
             días sin turno.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary"
-          style={{ background: "#25D366", borderColor: "#25D366" }}
-          onClick={enviarATodos}
-          disabled={pendientes.length === 0}
-        >
-          Enviar a todos ({pendientes.length})
-        </button>
       </header>
 
       {error && (
@@ -235,49 +187,25 @@ export default function RecordatoriosPage() {
       )}
 
       {/* KPI cards */}
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          marginBottom: 24,
-          flexWrap: "wrap",
-        }}
-      >
-        <div
-          className="card"
-          style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}
-        >
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
+      <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+        <div className="card" style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 4 }}>
             Pendientes
           </div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              color: pendientes.length > 0 ? "#b91c1c" : undefined,
-            }}
-          >
+          <div style={{ fontSize: 28, fontWeight: 700, color: pendientes.length > 0 ? "#b91c1c" : undefined }}>
             {loading ? "…" : pendientes.length}
           </div>
         </div>
-        <div
-          className="card"
-          style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}
-        >
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
+        <div className="card" style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 4 }}>
             Enviados hoy
           </div>
-          <div
-            style={{ fontSize: 28, fontWeight: 700, color: "#15803d" }}
-          >
+          <div style={{ fontSize: 28, fontWeight: 700, color: "#15803d" }}>
             {enviadosHoy}
           </div>
         </div>
-        <div
-          className="card"
-          style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}
-        >
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
+        <div className="card" style={{ flex: 1, minWidth: 140, textAlign: "center", padding: "16px 12px" }}>
+          <div style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 4 }}>
             Días promedio
           </div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -286,167 +214,102 @@ export default function RecordatoriosPage() {
         </div>
       </div>
 
-      {/* Tabla */}
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        {loading ? (
-          <div style={{ padding: 32, textAlign: "center", color: "#6b7280" }}>
-            Cargando turnos…
+      {/* Lista */}
+      <div className="card services-panel">
+        <div className="services-panel__header">
+          <div>
+            <h2 className="card-title">Clientes sin turno reciente</h2>
+            <p className="card-subtitle">
+              {loading
+                ? "Cargando turnos…"
+                : `${recordatorios.length} mascota${recordatorios.length !== 1 ? "s" : ""} sin turno en los últimos ${diasMin} días.`}
+            </p>
           </div>
-        ) : recordatorios.length === 0 ? (
-          <div
-            style={{
-              padding: 48,
-              textAlign: "center",
-              color: "#6b7280",
-              fontSize: 15,
-            }}
-          >
-            Ningún cliente lleva más de {diasMin} días sin turno. ¡Todo al día!
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-              <thead>
-                <tr
-                  style={{
-                    background: "#f9fafb",
-                    borderBottom: "1px solid #e5e7eb",
-                  }}
-                >
-                  <th style={{ padding: "10px 12px", textAlign: "left", width: 36 }}>
-                    <input
-                      type="checkbox"
-                      checked={todosSeleccionados}
-                      onChange={toggleSeleccionarTodos}
-                    />
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "left" }}>
-                    Mascota / Dueño
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "left" }}>
-                    Último turno
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "center" }}>
-                    Días
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "left" }}>
-                    Teléfono
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {recordatorios.map((turno) => {
-                  const { petId, petName, ownerName, ownerPhone } =
-                    getPetInfo(turno);
-                  const yaEnviado = Boolean(enviados[petId]);
-                  const diasColor =
-                    turno.dias >= 60
-                      ? "#b91c1c"
-                      : turno.dias >= 30
-                      ? "#d97706"
-                      : undefined;
+        </div>
 
-                  return (
-                    <tr
-                      key={petId ?? turno.id}
-                      style={{
-                        borderBottom: "1px solid #f3f4f6",
-                        opacity: yaEnviado ? 0.45 : 1,
-                        transition: "opacity 0.3s",
-                      }}
-                    >
-                      <td style={{ padding: "10px 12px" }}>
-                        <input
-                          type="checkbox"
-                          disabled={yaEnviado}
-                          checked={Boolean(seleccionados[petId])}
-                          onChange={(e) =>
-                            setSeleccionados((prev) => ({
-                              ...prev,
-                              [petId]: e.target.checked,
-                            }))
-                          }
-                        />
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>
-                        <div style={{ fontWeight: 600 }}>{petName}</div>
-                        <div style={{ color: "#6b7280", fontSize: 12 }}>
-                          {ownerName}
-                        </div>
-                      </td>
-                      <td style={{ padding: "10px 12px", color: "#374151" }}>
-                        {formatFecha(turno.date)}
-                      </td>
-                      <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                        <span
-                          style={{
-                            background: diasColor
-                              ? diasColor + "1a"
-                              : "#f3f4f6",
-                            color: diasColor ?? "#374151",
-                            fontWeight: 700,
-                            padding: "2px 10px",
-                            borderRadius: 12,
-                            fontSize: 13,
-                          }}
-                        >
-                          {turno.dias}d
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px 12px", color: "#374151" }}>
-                        {ownerPhone || (
-                          <span style={{ color: "#9ca3af" }}>Sin teléfono</span>
-                        )}
-                      </td>
-                      <td
+        <div className="services-list">
+          {loading ? (
+            <div className="services-skeleton">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="service-item service-item--skeleton">
+                  <div className="service-item__body">
+                    <div className="skeleton skeleton-line" />
+                    <div className="skeleton skeleton-line short" />
+                    <div className="skeleton skeleton-pill" />
+                  </div>
+                  <div className="service-item__side">
+                    <div className="skeleton skeleton-price" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : recordatorios.length === 0 ? (
+            <div className="services-empty">
+              Ningún cliente lleva más de {diasMin} días sin turno. ¡Todo al día!
+            </div>
+          ) : (
+            recordatorios.map((turno) => {
+              const { petId, petName, ownerName, ownerPhone } = getPetInfo(turno);
+              const yaEnviado = Boolean(enviados[petId]);
+              const diasColor =
+                turno.dias >= 60 ? "#b91c1c" : turno.dias >= 30 ? "#d97706" : undefined;
+
+              return (
+                <div
+                  key={petId ?? turno.id}
+                  className="service-item"
+                  style={{ opacity: yaEnviado ? 0.45 : 1, transition: "opacity 0.3s" }}
+                  onClick={() => !yaEnviado && abrirModal(turno)}
+                >
+                  <div className="service-item__body">
+                    <div className="service-item__title">{petName}</div>
+                    <div className="service-item__meta">
+                      <span>{ownerName}</span>
+                      <span>Último turno: {formatFecha(turno.date)}</span>
+                      <span>{ownerPhone || "Sin teléfono"}</span>
+                    </div>
+                    <div className="service-item__badges">
+                      <span
+                        className="service-badge"
+                        style={
+                          diasColor
+                            ? { background: diasColor + "18", color: diasColor }
+                            : undefined
+                        }
+                      >
+                        {turno.dias} días sin turno
+                      </span>
+                    </div>
+                  </div>
+                  <div className="service-item__side">
+                    {yaEnviado ? (
+                      <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>
+                        ✓ Enviado
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-primary"
                         style={{
-                          padding: "10px 12px",
-                          textAlign: "right",
-                          whiteSpace: "nowrap",
+                          background: "#25D366",
+                          boxShadow: "0 6px 16px rgba(37,211,102,0.35)",
+                          fontSize: 13,
+                          padding: "8px 14px",
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirModal(turno);
                         }}
                       >
-                        {yaEnviado ? (
-                          <span
-                            style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}
-                          >
-                            ✓ Enviado
-                          </span>
-                        ) : (
-                          <div style={{ display: "inline-flex", gap: 8 }}>
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              style={{ fontSize: 12, padding: "4px 10px" }}
-                              onClick={() => copiarFila(turno)}
-                            >
-                              {copiado[petId] ? "✓ Copiado" : "Copiar"}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-primary"
-                              style={{
-                                fontSize: 12,
-                                padding: "4px 10px",
-                                background: "#25D366",
-                                borderColor: "#25D366",
-                              }}
-                              onClick={() => abrirModal(turno)}
-                            >
-                              WhatsApp
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        WhatsApp
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Modal WhatsApp */}
@@ -457,7 +320,7 @@ export default function RecordatoriosPage() {
       >
         {selected && (
           <>
-            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 12 }}>
+            <p style={{ fontSize: 13, color: "var(--color-text-soft)", marginBottom: 12 }}>
               Para {selected.ownerName} · Tel:{" "}
               {selected.ownerPhone || (
                 <span style={{ color: "#b91c1c" }}>Sin teléfono</span>
@@ -471,20 +334,18 @@ export default function RecordatoriosPage() {
                 width: "100%",
                 padding: "10px",
                 borderRadius: 8,
-                border: "1px solid #d1d5db",
+                border: "1px solid var(--color-border-soft)",
                 fontSize: 14,
                 lineHeight: 1.5,
                 resize: "vertical",
                 boxSizing: "border-box",
                 marginBottom: 16,
+                background: "var(--color-surface-strong)",
+                color: "var(--color-text)",
               }}
             />
             <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={cerrarModal}
-              >
+              <button type="button" className="btn-secondary" onClick={cerrarModal}>
                 Cancelar
               </button>
               <button
@@ -501,10 +362,9 @@ export default function RecordatoriosPage() {
               <button
                 type="button"
                 className="btn-primary"
-                style={{ background: "#25D366", borderColor: "#25D366" }}
+                style={{ background: "#25D366", boxShadow: "0 6px 16px rgba(37,211,102,0.35)" }}
                 onClick={() => {
-                  const petId =
-                    selected.turno.pet_id ?? selected.turno.pet?.id;
+                  const petId = selected.turno.pet_id ?? selected.turno.pet?.id;
                   abrirWhatsApp(selected.ownerPhone, mensajeEdit, petId);
                   cerrarModal();
                 }}
