@@ -1264,44 +1264,48 @@ export default function AgendaPage() {
           <div className="agenda-command__date">
             <span className="agenda-daybar__label">{formatDateLong(selectedDate)}</span>
             <div className="agenda-date__controls">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setSelectedDate(todayISO())}
-              >
-                Hoy
-              </button>
-              <div className="date-field__control">
-                <input
-                  type="text"
-                  className="date-field__display"
-                  value={formatDateDisplay(selectedDate)}
-                  placeholder="DD-MM-AAAA"
-                  readOnly
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
-                <input
-                  type="date"
-                  className="date-field__native"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                />
+              <div className="agenda-date__nav-row">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+                >
+                  ←
+                </button>
+                <div className="date-field__control">
+                  <input
+                    type="text"
+                    className="date-field__display"
+                    value={formatDateDisplay(selectedDate)}
+                    placeholder="DD-MM-AAAA"
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="date"
+                    className="date-field__native"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+                >
+                  →
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
-              >
-                →
-              </button>
+              <div className="agenda-date__today-row">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setSelectedDate(todayISO())}
+                >
+                  Hoy
+                </button>
+              </div>
             </div>
           </div>
 

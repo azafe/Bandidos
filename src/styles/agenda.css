@@ -22,17 +22,29 @@
   min-width: 160px;
   position: sticky;
   top: 16px;
+  z-index: 10;
 }
 
 .agenda-date__controls {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.agenda-date__controls .date-field__control {
-  min-width: 150px;
+.agenda-date__nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agenda-date__nav-row .date-field__control {
+  flex: 1;
+  min-width: 130px;
+}
+
+.agenda-date__today-row {
+  display: flex;
+  justify-content: center;
 }
 
 .agenda-daybar__label {
@@ -1550,11 +1562,11 @@
 
   .agenda-cta {
     position: sticky;
-    top: auto;
-    bottom: 16px;
-    align-self: stretch;
+    top: 64px; /* debajo del app-header mobile (~52px) */
+    bottom: auto;
+    align-self: auto;
     text-align: center;
-    z-index: 20;
+    z-index: 10; /* debajo del app-header (z-index: 20) */
   }
 }
 
