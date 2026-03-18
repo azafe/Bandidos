@@ -257,6 +257,29 @@ ${productLines}
 === FIN DE DATOS ===`;
 }
 
+// --- Contador de consultas con reset mensual ---
+const QUERY_LIMIT = 20;
+
+function getQueryStorageKey() {
+  const now = new Date();
+  return `bandidos_ai_queries_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getQueriesUsed() {
+  return Number(localStorage.getItem(getQueryStorageKey()) || 0);
+}
+
+function incrementQueriesUsed() {
+  const key = getQueryStorageKey();
+  const current = Number(localStorage.getItem(key) || 0);
+  localStorage.setItem(key, String(current + 1));
+  return current + 1;
+}
+
+function getQueriesLeft() {
+  return Math.max(0, QUERY_LIMIT - getQueriesUsed());
+}
+
 // --- Sugerencias rápidas ---
 const QUICK_SUGGESTIONS = [
   "¿Cuánto facturamos hoy?",
@@ -296,6 +319,7 @@ export default function AsistenteIA() {
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(null);
   const [contextError, setContextError] = useState(null);
+  const [queriesLeft, setQueriesLeft] = useState(() => getQueriesLeft());
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -376,7 +400,7 @@ export default function AsistenteIA() {
 
   async function sendMessage(text) {
     const trimmed = text.trim();
-    if (!trimmed || isLoading || isLoadingContext || !systemPrompt) return;
+    if (!trimmed || isLoading || isLoadingContext || !systemPrompt || queriesLeft <= 0) return;
 
     const userMessage = { role: "user", content: trimmed };
     const updatedMessages = [...messages, userMessage];
@@ -415,6 +439,8 @@ export default function AsistenteIA() {
 
       const data = await res.json();
       const reply = data.content?.[0]?.text || "No pude generar una respuesta.";
+      const newLeft = QUERY_LIMIT - incrementQueriesUsed();
+      setQueriesLeft(Math.max(0, newLeft));
       setMessages([...updatedMessages, { role: "assistant", content: reply }]);
     } catch (err) {
       setMessages([
@@ -438,7 +464,8 @@ export default function AsistenteIA() {
     }
   }
 
-  const isInputDisabled = isLoading || isLoadingContext || !systemPrompt;
+  const isLimitReached = queriesLeft <= 0;
+  const isInputDisabled = isLoading || isLoadingContext || !systemPrompt || isLimitReached;
   const showWelcome = messages.length === 0 && !isLoadingContext;
 
   return (
@@ -540,26 +567,40 @@ export default function AsistenteIA() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form className="ai-panel__input" onSubmit={handleSubmit}>
-            <textarea
-              ref={inputRef}
-              className="ai-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isLoadingContext ? "Cargando datos..." : "Escribí tu pregunta..."}
-              rows={1}
-              disabled={isInputDisabled}
-            />
-            <button
-              className="ai-send"
-              type="submit"
-              disabled={!input.trim() || isInputDisabled}
-              aria-label="Enviar mensaje"
-            >
-              <IconSend />
-            </button>
-          </form>
+          {isLimitReached ? (
+            <div className="ai-limit-reached">
+              <p className="ai-limit-reached__title">Límite mensual alcanzado</p>
+              <p className="ai-limit-reached__text">
+                Usaste tus {QUERY_LIMIT} consultas de este mes. Contactá al administrador para ampliar el límite.
+              </p>
+            </div>
+          ) : (
+            <form className="ai-panel__input" onSubmit={handleSubmit}>
+              <div className="ai-input-wrapper">
+                <textarea
+                  ref={inputRef}
+                  className="ai-input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={isLoadingContext ? "Cargando datos..." : "Escribí tu pregunta..."}
+                  rows={1}
+                  disabled={isInputDisabled}
+                />
+                <span className={`ai-queries-left${queriesLeft <= 5 ? " ai-queries-left--low" : ""}`}>
+                  {queriesLeft} consulta{queriesLeft !== 1 ? "s" : ""} restante{queriesLeft !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <button
+                className="ai-send"
+                type="submit"
+                disabled={!input.trim() || isInputDisabled}
+                aria-label="Enviar mensaje"
+              >
+                <IconSend />
+              </button>
+            </form>
+          )}
         </div>
       )}
     </>
