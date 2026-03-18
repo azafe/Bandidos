@@ -17,15 +17,8 @@
   border-radius: 999px;
   background: rgba(16, 19, 31, 0.08);
   gap: 4px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  flex-wrap: wrap;
   margin-bottom: 16px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.cd-tabs::-webkit-scrollbar {
-  display: none;
 }
 
 .cd-tabs .tab {
@@ -770,16 +763,17 @@
     position: static;
   }
 
-  /* Tabs: scroll horizontal, sin wrap ni flex-grow */
   .cd-tabs {
     border-radius: 14px;
+    justify-content: center;
   }
 
   .cd-tabs .tab {
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    text-align: center;
+    font-size: 0.75rem;
+    padding: 5px 10px;
     white-space: nowrap;
-    font-size: 0.78rem;
-    padding: 6px 12px;
   }
 }
 

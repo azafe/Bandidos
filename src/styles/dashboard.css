@@ -46,11 +46,11 @@
 }
 
 .dashboard-month-nav__label {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #f7f8ff;
-  min-width: 160px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .dashboard-header__cta {
@@ -89,6 +89,18 @@
 @media (max-width: 640px) {
   .dashboard-charts__row--secondary {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-title {
+    font-size: 1.5rem;
+  }
+
+  .dashboard-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .dashboard-month-nav__label {
+    font-size: 0.82rem;
   }
 }
 
