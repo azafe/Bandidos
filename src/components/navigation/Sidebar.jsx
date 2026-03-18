@@ -48,18 +48,18 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         </NavLink>
 
         <NavLink
-          to="/recordatorios"
+          to="/comunicaciones"
           className={({ isActive }) => makeClassName(isActive)}
-          onClick={() => {
-            localStorage.setItem("bandidos_vio_recordatorios", "true");
-            handleNavigate();
-          }}
+          onClick={handleNavigate}
           style={{ display: "flex", alignItems: "center" }}
         >
-          Recordatorios
-          {!localStorage.getItem("bandidos_vio_recordatorios") && (
-            <span
-              style={{
+          Comunicaciones
+          {(() => {
+            const today = new Date().toISOString().split("T")[0];
+            const count = Number(localStorage.getItem("bandidos_comunicaciones_count") || 0);
+            const seen = localStorage.getItem("bandidos_comunicaciones_seen");
+            return count > 0 && seen !== today ? (
+              <span style={{
                 background: "#ef4444",
                 color: "white",
                 fontSize: "10px",
@@ -68,11 +68,11 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
                 borderRadius: "10px",
                 marginLeft: "6px",
                 lineHeight: 1.4,
-              }}
-            >
-              NUEVO
-            </span>
-          )}
+              }}>
+                {count}
+              </span>
+            ) : null;
+          })()}
         </NavLink>
 
         <NavLink

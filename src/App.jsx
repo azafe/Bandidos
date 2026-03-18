@@ -1,5 +1,5 @@
 // src/App.jsx
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 
 import DashboardHome from "./pages/DashboardHome";
@@ -22,7 +22,7 @@ import PaymentMethodsPage from "./pages/catalog/PaymentMethodsPage";
 import ExpenseCategoriesPage from "./pages/catalog/ExpenseCategoriesPage";
 import UsersPage from "./pages/admin/UsersPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
-import RecordatoriosPage from "./pages/reminders/RecordatoriosPage";
+import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -67,7 +67,8 @@ function App() {
                   />
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/petshop" element={<PetShopPage />} />
-                  <Route path="/recordatorios" element={<RecordatoriosPage />} />
+                  <Route path="/comunicaciones" element={<ComunicacionesPage />} />
+                  <Route path="/recordatorios" element={<Navigate to="/comunicaciones" replace />} />
                 </Routes>
               </MainLayout>
             </ProtectedRoute>

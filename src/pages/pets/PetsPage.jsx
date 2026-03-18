@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
+import { calcularEdad } from "../../utils/cumpleanos";
 
 const PAGE_SIZE = 24;
 
@@ -65,18 +66,18 @@ export default function PetsPage() {
   const [isEditingModal, setIsEditingModal] = useState(false);
   const [modalForm, setModalForm] = useState({
     name: "", breed: "", owner_name: "", owner_phone: "",
-    notes: "", neutered: false, behavior: "", age: "", address: "",
+    notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "",
   });
   const isAdmin = user?.role === "admin";
 
   const [form, setForm] = useState({
     name: "", breed: "", owner_name: "", owner_phone: "",
-    notes: "", neutered: false, behavior: "", age: "", address: "",
+    notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "",
   });
   const [saving, setSaving] = useState(false);
 
   function resetForm() {
-    setForm({ name: "", breed: "", owner_name: "", owner_phone: "", notes: "", neutered: false, behavior: "", age: "", address: "" });
+    setForm({ name: "", breed: "", owner_name: "", owner_phone: "", notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "" });
     setEditingId(null);
   }
 
@@ -103,6 +104,7 @@ export default function PetsPage() {
         behavior: form.behavior.trim() || null,
         age: form.age.trim() || null,
         address: form.address.trim() || null,
+        birth_date: form.birth_date || null,
       };
       if (editingId) {
         await updateItem(editingId, payload);
@@ -140,6 +142,7 @@ export default function PetsPage() {
       behavior: pet.behavior || "",
       age: pet.age || "",
       address: pet.address || "",
+      birth_date: pet.birth_date || "",
     });
     setIsEditingModal(true);
   }
@@ -161,6 +164,7 @@ export default function PetsPage() {
         behavior: modalForm.behavior.trim() || null,
         age: modalForm.age.trim() || null,
         address: modalForm.address.trim() || null,
+        birth_date: modalForm.birth_date || null,
       };
       await updateItem(selectedPet.id, payload);
       setSelectedPet((prev) => prev ? { ...prev, ...payload } : prev);
@@ -245,6 +249,14 @@ export default function PetsPage() {
               <label htmlFor="age">Edad</label>
               <input id="age" name="age" type="text" placeholder="Ej: 3 años" value={form.age} onChange={handleChange} />
             </div>
+            <div className="form-field">
+              <label htmlFor="birth_date">Fecha de nacimiento <span style={{ color: "var(--color-text-soft)" }}>(opcional)</span></label>
+              <input type="date" id="birth_date" name="birth_date" value={form.birth_date} onChange={handleChange}
+                max={new Date().toISOString().split("T")[0]} />
+              <small style={{ color: "var(--color-text-soft)", fontSize: "0.74rem" }}>
+                Si no la sabés, podés dejarlo vacío
+              </small>
+            </div>
             <div className="form-field form-field--full">
               <label htmlFor="address">Dirección</label>
               <input id="address" name="address" type="text" placeholder="Ej: Av. Corrientes 1234" value={form.address} onChange={handleChange} />
@@ -326,9 +338,15 @@ export default function PetsPage() {
                     {pet.behavior && (
                       <span className="pet-card__tag">{pet.behavior}</span>
                     )}
-                    {pet.age && (
+                    {pet.birth_date ? (
+                      <span className="pet-card__tag">
+                        {calcularEdad(pet.birth_date) !== null
+                          ? `${calcularEdad(pet.birth_date)} años`
+                          : pet.age || null}
+                      </span>
+                    ) : pet.age ? (
                       <span className="pet-card__tag">{pet.age}</span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <Link
@@ -429,6 +447,15 @@ export default function PetsPage() {
                     onChange={(e) => setModalForm((p) => ({ ...p, age: e.target.value }))} />
                 </label>
                 <label className="form-field">
+                  <span>Fecha de nacimiento <span style={{ color: "var(--color-text-soft)", fontWeight: 400 }}>(opcional)</span></span>
+                  <input type="date" value={modalForm.birth_date}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setModalForm((p) => ({ ...p, birth_date: e.target.value }))} />
+                  <small style={{ color: "var(--color-text-soft)", fontSize: "0.74rem" }}>
+                    Si no la sabés, podés dejarlo vacío
+                  </small>
+                </label>
+                <label className="form-field">
                   <span>Dirección</span>
                   <input type="text" value={modalForm.address}
                     onChange={(e) => setModalForm((p) => ({ ...p, address: e.target.value }))} />
@@ -453,7 +480,10 @@ export default function PetsPage() {
                 <div className="fe-modal-detail__rows">
                   <div><strong>Dueño</strong><span>{selectedPet.owner_name || "-"}</span></div>
                   <div><strong>Celular</strong><span>{selectedPet.owner_phone || "-"}</span></div>
-                  <div><strong>Edad</strong><span>{selectedPet.age || "-"}</span></div>
+                  <div><strong>Edad</strong><span>{selectedPet.birth_date ? (calcularEdad(selectedPet.birth_date) !== null ? `${calcularEdad(selectedPet.birth_date)} años` : selectedPet.age || "-") : selectedPet.age || "-"}</span></div>
+                  {selectedPet.birth_date && (
+                    <div><strong>Cumpleaños</strong><span>{selectedPet.birth_date.split("T")[0].split("-").reverse().join("/")}</span></div>
+                  )}
                   <div><strong>Castrado</strong><span>{selectedPet.neutered ? "Sí" : "No"}</span></div>
                   <div><strong>Comportamiento</strong><span>{selectedPet.behavior || "-"}</span></div>
                   <div><strong>Dirección</strong><span>{selectedPet.address || "-"}</span></div>
