@@ -290,9 +290,9 @@ const QUICK_SUGGESTIONS = [
 ];
 
 // --- Íconos ---
-function IconPaw() {
+function IconPaw({ size = 22 }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="15" cy="16" rx="6" ry="9" />
       <ellipse cx="32" cy="11" rx="6" ry="9" />
       <ellipse cx="49" cy="16" rx="6" ry="9" />
@@ -524,12 +524,18 @@ export default function AsistenteIA() {
 
             {showWelcome && (
               <div className="ai-welcome">
+                <div className="ai-welcome__hero">
+                  <div className="ai-welcome__icon">
+                    <IconPaw size={30} />
+                  </div>
+                  <h3 className="ai-welcome__heading">Asistente Bandidos</h3>
+                  <p className="ai-welcome__text">
+                    Tengo acceso completo a los datos del negocio en tiempo real. ¿En qué te ayudo?
+                  </p>
+                </div>
                 {contextError && (
                   <p className="ai-welcome__error">{contextError}</p>
                 )}
-                <p className="ai-welcome__text">
-                  Hola! Tengo acceso a los datos completos del negocio. ¿En qué te puedo ayudar?
-                </p>
                 <div className="ai-suggestions">
                   {QUICK_SUGGESTIONS.map((s) => (
                     <button
