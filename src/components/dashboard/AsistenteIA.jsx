@@ -5,7 +5,7 @@ import { buildDashboardMetrics } from "../../lib/dashboardMetrics";
 import { apiRequest } from "../../services/apiClient";
 import "../../styles/asistente-ia.css";
 
-// --- Helpers de rango de fecha (duplicados de DashboardHome para ser autónomos) ---
+// --- Helpers de fecha ---
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -36,72 +36,160 @@ function getPreviousRange(range) {
   };
 }
 
+function getFutureRange(today) {
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return { from: formatDate(tomorrow), to: formatDate(endOfMonth) };
+}
+
 // --- Formatters ---
 const fmt = (n) => `$${Math.round(n || 0).toLocaleString("es-AR")}`;
 const fmtPct = (n) => `${((n || 0) * 100).toFixed(1)}%`;
 const fmtDelta = (n) => (n >= 0 ? `+${fmtPct(n)}` : fmtPct(n));
 
 // --- Construcción del system prompt con datos reales ---
-function buildSystemPrompt(metrics, currentData, today, employees, serviceTypes) {
+function buildSystemPrompt(
+  metrics,
+  currentData,
+  today,
+  employees,
+  serviceTypes,
+  customers,
+  products,
+  futureAgenda
+) {
   const { kpis, series, range } = metrics;
   const todayStr = formatDate(today);
   const services = currentData.services || [];
 
-  // Maps de ID → nombre para join manual (el API devuelve IDs, no objetos expandidos)
-  const employeeMap = new Map((employees || []).map((e) => [String(e.id), e.name || e.nombre || ""]));
-  const serviceTypeMap = new Map((serviceTypes || []).map((st) => [String(st.id), st.name || st.nombre || ""]));
+  // Maps de ID → nombre
+  const employeeMap = new Map(
+    (employees || []).map((e) => [String(e.id), e.name || e.nombre || ""])
+  );
+  const serviceTypeMap = new Map(
+    (serviceTypes || []).map((st) => [String(st.id), st.name || st.nombre || ""])
+  );
 
-  // Precio de un servicio crudo
   const getPrice = (s) =>
     Number(s.final_price || s.service_type?.default_price || s.service_price || s.amount || s.price || 0) || 0;
 
+  const getGroomerName = (s) =>
+    employeeMap.get(String(s.groomer_id || "")) || (s.groomer_id ? `Groomer ${String(s.groomer_id).slice(0, 6)}` : "Sin groomer");
+
+  const getServiceTypeName = (s) =>
+    s.service_type?.name ||
+    serviceTypeMap.get(String(s.service_type_id || "")) ||
+    "Sin tipo";
+
   // Servicios de hoy
-  const todayServices = services.filter((s) => {
-    const d = String(s.date || s.created_at || s.createdAt || "");
-    return d.startsWith(todayStr);
-  });
+  const todayServices = services.filter((s) =>
+    String(s.date || s.created_at || "").startsWith(todayStr)
+  );
   const todayIncome = todayServices.reduce((acc, s) => acc + getPrice(s), 0);
 
-  // Revenue por groomer calculado desde los servicios raw (no del endpoint by-groomer que está vacío)
+  // Detalle de servicios del mes (máx 200 para no explotar el contexto)
+  const servicesDetail = services
+    .slice(0, 200)
+    .map((s) => {
+      const date = String(s.date || s.created_at || "").slice(0, 10);
+      return `  ${date} | ${s.pet_name || "-"} (${s.breed || "-"}) | Dueño: ${s.owner_name || "-"} | Groomer: ${getGroomerName(s)} | Servicio: ${getServiceTypeName(s)} | ${fmt(getPrice(s))} | ${s.status || ""}`;
+    })
+    .join("\n") || "  Sin servicios registrados";
+
+  // Revenue por groomer desde servicios raw
   const groomerRevenue = new Map();
   services.forEach((s) => {
-    const gId = String(s.groomer_id || "");
-    const name = employeeMap.get(gId) || (gId ? `Groomer ${gId.slice(0, 6)}` : "Sin groomer");
+    const name = getGroomerName(s);
     const amount = getPrice(s);
-    const prev = groomerRevenue.get(name) || { total: 0, services: 0 };
-    groomerRevenue.set(name, { total: prev.total + amount, services: prev.services + 1 });
+    const prev = groomerRevenue.get(name) || { total: 0, count: 0 };
+    groomerRevenue.set(name, { total: prev.total + amount, count: prev.count + 1 });
   });
   const groomerLines =
     Array.from(groomerRevenue.entries())
       .filter(([, v]) => v.total > 0)
       .sort(([, a], [, b]) => b.total - a.total)
-      .map(([name, v]) => `  - ${name}: ${fmt(v.total)} (${v.services} servicios, comisión est.: ${fmt(v.total * 0.4)})`)
+      .map(([name, v]) => `  - ${name}: ${fmt(v.total)} (${v.count} servicios, comisión est.: ${fmt(v.total * 0.4)})`)
       .join("\n") || "  Sin datos de groomers";
 
-  // Revenue por tipo de servicio calculado desde los servicios raw
+  // Revenue por tipo de servicio
   const typeRevenue = new Map();
   services.forEach((s) => {
-    const stId = String(s.service_type_id || "");
-    const name =
-      s.service_type?.name ||
-      serviceTypeMap.get(stId) ||
-      (stId ? `Servicio ${stId.slice(0, 6)}` : "Sin tipo");
-    const amount = getPrice(s);
-    typeRevenue.set(name, (typeRevenue.get(name) || 0) + amount);
+    const name = getServiceTypeName(s);
+    typeRevenue.set(name, (typeRevenue.get(name) || 0) + getPrice(s));
   });
   const serviceTypeLines =
     Array.from(typeRevenue.entries())
       .filter(([, v]) => v > 0)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 6)
+      .slice(0, 8)
       .map(([name, total]) => `  - ${name}: ${fmt(total)}`)
-      .join("\n") || "  Sin datos de tipos de servicio";
+      .join("\n") || "  Sin datos";
 
-  // Gastos por categoría
-  const expenseLines =
+  // Gastos diarios desglosados
+  const dailyExpenseLines =
+    (currentData.dailyExpenses || [])
+      .map((e) => {
+        const date = String(e.date || e.created_at || "").slice(0, 10);
+        return `  ${date} | ${e.category?.name || e.category_name || e.categoryName || "Sin cat."} | ${e.description || "-"} | ${fmt(Number(e.amount || 0))} | ${e.payment_method?.name || e.paymentMethod || "-"}`;
+      })
+      .join("\n") || "  Sin gastos diarios registrados";
+
+  // Gastos fijos desglosados
+  const fixedExpenseLines =
+    (currentData.fixedExpenses || [])
+      .filter((e) => e.status === "active" || e.status === "Activo")
+      .map((e) => `  - ${e.name || "Sin nombre"} | ${fmt(Number(e.amount || 0))} | Vence día ${e.due_day || e.dueDay || "-"}`)
+      .join("\n") || "  Sin gastos fijos activos";
+
+  // Gastos por categoría (resumen)
+  const expenseCategoryLines =
     (series.expensesByCategory || [])
       .map((e) => `  - ${e.name}: ${fmt(e.value)}`)
-      .join("\n") || "  Sin gastos registrados";
+      .join("\n") || "  Sin datos";
+
+  // Clientes registrados (máx 100)
+  const customerLines =
+    (customers || [])
+      .slice(0, 100)
+      .map((c) => {
+        const name = c.name || c.nombre || "-";
+        const phone = c.phone || c.telefono || c.whatsapp || "";
+        // Contar visitas en el mes desde services
+        const visits = services.filter(
+          (s) =>
+            (s.owner_name || "").toLowerCase() === name.toLowerCase() ||
+            String(s.customer_id || "") === String(c.id || "")
+        ).length;
+        return `  - ${name}${phone ? ` (${phone})` : ""}${visits > 0 ? ` | ${visits} visita(s) este mes` : ""}`;
+      })
+      .join("\n") || "  Sin clientes registrados";
+
+  // Stock del petshop
+  const productLines =
+    (products || [])
+      .map((p) => {
+        const name = p.name || p.nombre || "-";
+        const price = fmt(Number(p.price || p.precio || p.sale_price || 0));
+        const stock = p.stock !== undefined ? ` | Stock: ${p.stock}` : "";
+        return `  - ${name} | ${price}${stock}`;
+      })
+      .join("\n") || "  Sin productos registrados";
+
+  // Agenda futura (turnos reservados)
+  const futureItems = Array.isArray(futureAgenda)
+    ? futureAgenda
+    : futureAgenda?.items || [];
+  const futureLines =
+    futureItems
+      .filter((t) => t.status === "reserved" || !t.status)
+      .slice(0, 50)
+      .map((t) => {
+        const date = String(t.date || "").slice(0, 10);
+        const time = t.time ? t.time.slice(0, 5) : "";
+        return `  ${date} ${time} | ${t.pet_name || "-"} | Dueño: ${t.owner_name || "-"} | Groomer: ${getGroomerName(t)} | ${getServiceTypeName(t)}`;
+      })
+      .join("\n") || "  Sin turnos próximos reservados";
 
   // Comparativa mes anterior
   const deltas = kpis.deltas;
@@ -115,10 +203,7 @@ COMPARATIVA CON MES ANTERIOR:
 - Ticket promedio: ${fmtDelta(deltas.avgTicket)}`
     : "\nComparativa con mes anterior: no disponible";
 
-  // TODO: agregar turnos del día desde /agenda?date=hoy cuando el endpoint lo soporte granularmente
-  // TODO: agregar lista de clientes frecuentes cuando el endpoint /clientes esté disponible
-
-  return `Sos el asistente financiero de Bandidos Peluquería Canina. Tu función es ayudar al dueño/a a entender la situación del negocio con datos reales. Respondé en español argentino, de manera concisa y directa. Usá los números reales que te doy. Si alguien pregunta algo que no está en los datos, decilo claramente sin inventar cifras.
+  return `Sos el asistente de Bandidos Peluquería Canina. Ayudás al dueño/a a entender y gestionar el negocio con datos reales. Respondé en español argentino, de manera concisa y directa. Usá los números reales. Si te preguntan algo que no está en los datos, decilo claramente sin inventar.
 
 === DATOS DEL NEGOCIO ===
 Período activo: ${range.label} (${range.from} al ${range.to})
@@ -126,31 +211,48 @@ Fecha de hoy: ${todayStr}
 
 HOY (${todayStr}):
 - Servicios realizados: ${todayServices.length}
-- Ingresos estimados: ${fmt(todayIncome)}
+- Ingresos: ${fmt(todayIncome)}
 
-RESUMEN DEL MES (${range.label}):
+RESUMEN DEL MES:
 - Ingresos totales: ${fmt(kpis.income)}
-  · Por servicios de peluquería: ${fmt(kpis.servicesIncome)}
-  · Por ventas petshop: ${fmt(kpis.petshopIncome)}
+  · Servicios peluquería: ${fmt(kpis.servicesIncome)}
+  · Petshop: ${fmt(kpis.petshopIncome)}
 - Total servicios: ${kpis.servicesCount}
 - Ticket promedio: ${fmt(kpis.avgTicket)}
-- Gastos operativos (diarios): ${fmt(kpis.dailyExpenseTotal)}
-- Gastos fijos mensuales: ${fmt(kpis.fixedExpenseTotal)}
-- Total gastos: ${fmt(kpis.expenses)}
-- Comisiones peluqueros (40% sobre servicios): ${fmt(kpis.groomerCommissions)}
-- Costo total (gastos + comisiones): ${fmt(kpis.totalCosts)}
+- Gastos operativos: ${fmt(kpis.dailyExpenseTotal)}
+- Gastos fijos: ${fmt(kpis.fixedExpenseTotal)}
+- Comisiones groomers (40%): ${fmt(kpis.groomerCommissions)}
+- Costo total: ${fmt(kpis.totalCosts)}
 - Profit neto: ${fmt(kpis.profit)}
-- Margen neto: ${fmtPct(kpis.margin)}
+- Margen: ${fmtPct(kpis.margin)}
 ${deltaSection}
 
-RENDIMIENTO POR GROOMER (calculado desde servicios del mes):
+RENDIMIENTO POR GROOMER:
 ${groomerLines}
 
-GASTOS POR CATEGORÍA:
-${expenseLines}
-
-INGRESOS POR TIPO DE SERVICIO (top 6):
+INGRESOS POR TIPO DE SERVICIO:
 ${serviceTypeLines}
+
+GASTOS POR CATEGORÍA (resumen):
+${expenseCategoryLines}
+
+GASTOS DIARIOS DESGLOSADOS (formato: fecha | categoría | descripción | monto | método pago):
+${dailyExpenseLines}
+
+GASTOS FIJOS ACTIVOS:
+${fixedExpenseLines}
+
+DETALLE DE SERVICIOS DEL MES (formato: fecha | mascota (raza) | dueño | groomer | tipo servicio | precio | estado):
+${servicesDetail}
+
+TURNOS PRÓXIMOS RESERVADOS:
+${futureLines}
+
+CLIENTES REGISTRADOS:
+${customerLines}
+
+STOCK DEL PETSHOP:
+${productLines}
 
 === FIN DE DATOS ===`;
 }
@@ -164,7 +266,7 @@ const QUICK_SUGGESTIONS = [
   "¿Qué servicios generan más ingresos?",
 ];
 
-// --- Icono de chat (patita SVG) ---
+// --- Íconos ---
 function IconPaw() {
   return (
     <svg width="22" height="22" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -197,19 +299,17 @@ export default function AsistenteIA() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Scroll al último mensaje
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Focus en el input al abrir
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [isOpen]);
 
-  // Carga el contexto del negocio la primera vez que se abre
+  // Carga el contexto completo del negocio la primera vez que se abre
   useEffect(() => {
     if (!isOpen || systemPrompt !== null || isLoadingContext) return;
 
@@ -217,23 +317,50 @@ export default function AsistenteIA() {
       setIsLoadingContext(true);
       setContextError(null);
       try {
+        const today = new Date();
         const range = getMonthRange(0);
         const previousRange = getPreviousRange(range);
-        const [currentData, previousData, employeesRaw, serviceTypesRaw] = await Promise.all([
+        const futureRange = getFutureRange(today);
+
+        const [
+          currentData,
+          previousData,
+          employeesRaw,
+          serviceTypesRaw,
+          customersRaw,
+          productsRaw,
+          futureAgendaRaw,
+        ] = await Promise.all([
           fetchDashboardData(range),
           fetchDashboardData(previousRange),
           apiRequest("/v2/employees").catch(() => []),
           apiRequest("/v2/service-types").catch(() => []),
+          apiRequest("/v2/customers").catch(() => []),
+          apiRequest("/v2/petshop/products").catch(() => []),
+          apiRequest("/agenda", { params: { from: futureRange.from, to: futureRange.to } }).catch(() => []),
         ]);
-        const employees = Array.isArray(employeesRaw) ? employeesRaw : employeesRaw?.items || [];
-        const serviceTypes = Array.isArray(serviceTypesRaw) ? serviceTypesRaw : serviceTypesRaw?.items || [];
+
+        const normalize = (raw) => (Array.isArray(raw) ? raw : raw?.items || []);
+
         const metrics = buildDashboardMetrics({
           range,
           current: currentData,
           previous: { range: previousRange, current: previousData },
           categories: currentData.categories,
         });
-        setSystemPrompt(buildSystemPrompt(metrics, currentData, new Date(), employees, serviceTypes));
+
+        setSystemPrompt(
+          buildSystemPrompt(
+            metrics,
+            currentData,
+            today,
+            normalize(employeesRaw),
+            normalize(serviceTypesRaw),
+            normalize(customersRaw),
+            normalize(productsRaw),
+            normalize(futureAgendaRaw)
+          )
+        );
       } catch (err) {
         const fallback =
           "Sos el asistente de Bandidos Peluquería Canina. Los datos del negocio no pudieron cargarse. Respondé en español argentino e informá al usuario que los datos no están disponibles en este momento.";
@@ -259,7 +386,7 @@ export default function AsistenteIA() {
 
     try {
       // Nota: VITE_ANTHROPIC_API_KEY queda expuesta en el bundle del cliente.
-      // Para producción, considerar proxy en el backend.
+      // Para producción, considerar mover la llamada a un proxy en el backend.
       const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
       if (!apiKey) {
         throw new Error("La variable VITE_ANTHROPIC_API_KEY no está configurada.");
@@ -275,7 +402,7 @@ export default function AsistenteIA() {
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
+          max_tokens: 1024,
           system: systemPrompt,
           messages: updatedMessages,
         }),
@@ -292,10 +419,7 @@ export default function AsistenteIA() {
     } catch (err) {
       setMessages([
         ...updatedMessages,
-        {
-          role: "assistant",
-          content: `Hubo un error: ${err.message}`,
-        },
+        { role: "assistant", content: `Hubo un error: ${err.message}` },
       ]);
     } finally {
       setIsLoading(false);
@@ -319,7 +443,6 @@ export default function AsistenteIA() {
 
   return (
     <>
-      {/* Botón flotante */}
       {!isOpen && (
         <button
           className="ai-fab"
@@ -332,10 +455,8 @@ export default function AsistenteIA() {
         </button>
       )}
 
-      {/* Panel de chat */}
       {isOpen && (
         <div className="ai-panel" role="dialog" aria-label="Asistente IA">
-          {/* Header */}
           <div className="ai-panel__header">
             <div className="ai-panel__header-info">
               <div className="ai-panel__avatar">
@@ -347,7 +468,7 @@ export default function AsistenteIA() {
                   {isLoadingContext
                     ? "Cargando datos del negocio..."
                     : contextError
-                    ? "Datos no disponibles"
+                    ? "Datos parciales"
                     : "Datos en tiempo real"}
                 </div>
               </div>
@@ -362,9 +483,7 @@ export default function AsistenteIA() {
             </button>
           </div>
 
-          {/* Mensajes */}
           <div className="ai-panel__messages">
-            {/* Estado de carga inicial */}
             {isLoadingContext && messages.length === 0 && (
               <div className="ai-loading-context">
                 <div className="ai-typing">
@@ -376,14 +495,13 @@ export default function AsistenteIA() {
               </div>
             )}
 
-            {/* Bienvenida con sugerencias rápidas */}
             {showWelcome && (
               <div className="ai-welcome">
                 {contextError && (
                   <p className="ai-welcome__error">{contextError}</p>
                 )}
                 <p className="ai-welcome__text">
-                  Hola! Tengo acceso a los datos reales del negocio. ¿En qué te puedo ayudar?
+                  Hola! Tengo acceso a los datos completos del negocio. ¿En qué te puedo ayudar?
                 </p>
                 <div className="ai-suggestions">
                   {QUICK_SUGGESTIONS.map((s) => (
@@ -401,14 +519,12 @@ export default function AsistenteIA() {
               </div>
             )}
 
-            {/* Historial de mensajes */}
             {messages.map((msg, i) => (
               <div key={i} className={`ai-message ai-message--${msg.role}`}>
                 <div className="ai-message__bubble">{msg.content}</div>
               </div>
             ))}
 
-            {/* Indicador de escritura */}
             {isLoading && (
               <div className="ai-message ai-message--assistant">
                 <div className="ai-message__bubble ai-message__bubble--typing">
@@ -424,7 +540,6 @@ export default function AsistenteIA() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <form className="ai-panel__input" onSubmit={handleSubmit}>
             <textarea
               ref={inputRef}
@@ -432,11 +547,7 @@ export default function AsistenteIA() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                isLoadingContext
-                  ? "Cargando datos..."
-                  : "Escribí tu pregunta..."
-              }
+              placeholder={isLoadingContext ? "Cargando datos..." : "Escribí tu pregunta..."}
               rows={1}
               disabled={isInputDisabled}
             />
