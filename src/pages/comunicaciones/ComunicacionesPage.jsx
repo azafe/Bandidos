@@ -37,6 +37,7 @@ export default function ComunicacionesPage() {
     () => localStorage.getItem(TAB_KEY) || "turnos"
   );
   const [diasMin, setDiasMin] = useState(30);
+  const [cumpleFiltro, setCumpleFiltro] = useState("semana"); // "hoy" | "semana" | "mes"
   const [enviados, setEnviados] = useState({});
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -239,34 +240,42 @@ export default function ComunicacionesPage() {
       )}
 
       {/* Tabs */}
-      <div className="services-tabs" style={{ marginBottom: 20 }}>
-        {[
-          { id: "turnos", label: "Turnos pendientes" },
-          { id: "cumpleanos", label: "Cumpleaños" },
-          { id: "todos", label: "Todos" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`tab${activeTab === tab.id ? " tab--active" : ""}`}
-            onClick={() => switchTab(tab.id)}
-          >
-            {tab.label}
-            {tab.id === "cumpleanos" && todayBirthdays.length > 0 && (
-              <span style={{
-                background: "rgba(217,72,239,0.15)",
-                color: "#9b1dc8",
-                fontSize: "10px",
-                fontWeight: "600",
-                padding: "2px 6px",
-                borderRadius: "10px",
-                marginLeft: "6px",
-              }}>
-                {todayBirthdays.length}
-              </span>
-            )}
-          </button>
-        ))}
+      <div className="agenda-mode-bar card" style={{ marginBottom: 20 }}>
+        <div className="agenda-mode-switch" role="tablist" aria-label="Sección de comunicaciones">
+          {[
+            { id: "turnos", label: "Turnos pendientes" },
+            { id: "cumpleanos", label: "Cumpleaños" },
+            { id: "todos", label: "Todos" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={activeTab === tab.id ? "is-active" : ""}
+              onClick={() => switchTab(tab.id)}
+            >
+              {tab.label}
+              {tab.id === "cumpleanos" && todayBirthdays.length > 0 && (
+                <span style={{
+                  background: "rgba(255,255,255,0.25)",
+                  fontSize: "10px",
+                  fontWeight: "700",
+                  padding: "1px 6px",
+                  borderRadius: "10px",
+                  marginLeft: "6px",
+                }}>
+                  {todayBirthdays.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="agenda-mode-hint">
+          {activeTab === "turnos" && "Enviá mensajes a clientes que llevan tiempo sin turno."}
+          {activeTab === "cumpleanos" && "Felicitá a las mascotas y ofrecé un descuento por cumpleaños."}
+          {activeTab === "todos" && "Vista unificada ordenada por prioridad."}
+        </p>
       </div>
 
       {/* ── Tab: Turnos ── */}
@@ -427,78 +436,129 @@ export default function ComunicacionesPage() {
 
       {/* ── Tab: Cumpleaños ── */}
       {activeTab === "cumpleanos" && (
-        <div className="card services-panel">
-          <div className="services-panel__header">
-            <div>
-              <h2 className="card-title">Cumpleaños de mascotas</h2>
-              <p className="card-subtitle">
-                {petsWithBirthday.length === 0
-                  ? "No hay mascotas con fecha de nacimiento cargada."
-                  : `${todayBirthdays.length} hoy · ${weekBirthdays.length} esta semana · ${monthBirthdays.length} este mes`}
-              </p>
+        <>
+          {/* Filtro de período */}
+          <div className="card filters-card" style={{ marginBottom: 16 }}>
+            <div className="filters-period-quick">
+              <span>Mostrar cumpleaños</span>
+              {[
+                { id: "hoy", label: "Hoy", count: todayBirthdays.length },
+                { id: "semana", label: "Esta semana", count: weekBirthdays.length },
+                { id: "mes", label: "Este mes", count: monthBirthdays.length },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`filters-period-pill${cumpleFiltro === f.id ? " is-active" : ""}`}
+                  onClick={() => setCumpleFiltro(f.id)}
+                >
+                  {f.label}
+                  {f.count > 0 && (
+                    <span style={{
+                      marginLeft: 5,
+                      background: cumpleFiltro === f.id ? "rgba(255,255,255,0.3)" : "rgba(217,72,239,0.15)",
+                      color: cumpleFiltro === f.id ? "inherit" : "#9b1dc8",
+                      fontSize: "10px", fontWeight: 700,
+                      padding: "1px 5px", borderRadius: 8,
+                    }}>
+                      {f.count}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* HOY */}
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-soft)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-              HOY
+          <div className="card services-panel">
+            <div className="services-panel__header">
+              <div>
+                <h2 className="card-title">
+                  {cumpleFiltro === "hoy" && "Cumpleaños de hoy"}
+                  {cumpleFiltro === "semana" && "Cumpleaños esta semana"}
+                  {cumpleFiltro === "mes" && "Cumpleaños este mes"}
+                </h2>
+                <p className="card-subtitle">
+                  {petsWithBirthday.length === 0
+                    ? "No hay mascotas con fecha de nacimiento cargada."
+                    : cumpleFiltro === "semana"
+                    ? "Escribiles para felicitarlos y ofrecé turno con descuento."
+                    : `${todayBirthdays.length} hoy · ${weekBirthdays.length} esta semana · ${monthBirthdays.length} este mes`}
+                </p>
+              </div>
             </div>
-            {todayBirthdays.length === 0 ? (
-              <div className="services-empty">🎂 Ninguna mascota cumple años hoy</div>
-            ) : (
-              todayBirthdays.map((pet) => (
-                <BirthdayCard
-                  key={pet.id}
-                  pet={pet}
-                  enviado={Boolean(enviados[pet.id])}
-                  highlight
-                  onOpenModal={abrirModalCumple}
-                />
-              ))
+
+            {/* HOY */}
+            {(cumpleFiltro === "hoy" || cumpleFiltro === "semana") && (
+              <div style={{ marginBottom: cumpleFiltro === "semana" && weekBirthdays.length > 0 ? 24 : 0 }}>
+                {cumpleFiltro === "semana" && todayBirthdays.length > 0 && (
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-soft)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                    HOY
+                  </div>
+                )}
+                {todayBirthdays.length === 0 && cumpleFiltro === "hoy" ? (
+                  <div className="services-empty">🎂 Ninguna mascota cumple años hoy</div>
+                ) : (
+                  todayBirthdays.map((pet) => (
+                    <BirthdayCard
+                      key={pet.id}
+                      pet={pet}
+                      enviado={Boolean(enviados[pet.id])}
+                      highlight
+                      onOpenModal={abrirModalCumple}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* ESTA SEMANA */}
+            {(cumpleFiltro === "semana") && (
+              <div style={{ marginBottom: 8 }}>
+                {todayBirthdays.length > 0 && (
+                  <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-soft)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                    PRÓXIMOS 7 DÍAS
+                  </div>
+                )}
+                {weekBirthdays.length === 0 && todayBirthdays.length === 0 ? (
+                  <div className="services-empty">🎂 Ninguna mascota cumple años esta semana</div>
+                ) : weekBirthdays.length === 0 && todayBirthdays.length > 0 ? null : (
+                  weekBirthdays.map((pet) => (
+                    <BirthdayCard
+                      key={pet.id}
+                      pet={pet}
+                      enviado={Boolean(enviados[pet.id])}
+                      onOpenModal={abrirModalCumple}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* ESTE MES */}
+            {cumpleFiltro === "mes" && (
+              <div>
+                {todayBirthdays.map((pet) => (
+                  <BirthdayCard key={pet.id} pet={pet} enviado={Boolean(enviados[pet.id])} highlight onOpenModal={abrirModalCumple} />
+                ))}
+                {weekBirthdays.map((pet) => (
+                  <BirthdayCard key={pet.id} pet={pet} enviado={Boolean(enviados[pet.id])} onOpenModal={abrirModalCumple} />
+                ))}
+                {monthBirthdays.map((pet) => (
+                  <BirthdayCard key={pet.id} pet={pet} enviado={Boolean(enviados[pet.id])} onOpenModal={abrirModalCumple} />
+                ))}
+                {todayBirthdays.length === 0 && weekBirthdays.length === 0 && monthBirthdays.length === 0 && (
+                  <div className="services-empty">🎂 Ninguna mascota cumple años este mes</div>
+                )}
+              </div>
+            )}
+
+            {petsWithBirthday.length === 0 && (
+              <div className="services-empty">
+                Cargá la fecha de nacimiento de las mascotas desde la sección Mascotas para ver cumpleaños aquí.
+              </div>
             )}
           </div>
-
-          {/* ESTA SEMANA */}
-          {weekBirthdays.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-soft)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-                ESTA SEMANA
-              </div>
-              {weekBirthdays.map((pet) => (
-                <BirthdayCard
-                  key={pet.id}
-                  pet={pet}
-                  enviado={Boolean(enviados[pet.id])}
-                  onOpenModal={abrirModalCumple}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* ESTE MES */}
-          {monthBirthdays.length > 0 && (
-            <div>
-              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--color-text-soft)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-                ESTE MES
-              </div>
-              {monthBirthdays.map((pet) => (
-                <BirthdayCard
-                  key={pet.id}
-                  pet={pet}
-                  enviado={Boolean(enviados[pet.id])}
-                  onOpenModal={abrirModalCumple}
-                />
-              ))}
-            </div>
-          )}
-
-          {petsWithBirthday.length === 0 && (
-            <div className="services-empty">
-              Cargá la fecha de nacimiento de las mascotas desde la sección Mascotas para ver cumpleaños aquí.
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       {/* ── Tab: Todos ── */}
