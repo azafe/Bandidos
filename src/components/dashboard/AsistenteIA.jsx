@@ -203,7 +203,7 @@ COMPARATIVA CON MES ANTERIOR:
 - Ticket promedio: ${fmtDelta(deltas.avgTicket)}`
     : "\nComparativa con mes anterior: no disponible";
 
-  return `Sos el asistente de Bandidos Peluquería Canina. Ayudás al dueño/a a entender y gestionar el negocio con datos reales. Respondé en español argentino, de manera concisa y directa. Usá los números reales. Si te preguntan algo que no está en los datos, decilo claramente sin inventar.
+  return `Sos el asistente de Bandidos Peluquería Canina. Ayudás al dueño/a a entender y gestionar el negocio con datos reales. Respondé en español argentino, de manera concisa y directa. Usá los números reales. Si te preguntan algo que no está en los datos, decilo claramente sin inventar. MUY IMPORTANTE: no uses Markdown en tus respuestas — nada de asteriscos, guiones para listas, almohadillas ni ningún otro símbolo de formato. Escribí en texto plano, usá números para listas (1. 2. 3.) y saltos de línea para separar ideas.
 
 === DATOS DEL NEGOCIO ===
 Período activo: ${range.label} (${range.from} al ${range.to})
