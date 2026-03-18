@@ -16,37 +16,34 @@ export default function DashboardHeader({
       </div>
 
       <div className="dashboard-header__actions">
-        <div className="dashboard-month-nav">
+        <button
+          type="button"
+          className="btn-secondary dashboard-month-nav__arrow"
+          onClick={() => onMonthOffsetChange(monthOffset - 1)}
+        >
+          ‹
+        </button>
+
+        <span className="dashboard-month-nav__label">{label}</span>
+
+        <button
+          type="button"
+          className="btn-secondary dashboard-month-nav__arrow"
+          onClick={() => onMonthOffsetChange(monthOffset + 1)}
+          disabled={monthOffset >= 0}
+        >
+          ›
+        </button>
+
+        {monthOffset !== 0 && (
           <button
             type="button"
-            className="btn-secondary dashboard-month-nav__arrow"
-            onClick={() => onMonthOffsetChange(monthOffset - 1)}
+            className="btn-secondary"
+            onClick={() => onMonthOffsetChange(0)}
           >
-            ‹
+            Hoy
           </button>
-
-          <span className="dashboard-month-nav__label">{label}</span>
-
-          <button
-            type="button"
-            className="btn-secondary dashboard-month-nav__arrow"
-            onClick={() => onMonthOffsetChange(monthOffset + 1)}
-            disabled={monthOffset >= 0}
-          >
-            ›
-          </button>
-
-          {monthOffset !== 0 && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => onMonthOffsetChange(0)}
-            >
-              Mes actual
-            </button>
-          )}
-        </div>
-
+        )}
       </div>
     </header>
   );

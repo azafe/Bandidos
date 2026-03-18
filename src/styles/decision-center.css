@@ -12,13 +12,20 @@
 }
 
 .cd-tabs {
-  display: inline-flex;
+  display: flex;
   padding: 4px;
   border-radius: 999px;
   background: rgba(16, 19, 31, 0.08);
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   margin-bottom: 16px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cd-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .cd-tabs .tab {
@@ -61,6 +68,9 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-soft);
+  min-height: 2.2em;
+  display: flex;
+  align-items: flex-start;
 }
 
 .cd-kpi-box__value {
@@ -734,6 +744,16 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* El 5to KPI ocupa todo el ancho para que no quede solo y desalineado */
+  .cd-kpi-row--5 .cd-kpi-box:last-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Valores numéricos más compactos en mobile */
+  .cd-kpi-box__value {
+    font-size: 1.25rem;
+  }
+
   .cd-split {
     grid-template-columns: 1fr;
   }
@@ -750,16 +770,16 @@
     position: static;
   }
 
+  /* Tabs: scroll horizontal, sin wrap ni flex-grow */
   .cd-tabs {
-    width: 100%;
     border-radius: 14px;
   }
 
   .cd-tabs .tab {
-    flex: 1 1 auto;
-    text-align: center;
-    font-size: 0.72rem;
-    padding: 5px 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    padding: 6px 12px;
   }
 }
 
