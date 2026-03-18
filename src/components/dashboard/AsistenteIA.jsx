@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { fetchDashboardData } from "../../lib/dashboardApi";
 import { buildDashboardMetrics } from "../../lib/dashboardMetrics";
+import { apiRequest } from "../../services/apiClient";
 import "../../styles/asistente-ia.css";
 
 // --- Helpers de rango de fecha (duplicados de DashboardHome para ser autónomos) ---
@@ -41,47 +42,66 @@ const fmtPct = (n) => `${((n || 0) * 100).toFixed(1)}%`;
 const fmtDelta = (n) => (n >= 0 ? `+${fmtPct(n)}` : fmtPct(n));
 
 // --- Construcción del system prompt con datos reales ---
-function buildSystemPrompt(metrics, currentData, today) {
+function buildSystemPrompt(metrics, currentData, today, employees, serviceTypes) {
   const { kpis, series, range } = metrics;
   const todayStr = formatDate(today);
+  const services = currentData.services || [];
 
-  // Servicios de hoy filtrados del raw data
-  const todayServices = (currentData.services || []).filter((s) => {
+  // Maps de ID → nombre para join manual (el API devuelve IDs, no objetos expandidos)
+  const employeeMap = new Map((employees || []).map((e) => [String(e.id), e.name || e.nombre || ""]));
+  const serviceTypeMap = new Map((serviceTypes || []).map((st) => [String(st.id), st.name || st.nombre || ""]));
+
+  // Precio de un servicio crudo
+  const getPrice = (s) =>
+    Number(s.final_price || s.service_type?.default_price || s.service_price || s.amount || s.price || 0) || 0;
+
+  // Servicios de hoy
+  const todayServices = services.filter((s) => {
     const d = String(s.date || s.created_at || s.createdAt || "");
     return d.startsWith(todayStr);
   });
-  const todayIncome = todayServices.reduce(
-    (acc, s) =>
-      acc +
-      (Number(
-        s.final_price ||
-          s.service_type?.default_price ||
-          s.service_price ||
-          s.amount ||
-          s.price ||
-          0
-      ) || 0),
-    0
-  );
+  const todayIncome = todayServices.reduce((acc, s) => acc + getPrice(s), 0);
 
-  // Groomers
+  // Revenue por groomer calculado desde los servicios raw (no del endpoint by-groomer que está vacío)
+  const groomerRevenue = new Map();
+  services.forEach((s) => {
+    const gId = String(s.groomer_id || "");
+    const name = employeeMap.get(gId) || (gId ? `Groomer ${gId.slice(0, 6)}` : "Sin groomer");
+    const amount = getPrice(s);
+    const prev = groomerRevenue.get(name) || { total: 0, services: 0 };
+    groomerRevenue.set(name, { total: prev.total + amount, services: prev.services + 1 });
+  });
   const groomerLines =
-    (series.groomerRevenue || [])
-      .map((g) => `  - ${g.name}: ${fmt(g.total)} (${g.services} servicios, comisión estimada: ${fmt(g.total * 0.4)})`)
-      .join("\n") || "  Sin datos de groomers disponibles";
+    Array.from(groomerRevenue.entries())
+      .filter(([, v]) => v.total > 0)
+      .sort(([, a], [, b]) => b.total - a.total)
+      .map(([name, v]) => `  - ${name}: ${fmt(v.total)} (${v.services} servicios, comisión est.: ${fmt(v.total * 0.4)})`)
+      .join("\n") || "  Sin datos de groomers";
+
+  // Revenue por tipo de servicio calculado desde los servicios raw
+  const typeRevenue = new Map();
+  services.forEach((s) => {
+    const stId = String(s.service_type_id || "");
+    const name =
+      s.service_type?.name ||
+      serviceTypeMap.get(stId) ||
+      (stId ? `Servicio ${stId.slice(0, 6)}` : "Sin tipo");
+    const amount = getPrice(s);
+    typeRevenue.set(name, (typeRevenue.get(name) || 0) + amount);
+  });
+  const serviceTypeLines =
+    Array.from(typeRevenue.entries())
+      .filter(([, v]) => v > 0)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 6)
+      .map(([name, total]) => `  - ${name}: ${fmt(total)}`)
+      .join("\n") || "  Sin datos de tipos de servicio";
 
   // Gastos por categoría
   const expenseLines =
     (series.expensesByCategory || [])
       .map((e) => `  - ${e.name}: ${fmt(e.value)}`)
       .join("\n") || "  Sin gastos registrados";
-
-  // Tipos de servicio top 5
-  const serviceTypeLines =
-    (series.revenueByServiceType || [])
-      .slice(0, 5)
-      .map((s) => `  - ${s.name}: ${fmt(s.total)}`)
-      .join("\n") || "  Sin datos de tipos de servicio";
 
   // Comparativa mes anterior
   const deltas = kpis.deltas;
@@ -95,7 +115,7 @@ COMPARATIVA CON MES ANTERIOR:
 - Ticket promedio: ${fmtDelta(deltas.avgTicket)}`
     : "\nComparativa con mes anterior: no disponible";
 
-  // TODO: agregar turnos del día desde /agenda con fecha de hoy cuando el endpoint lo soporte por día
+  // TODO: agregar turnos del día desde /agenda?date=hoy cuando el endpoint lo soporte granularmente
   // TODO: agregar lista de clientes frecuentes cuando el endpoint /clientes esté disponible
 
   return `Sos el asistente financiero de Bandidos Peluquería Canina. Tu función es ayudar al dueño/a a entender la situación del negocio con datos reales. Respondé en español argentino, de manera concisa y directa. Usá los números reales que te doy. Si alguien pregunta algo que no está en los datos, decilo claramente sin inventar cifras.
@@ -123,13 +143,13 @@ RESUMEN DEL MES (${range.label}):
 - Margen neto: ${fmtPct(kpis.margin)}
 ${deltaSection}
 
-RENDIMIENTO POR GROOMER:
+RENDIMIENTO POR GROOMER (calculado desde servicios del mes):
 ${groomerLines}
 
 GASTOS POR CATEGORÍA:
 ${expenseLines}
 
-INGRESOS POR TIPO DE SERVICIO (top 5):
+INGRESOS POR TIPO DE SERVICIO (top 6):
 ${serviceTypeLines}
 
 === FIN DE DATOS ===`;
@@ -199,26 +219,21 @@ export default function AsistenteIA() {
       try {
         const range = getMonthRange(0);
         const previousRange = getPreviousRange(range);
-        const [currentData, previousData] = await Promise.all([
+        const [currentData, previousData, employeesRaw, serviceTypesRaw] = await Promise.all([
           fetchDashboardData(range),
           fetchDashboardData(previousRange),
+          apiRequest("/v2/employees").catch(() => []),
+          apiRequest("/v2/service-types").catch(() => []),
         ]);
-        // DEBUG TEMPORAL: ver estructura cruda de los datos
-        console.log("[AsistenteIA] primer servicio:", currentData.services?.[0]);
-        console.log("[AsistenteIA] groomerReport:", currentData.groomerReport);
-        console.log("[AsistenteIA] total servicios:", currentData.services?.length);
-
+        const employees = Array.isArray(employeesRaw) ? employeesRaw : employeesRaw?.items || [];
+        const serviceTypes = Array.isArray(serviceTypesRaw) ? serviceTypesRaw : serviceTypesRaw?.items || [];
         const metrics = buildDashboardMetrics({
           range,
           current: currentData,
           previous: { range: previousRange, current: previousData },
           categories: currentData.categories,
         });
-
-        console.log("[AsistenteIA] groomerRevenue calculado:", metrics.series.groomerRevenue);
-        console.log("[AsistenteIA] revenueByServiceType:", metrics.series.revenueByServiceType);
-
-        setSystemPrompt(buildSystemPrompt(metrics, currentData, new Date()));
+        setSystemPrompt(buildSystemPrompt(metrics, currentData, new Date(), employees, serviceTypes));
       } catch (err) {
         const fallback =
           "Sos el asistente de Bandidos Peluquería Canina. Los datos del negocio no pudieron cargarse. Respondé en español argentino e informá al usuario que los datos no están disponibles en este momento.";
