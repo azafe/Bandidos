@@ -1561,12 +1561,9 @@
   }
 
   .agenda-cta {
-    position: sticky;
-    top: 64px; /* debajo del app-header mobile (~52px) */
-    bottom: auto;
+    position: static;
     align-self: auto;
     text-align: center;
-    z-index: 10; /* debajo del app-header (z-index: 20) */
   }
 }
 
