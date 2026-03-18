@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/navigation/Sidebar";
+import AsistenteIA from "../components/dashboard/AsistenteIA";
 import logo from "../assets/bandidos-logo.jpg";
 
 const LS_KEY = "bandidos_vio_recordatorios";
@@ -62,6 +63,9 @@ export default function MainLayout({ children }) {
 
         <main className="app-main-content">{children}</main>
       </div>
+
+      {/* Asistente IA flotante */}
+      <AsistenteIA />
 
       {/* Toast de bienvenida: Recordatorios */}
       {showToast && (
