@@ -1564,6 +1564,7 @@
     position: static;
     align-self: auto;
     text-align: center;
+    margin-bottom: 8px;
   }
 }
 
