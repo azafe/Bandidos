@@ -203,12 +203,21 @@ export default function AsistenteIA() {
           fetchDashboardData(range),
           fetchDashboardData(previousRange),
         ]);
+        // DEBUG TEMPORAL: ver estructura cruda de los datos
+        console.log("[AsistenteIA] primer servicio:", currentData.services?.[0]);
+        console.log("[AsistenteIA] groomerReport:", currentData.groomerReport);
+        console.log("[AsistenteIA] total servicios:", currentData.services?.length);
+
         const metrics = buildDashboardMetrics({
           range,
           current: currentData,
           previous: { range: previousRange, current: previousData },
           categories: currentData.categories,
         });
+
+        console.log("[AsistenteIA] groomerRevenue calculado:", metrics.series.groomerRevenue);
+        console.log("[AsistenteIA] revenueByServiceType:", metrics.series.revenueByServiceType);
+
         setSystemPrompt(buildSystemPrompt(metrics, currentData, new Date()));
       } catch (err) {
         const fallback =
