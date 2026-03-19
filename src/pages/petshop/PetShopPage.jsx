@@ -876,12 +876,13 @@ export default function PetShopPage() {
                   <div key={group.dateKey} className="petshop-sales-group">
                     <div className="petshop-day-header">
                       <span className="petshop-day-header__date">{group.label}</span>
+                      <span className="petshop-day-header__count">{group.items.length} {group.items.length === 1 ? "venta" : "ventas"}</span>
                       <span className="petshop-day-header__divider" />
                       <span className="petshop-day-header__total">{formatCurrency(group.total)}</span>
                     </div>
                     <table className="petshop-sales-table">
                       <tbody>
-                        {group.items.map((sale) => {
+                        {group.items.map((sale, saleIdx) => {
                           const isTestSale = String(sale.notes || "").toLowerCase().includes("prueba");
                           const openSaleModal = () => {
                             setSelectedSale(sale);
@@ -903,7 +904,7 @@ export default function PetShopPage() {
                           return (
                             <tr
                               key={sale.id}
-                              className="petshop-sales-table__row petshop-clickable"
+                              className={`petshop-sales-table__row petshop-clickable${saleIdx % 2 === 1 ? " petshop-sales-table__row--alt" : ""}`}
                               onClick={openSaleModal}
                               tabIndex={0}
                               onKeyDown={(e) => {
@@ -914,8 +915,10 @@ export default function PetShopPage() {
                                 {(sale.items || []).map((item, i) => (
                                   <span key={i} className="petshop-sales-table__item">
                                     {formatProductName(item.product_id)}
-                                    <span className="petshop-sales-table__qty"> ×{item.quantity}</span>
-                                    {i < sale.items.length - 1 && <span className="petshop-sales-table__sep">, </span>}
+                                    {item.quantity > 1 && (
+                                      <span className="petshop-sales-table__qty"> ×{item.quantity}</span>
+                                    )}
+                                    {i < sale.items.length - 1 && <span className="petshop-sales-table__sep">,  </span>}
                                   </span>
                                 ))}
                                 {sale.notes && !isTestSale && (

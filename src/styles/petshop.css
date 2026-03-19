@@ -472,6 +472,14 @@
   background: rgba(17, 24, 39, 0.08);
 }
 
+.petshop-day-header__count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-soft);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
 .petshop-day-header__total {
   font-size: 0.78rem;
   font-weight: 600;
@@ -491,6 +499,10 @@
   border-bottom: 1px solid var(--color-border-soft);
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.petshop-sales-table__row--alt {
+  background: rgba(17, 24, 39, 0.025);
 }
 
 .petshop-sales-table__row:hover {
@@ -533,13 +545,11 @@
 
 .petshop-sales-table__method {
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  color: #0f766e;
-  background: rgba(15, 118, 110, 0.08);
-  border-radius: 6px;
-  padding: 3px 8px !important;
-  text-align: center;
+  color: var(--color-text-soft);
+  text-align: right;
+  padding-right: 12px !important;
 }
 
 .petshop-sales-table__total {
