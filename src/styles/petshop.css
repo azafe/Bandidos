@@ -479,7 +479,78 @@
   white-space: nowrap;
 }
 
-/* Sales list grid */
+/* Sales table */
+.petshop-sales-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.petshop-sales-table__row {
+  border-bottom: 1px solid var(--color-border-soft);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.petshop-sales-table__row:hover {
+  background: var(--color-surface-strong);
+}
+
+.petshop-sales-table__row:last-child {
+  border-bottom: none;
+}
+
+.petshop-sales-table td {
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.petshop-sales-table__items {
+  width: 100%;
+  color: var(--color-text);
+}
+
+.petshop-sales-table__item {
+  white-space: nowrap;
+}
+
+.petshop-sales-table__qty {
+  font-weight: 600;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+}
+
+.petshop-sales-table__sep {
+  color: var(--color-text-soft);
+}
+
+.petshop-sales-table__note {
+  font-style: italic;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+}
+
+.petshop-sales-table__method {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.08);
+  border-radius: 6px;
+  padding: 3px 8px !important;
+  text-align: center;
+}
+
+.petshop-sales-table__total {
+  white-space: nowrap;
+  text-align: right;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding-right: 4px !important;
+}
+
+/* Sales list grid (legacy - kept for reference) */
 .petshop-sales-list {
   display: grid;
   gap: 10px;

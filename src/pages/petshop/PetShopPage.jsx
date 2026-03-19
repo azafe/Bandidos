@@ -731,6 +731,7 @@ export default function PetShopPage() {
                             min="0"
                             step="100"
                             value={item.unit_price}
+                            step="1"
                             onChange={(e) => updateSaleItem(index, { unit_price: e.target.value })}
                             aria-label="Precio unitario"
                           />
@@ -841,7 +842,7 @@ export default function PetShopPage() {
               <div>
                 <h2 className="card-title">Ventas registradas</h2>
                 <p className="card-subtitle">
-                  Período: {salesFilters.from} → {salesFilters.to}
+                  Período: {formatDateLabel(salesFilters.from)} → {formatDateLabel(salesFilters.to)}
                 </p>
               </div>
               <div className="petshop-date-range">
@@ -878,72 +879,63 @@ export default function PetShopPage() {
                       <span className="petshop-day-header__divider" />
                       <span className="petshop-day-header__total">{formatCurrency(group.total)}</span>
                     </div>
-                    <div className="petshop-sales-list">
-                      {group.items.map((sale) => {
-                        const isTestSale = String(sale.notes || "")
-                          .toLowerCase()
-                          .includes("prueba");
-                        const openSaleModal = () => {
-                          setSelectedSale(sale);
-                          setSaleModalForm({
-                            date: sale.date || todayISO(),
-                            payment_method_id: sale.payment_method_id || "",
-                            notes: sale.notes || "",
-                            items: (sale.items || []).map((item) => ({
-                              product_id: item.product_id,
-                              quantity: item.quantity,
-                              unit_price:
-                                item.unit_price !== null &&
-                                item.unit_price !== undefined
-                                  ? String(item.unit_price)
-                                  : "",
-                            })),
-                          });
-                          setIsEditingSaleModal(false);
-                        };
-                        return (
-                          <div
-                            key={sale.id}
-                            className="petshop-sale-card petshop-clickable"
-                            onClick={openSaleModal}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                openSaleModal();
-                              }
-                            }}
-                          >
-                            <div className="petshop-sale-card__accent" />
-                            <div className="petshop-sale-card__body">
-                              <div className="petshop-sale-card__top">
-                                <span className="petshop-sale-card__title">
-                                  {getSaleTitle(sale)}
-                                </span>
-                                <span className="petshop-sale-card__total petshop-amount">
-                                  {formatCurrency(sale.total)}
-                                </span>
-                              </div>
-                              <div className="petshop-sale-card__meta">
-                                <span className="petshop-sale-card__qty">{getSaleQuantity(sale)} u.</span>
-                                <span className="petshop-sale-card__method">
-                                  {formatPaymentMethod(sale.payment_method_id)}
-                                </span>
-                                {isTestSale && (
-                                  <span className="service-badge service-badge--muted">
-                                    Venta de prueba
+                    <table className="petshop-sales-table">
+                      <tbody>
+                        {group.items.map((sale) => {
+                          const isTestSale = String(sale.notes || "").toLowerCase().includes("prueba");
+                          const openSaleModal = () => {
+                            setSelectedSale(sale);
+                            setSaleModalForm({
+                              date: sale.date || todayISO(),
+                              payment_method_id: sale.payment_method_id || "",
+                              notes: sale.notes || "",
+                              items: (sale.items || []).map((item) => ({
+                                product_id: item.product_id,
+                                quantity: item.quantity,
+                                unit_price:
+                                  item.unit_price !== null && item.unit_price !== undefined
+                                    ? String(item.unit_price)
+                                    : "",
+                              })),
+                            });
+                            setIsEditingSaleModal(false);
+                          };
+                          return (
+                            <tr
+                              key={sale.id}
+                              className="petshop-sales-table__row petshop-clickable"
+                              onClick={openSaleModal}
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSaleModal(); }
+                              }}
+                            >
+                              <td className="petshop-sales-table__items">
+                                {(sale.items || []).map((item, i) => (
+                                  <span key={i} className="petshop-sales-table__item">
+                                    {formatProductName(item.product_id)}
+                                    <span className="petshop-sales-table__qty"> ×{item.quantity}</span>
+                                    {i < sale.items.length - 1 && <span className="petshop-sales-table__sep">, </span>}
                                   </span>
-                                )}
+                                ))}
                                 {sale.notes && !isTestSale && (
-                                  <span className="petshop-sale-card__notes">{sale.notes}</span>
+                                  <span className="petshop-sales-table__note"> · {sale.notes}</span>
                                 )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                                {isTestSale && (
+                                  <span className="service-badge service-badge--muted" style={{ marginLeft: 6 }}>prueba</span>
+                                )}
+                              </td>
+                              <td className="petshop-sales-table__method">
+                                {formatPaymentMethod(sale.payment_method_id)}
+                              </td>
+                              <td className="petshop-sales-table__total petshop-amount">
+                                {formatCurrency(sale.total)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 ))}
               </div>
