@@ -797,6 +797,21 @@ export default function PetShopPage() {
               </div>
             </div>
 
+            <div className="form-grid">
+              <div className="form-field form-field--full">
+                <label htmlFor="sale_notes">Notas (opcional)</label>
+                <textarea
+                  id="sale_notes"
+                  rows={3}
+                  style={{ resize: "none" }}
+                  value={saleForm.notes}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
             {saleError ? (
               <div className="petshop-inline-error">{saleError}</div>
             ) : null}
@@ -1022,6 +1037,7 @@ export default function PetShopPage() {
                         <textarea
                           id="sale_modal_notes"
                           rows={3}
+                          style={{ resize: "none" }}
                           value={saleModalForm.notes}
                           onChange={(e) =>
                             setSaleModalForm((prev) => ({
