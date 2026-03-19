@@ -47,6 +47,8 @@ function toNumber(value, fallback = 0) {
 export default function PetShopPage() {
   const [activeTab, setActiveTab] = useState("sales");
   const [productSearch, setProductSearch] = useState("");
+  const [productSort, setProductSort] = useState({ col: "name", dir: "asc" });
+  const [showOnlyCritical, setShowOnlyCritical] = useState(false);
 
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
 
@@ -173,15 +175,42 @@ export default function PetShopPage() {
   );
   const hasCriticalStock = lowStockProducts.length > 0;
 
-  const filteredProducts = productSearch.trim()
-    ? products.filter((p) => {
-        const q = productSearch.trim().toLowerCase();
-        return (
-          (p.name && p.name.toLowerCase().includes(q)) ||
-          (p.sku && p.sku.toLowerCase().includes(q))
-        );
-      })
-    : products;
+  const filteredProducts = useMemo(() => {
+    let list = productSearch.trim()
+      ? products.filter((p) => {
+          const q = productSearch.trim().toLowerCase();
+          return (
+            (p.name && p.name.toLowerCase().includes(q)) ||
+            (p.sku && p.sku.toLowerCase().includes(q))
+          );
+        })
+      : [...products];
+    if (showOnlyCritical) {
+      list = list.filter((p) => toNumber(p.stock) <= toNumber(p.stock_min));
+    }
+    list.sort((a, b) => {
+      let av, bv;
+      if (productSort.col === "name") {
+        av = (a.name || "").toLowerCase();
+        bv = (b.name || "").toLowerCase();
+      } else {
+        av = toNumber(a[productSort.col]);
+        bv = toNumber(b[productSort.col]);
+      }
+      if (av < bv) return productSort.dir === "asc" ? -1 : 1;
+      if (av > bv) return productSort.dir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [products, productSearch, showOnlyCritical, productSort]);
+
+  function toggleSort(col) {
+    setProductSort((prev) =>
+      prev.col === col
+        ? { col, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: col === "name" ? "asc" : "desc" }
+    );
+  }
 
   useEffect(() => {
     if (!saleSuccess) return;
@@ -1193,7 +1222,7 @@ export default function PetShopPage() {
                   id="product_cost"
                   type="number"
                   min="0"
-                  step="100"
+                  step="1"
                   value={productForm.cost}
                   onChange={(e) =>
                     setProductForm((prev) => ({ ...prev, cost: e.target.value }))
@@ -1206,7 +1235,7 @@ export default function PetShopPage() {
                   id="product_price"
                   type="number"
                   min="0"
-                  step="100"
+                  step="1"
                   value={productForm.price}
                   onChange={(e) =>
                     setProductForm((prev) => ({ ...prev, price: e.target.value }))
@@ -1256,11 +1285,21 @@ export default function PetShopPage() {
 
           <div className="card">
             <div className="petshop-list__header">
-              <h2 className="card-title">Productos cargados</h2>
-              {lowStockProducts.length > 0 && (
-                <span className="service-badge service-badge--critical">
-                  {lowStockProducts.length} con stock crítico
+              <h2 className="card-title">
+                Productos cargados
+                <span style={{ fontWeight: 400, fontSize: "0.85rem", color: "var(--color-text-soft)", marginLeft: 8 }}>
+                  {filteredProducts.length} de {products.length}
                 </span>
+              </h2>
+              {lowStockProducts.length > 0 && (
+                <button
+                  type="button"
+                  className={`service-badge${showOnlyCritical ? "" : " service-badge--critical"}`}
+                  style={{ cursor: "pointer", border: "none", background: showOnlyCritical ? "var(--color-primary-light)" : undefined, color: showOnlyCritical ? "var(--color-primary)" : undefined }}
+                  onClick={() => setShowOnlyCritical((v) => !v)}
+                >
+                  {lowStockProducts.length} con stock crítico{showOnlyCritical ? " ✕" : ""}
+                </button>
               )}
             </div>
             <input
@@ -1282,45 +1321,68 @@ export default function PetShopPage() {
                 Sin resultados para &ldquo;{productSearch}&rdquo;.
               </div>
             ) : (
-              <div className="petshop-product-grid">
-                {filteredProducts.map((product) => {
-                  const isCritical = toNumber(product.stock) <= toNumber(product.stock_min);
-                  return (
-                    <div
-                      key={product.id}
-                      className={`petshop-product-card petshop-clickable${isCritical ? " petshop-product-card--critical" : ""}`}
-                      onClick={() => openProductModal(product)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openProductModal(product);
-                        }
-                      }}
-                    >
-                      <div className="petshop-product-card__accent" />
-                      <div className="petshop-product-card__body">
-                        <div className="petshop-product-card__top">
-                          <div className="petshop-product-card__name-row">
-                            <span className="petshop-product-card__name">{product.name}</span>
-                            {product.sku && (
-                              <span className="petshop-product-card__sku">{product.sku}</span>
-                            )}
-                          </div>
-                          <span className={`petshop-product-card__stock${isCritical ? " petshop-product-card__stock--critical" : ""}`}>
-                            {product.stock ?? 0} u.
+              <div className="petshop-product-table-wrap">
+                <table className="petshop-product-table">
+                  <thead>
+                    <tr>
+                      {[
+                        { col: "name", label: "Producto" },
+                        { col: "stock", label: "Stock" },
+                        { col: "stock_min", label: "Mín." },
+                        { col: "cost", label: "Costo" },
+                        { col: "price", label: "Precio" },
+                      ].map(({ col, label }) => (
+                        <th
+                          key={col}
+                          className={`petshop-product-table__th${productSort.col === col ? " is-sorted" : ""}`}
+                          onClick={() => toggleSort(col)}
+                        >
+                          {label}
+                          <span className="petshop-sort-icon">
+                            {productSort.col === col
+                              ? productSort.dir === "asc" ? " ↑" : " ↓"
+                              : " ↕"}
                           </span>
-                        </div>
-                        <div className="petshop-product-card__meta">
-                          <span>Mín: {product.stock_min ?? 0} u.</span>
-                          {product.cost ? <span>Costo: {formatCurrency(product.cost)}</span> : null}
-                          <span className="petshop-product-card__price petshop-amount">{formatCurrency(product.price)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map((product) => {
+                      const isCritical = toNumber(product.stock) <= toNumber(product.stock_min);
+                      return (
+                        <tr
+                          key={product.id}
+                          className={`petshop-product-table__row petshop-clickable${isCritical ? " petshop-product-table__row--critical" : ""}`}
+                          onClick={() => openProductModal(product)}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              openProductModal(product);
+                            }
+                          }}
+                        >
+                          <td className="petshop-product-table__name-cell">
+                            {isCritical && (
+                              <span className="petshop-product-table__critical-dot" title="Stock crítico" />
+                            )}
+                            <span className="petshop-product-table__name">{product.name}</span>
+                            {product.sku && (
+                              <span className="petshop-product-table__sku">{product.sku}</span>
+                            )}
+                          </td>
+                          <td className={`petshop-product-table__stock${isCritical ? " petshop-product-table__stock--critical" : ""}`}>
+                            {product.stock ?? 0}
+                          </td>
+                          <td className="petshop-product-table__muted">{product.stock_min ?? 0}</td>
+                          <td className="petshop-product-table__muted">{product.cost ? formatCurrency(product.cost) : "-"}</td>
+                          <td className="petshop-product-table__price">{formatCurrency(product.price)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

@@ -578,16 +578,120 @@
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
-/* Product grid */
-.petshop-product-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+/* Product table */
+.petshop-product-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
 }
 
-@media (max-width: 640px) {
-  .petshop-product-grid {
-    grid-template-columns: 1fr;
+.petshop-product-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.petshop-product-table__th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border-soft);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.petshop-product-table__th:hover {
+  color: var(--color-text);
+}
+
+.petshop-product-table__th.is-sorted {
+  color: var(--color-primary);
+}
+
+.petshop-sort-icon {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.petshop-product-table__row {
+  border-bottom: 1px solid var(--color-border-soft);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.petshop-product-table__row:hover {
+  background: var(--color-surface-strong);
+}
+
+.petshop-product-table__row--critical {
+  background: rgba(185, 28, 28, 0.03);
+}
+
+.petshop-product-table__row--critical:hover {
+  background: rgba(185, 28, 28, 0.07);
+}
+
+.petshop-product-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.petshop-product-table__name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.petshop-product-table__critical-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b91c1c;
+  flex-shrink: 0;
+}
+
+.petshop-product-table__name {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.petshop-product-table__sku {
+  font-size: 0.72rem;
+  color: var(--color-text-soft);
+  background: var(--color-surface-strong);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.petshop-product-table__stock {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.petshop-product-table__stock--critical {
+  color: #b91c1c;
+}
+
+.petshop-product-table__muted {
+  color: var(--color-text-soft);
+}
+
+.petshop-product-table__price {
+  font-weight: 600;
+  color: #0f766e;
+}
+
+@media (max-width: 600px) {
+  .petshop-product-table__th:nth-child(3),
+  .petshop-product-table td:nth-child(3),
+  .petshop-product-table__th:nth-child(4),
+  .petshop-product-table td:nth-child(4) {
+    display: none;
   }
 }
 
