@@ -842,7 +842,8 @@ export default function PetShopPage() {
               <div>
                 <h2 className="card-title">Ventas registradas</h2>
                 <p className="card-subtitle">
-                  Período: {formatDateLabel(salesFilters.from)} → {formatDateLabel(salesFilters.to)}
+                  {formatDateLabel(salesFilters.from)} → {formatDateLabel(salesFilters.to)}
+                  {" · "}{salesCount} {salesCount === 1 ? "venta" : "ventas"}
                 </p>
               </div>
               <div className="petshop-date-range">
@@ -861,6 +862,40 @@ export default function PetShopPage() {
                   }
                 />
               </div>
+            </div>
+            <div className="filters-period-quick" style={{ marginBottom: 16 }}>
+              {[
+                { label: "Hoy", range: () => { const t = todayISO(); return { from: t, to: t }; } },
+                { label: "Esta semana", range: () => {
+                  const now = new Date();
+                  const day = now.getDay() === 0 ? 6 : now.getDay() - 1;
+                  const mon = new Date(now); mon.setDate(now.getDate() - day);
+                  return { from: mon.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) };
+                }},
+                { label: "Este mes", range: () => {
+                  const now = new Date();
+                  return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, to: now.toISOString().slice(0, 10) };
+                }},
+                { label: "Mes anterior", range: () => {
+                  const now = new Date();
+                  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                  const last = new Date(now.getFullYear(), now.getMonth(), 0);
+                  return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
+                }},
+              ].map(({ label, range }) => {
+                const r = range();
+                const isActive = salesFilters.from === r.from && salesFilters.to === r.to;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`filters-period-pill${isActive ? " is-active" : ""}`}
+                    onClick={() => setSalesFilters(r)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
 
             {salesError && <div className="petshop-error">{salesError}</div>}
