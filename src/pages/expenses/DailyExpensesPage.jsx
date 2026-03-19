@@ -317,7 +317,7 @@ export default function DailyExpensesPage() {
               <input
                 id="amount" type="number" name="amount"
                 value={form.amount} onChange={handleChange}
-                min="0" step="100" required
+                min="0" step="1" required
               />
             </div>
             <div className="form-field">
