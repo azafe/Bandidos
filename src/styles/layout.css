@@ -4,7 +4,7 @@
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: transparent;
+  background: #111217;
   position: relative;
 }
 
