@@ -24,19 +24,25 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: #111217;
+}
+
 body,
 #root {
   min-height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #111217;
 }
 
 body {
   font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  background-image: radial-gradient(circle at top left, #262938, #111217 55%);
+  background: radial-gradient(circle at top left, #262938, #111217 55%) #111217;
+  background-attachment: fixed;
   color: var(--color-text);
 }
 
