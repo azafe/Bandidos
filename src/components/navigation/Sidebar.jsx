@@ -168,6 +168,16 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         >
           Estilista
         </NavLink>
+
+        {user?.role === "super_admin" && (
+          <NavLink
+            to="/admin/super"
+            className={({ isActive }) => makeClassName(isActive)}
+            onClick={handleNavigate}
+          >
+            Super Admin
+          </NavLink>
+        )}
       </nav>
 
       <div className="sidebar__nav" style={{ marginTop: "auto" }}>

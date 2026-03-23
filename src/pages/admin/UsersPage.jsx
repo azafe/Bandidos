@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function UsersPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
   const { items, loading, error, createItem, updateItem, deleteItem } =
     useApiResource("/v2/users");
   const [form, setForm] = useState({

@@ -68,7 +68,7 @@ export default function PetsPage() {
     name: "", breed: "", owner_name: "", owner_phone: "",
     notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "",
   });
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   const [form, setForm] = useState({
     name: "", breed: "", owner_name: "", owner_phone: "",

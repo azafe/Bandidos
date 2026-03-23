@@ -21,6 +21,7 @@ import ServiceTypesPage from "./pages/catalog/ServiceTypesPage";
 import PaymentMethodsPage from "./pages/catalog/PaymentMethodsPage";
 import ExpenseCategoriesPage from "./pages/catalog/ExpenseCategoriesPage";
 import UsersPage from "./pages/admin/UsersPage";
+import SuperAdminPage from "./pages/admin/SuperAdminPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 
@@ -66,6 +67,7 @@ function App() {
                     element={<ExpenseCategoriesPage />}
                   />
                   <Route path="/admin/users" element={<UsersPage />} />
+                  <Route path="/admin/super" element={<SuperAdminPage />} />
                   <Route path="/petshop" element={<PetShopPage />} />
                   <Route path="/comunicaciones" element={<ComunicacionesPage />} />
                   <Route path="/recordatorios" element={<Navigate to="/comunicaciones" replace />} />
