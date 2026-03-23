@@ -27,6 +27,7 @@ import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import ThemeApplier from "./components/ui/ThemeApplier";
 
 function DashboardHomeWrapper() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ function DashboardHomeWrapper() {
 function App() {
   return (
     <AuthProvider>
+      <ThemeApplier />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

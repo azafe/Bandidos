@@ -8,7 +8,30 @@ import {
   createTenantAdmin,
 } from "../../services/superAdminApi";
 
-const EMPTY_TENANT_FORM = { name: "", logo_url: "", primary_color: "", secondary_color: "", plan: "basic" };
+const MODULES = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "agenda", label: "Agenda" },
+  { id: "services", label: "Servicios" },
+  { id: "customers", label: "Clientes" },
+  { id: "pets", label: "Mascotas" },
+  { id: "expenses", label: "Gastos (Diarios y Fijos)" },
+  { id: "employees", label: "Estilistas" },
+  { id: "suppliers", label: "Proveedores" },
+  { id: "catalog", label: "Catálogos" },
+  { id: "petshop", label: "PetShop" },
+  { id: "comunicaciones", label: "Comunicaciones" },
+];
+
+const DEFAULT_MODULES = MODULES.reduce((acc, m) => ({ ...acc, [m.id]: true }), {});
+
+const EMPTY_TENANT_FORM = { 
+  name: "", 
+  logo_url: "", 
+  primary_color: "#d948ef", 
+  secondary_color: "#ff4fa8", 
+  plan: "basic",
+  enabled_modules: DEFAULT_MODULES
+};
 const EMPTY_ADMIN_FORM  = { email: "", password: "" };
 
 export default function SuperAdminPage() {
@@ -55,6 +78,26 @@ export default function SuperAdminPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleModuleToggle = (modId, isEdit = false) => {
+    if (isEdit) {
+      setEditForm(prev => ({
+        ...prev,
+        enabled_modules: {
+          ...prev.enabled_modules,
+          [modId]: !prev.enabled_modules?.[modId]
+        }
+      }));
+    } else {
+      setTenantForm(prev => ({
+        ...prev,
+        enabled_modules: {
+          ...prev.enabled_modules,
+          [modId]: !prev.enabled_modules?.[modId]
+        }
+      }));
+    }
+  };
+
   // ── Nuevo tenant ─────────────────────────────────────────────────────────
   async function handleCreateTenant(e) {
     e.preventDefault();
@@ -62,11 +105,9 @@ export default function SuperAdminPage() {
     setSavingTenant(true);
     try {
       await createTenant({
+        ...tenantForm,
         name:            tenantForm.name.trim(),
         logo_url:        tenantForm.logo_url.trim()         || null,
-        primary_color:   tenantForm.primary_color.trim()    || null,
-        secondary_color: tenantForm.secondary_color.trim()  || null,
-        plan:            tenantForm.plan,
       });
       setShowNewTenant(false);
       setTenantForm(EMPTY_TENANT_FORM);
@@ -84,9 +125,10 @@ export default function SuperAdminPage() {
     setEditForm({
       name:            tenant.name            || "",
       logo_url:        tenant.logo_url        || "",
-      primary_color:   tenant.primary_color   || "",
-      secondary_color: tenant.secondary_color || "",
+      primary_color:   tenant.primary_color   || "#d948ef",
+      secondary_color: tenant.secondary_color || "#ff4fa8",
       plan:            tenant.plan            || "basic",
+      enabled_modules: tenant.enabled_modules || DEFAULT_MODULES,
     });
   }
 
@@ -96,11 +138,9 @@ export default function SuperAdminPage() {
     setSavingEdit(true);
     try {
       await updateTenant(editTarget.id, {
-        name:            editForm.name.trim(),
-        logo_url:        editForm.logo_url.trim()         || null,
-        primary_color:   editForm.primary_color.trim()    || null,
-        secondary_color: editForm.secondary_color.trim()  || null,
-        plan:            editForm.plan,
+        ...editForm,
+        name: editForm.name.trim(),
+        logo_url: editForm.logo_url.trim() || null,
       });
       setEditTarget(null);
       await load();
@@ -236,13 +276,30 @@ export default function SuperAdminPage() {
             </div>
             <div className="form-field">
               <label>Color primario</label>
-              <input value={tenantForm.primary_color} onChange={(e) => setTenantForm(p => ({ ...p, primary_color: e.target.value }))} placeholder="#rrggbb" />
+              <input type="color" value={tenantForm.primary_color} onChange={(e) => setTenantForm(p => ({ ...p, primary_color: e.target.value }))} style={{ height: 38, padding: 2 }} />
             </div>
             <div className="form-field">
               <label>Color secundario</label>
-              <input value={tenantForm.secondary_color} onChange={(e) => setTenantForm(p => ({ ...p, secondary_color: e.target.value }))} placeholder="#rrggbb" />
+              <input type="color" value={tenantForm.secondary_color} onChange={(e) => setTenantForm(p => ({ ...p, secondary_color: e.target.value }))} style={{ height: 38, padding: 2 }} />
             </div>
           </div>
+
+          <div style={{ marginTop: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: "block" }}>Módulos habilitados</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+              {MODULES.map(m => (
+                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={tenantForm.enabled_modules?.[m.id] !== false} 
+                    onChange={() => handleModuleToggle(m.id)}
+                  />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={() => setShowNewTenant(false)}>Cancelar</button>
             <button type="submit" className="btn-primary" disabled={savingTenant}>
@@ -273,13 +330,30 @@ export default function SuperAdminPage() {
             </div>
             <div className="form-field">
               <label>Color primario</label>
-              <input value={editForm.primary_color} onChange={(e) => setEditForm(p => ({ ...p, primary_color: e.target.value }))} placeholder="#rrggbb" />
+              <input type="color" value={editForm.primary_color} onChange={(e) => setEditForm(p => ({ ...p, primary_color: e.target.value }))} style={{ height: 38, padding: 2 }} />
             </div>
             <div className="form-field">
               <label>Color secundario</label>
-              <input value={editForm.secondary_color} onChange={(e) => setEditForm(p => ({ ...p, secondary_color: e.target.value }))} placeholder="#rrggbb" />
+              <input type="color" value={editForm.secondary_color} onChange={(e) => setEditForm(p => ({ ...p, secondary_color: e.target.value }))} style={{ height: 38, padding: 2 }} />
             </div>
           </div>
+
+          <div style={{ marginTop: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, marginBottom: 8, display: "block" }}>Módulos habilitados</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+              {MODULES.map(m => (
+                <label key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                  <input 
+                    type="checkbox" 
+                    checked={editForm.enabled_modules?.[m.id] !== false} 
+                    onChange={() => handleModuleToggle(m.id, true)}
+                  />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="modal-actions">
             <button type="button" className="btn-secondary" onClick={() => setEditTarget(null)}>Cancelar</button>
             <button type="submit" className="btn-primary" disabled={savingEdit}>

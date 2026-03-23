@@ -12,12 +12,11 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
   const brandLogo = user?.tenant_logo || logo;
   const brandSubtitle = user?.role === "super_admin" ? "SaaS Admin" : "Peluquería Canina";
 
-  const handleNavigate = () => {
-    if (onNavigate) onNavigate();
+  const isEnabled = (mod) => {
+    if (user?.role === "super_admin") return true;
+    if (!user?.enabled_modules) return true;
+    return user.enabled_modules[mod] !== false;
   };
-
-  const makeClassName = (isActive) =>
-    "sidebar__nav-link" + (isActive ? " sidebar__nav-link--active" : "");
 
   return (
     <aside className={`sidebar ${isOpen ? "sidebar--open" : ""}`}>
@@ -38,106 +37,126 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       <nav className="sidebar__nav">
         {user?.role !== "super_admin" && (
           <>
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Inicio
-            </NavLink>
+            {isEnabled("dashboard") && (
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Inicio
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/agenda"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Agenda
-            </NavLink>
+            {isEnabled("agenda") && (
+              <NavLink
+                to="/agenda"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Agenda
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/comunicaciones"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-              style={{ display: "flex", alignItems: "center" }}
-            >
-              Comunicaciones
-              {(() => {
-                const today = new Date().toISOString().split("T")[0];
-                const count = Number(localStorage.getItem("bandidos_comunicaciones_count") || 0);
-                const seen = localStorage.getItem("bandidos_comunicaciones_seen");
-                return count > 0 && seen !== today ? (
-                  <span style={{
-                    background: "#ef4444",
-                    color: "white",
-                    fontSize: "10px",
-                    fontWeight: "600",
-                    padding: "2px 6px",
-                    borderRadius: "10px",
-                    marginLeft: "6px",
-                    lineHeight: 1.4,
-                  }}>
-                    {count}
-                  </span>
-                ) : null;
-              })()}
-            </NavLink>
+            {isEnabled("comunicaciones") && (
+              <NavLink
+                to="/comunicaciones"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+                style={{ display: "flex", alignItems: "center" }}
+              >
+                Comunicaciones
+                {(() => {
+                  const today = new Date().toISOString().split("T")[0];
+                  const count = Number(localStorage.getItem("bandidos_comunicaciones_count") || 0);
+                  const seen = localStorage.getItem("bandidos_comunicaciones_seen");
+                  return count > 0 && seen !== today ? (
+                    <span style={{
+                      background: "#ef4444",
+                      color: "white",
+                      fontSize: "10px",
+                      fontWeight: "600",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      marginLeft: "6px",
+                      lineHeight: 1.4,
+                    }}>
+                      {count}
+                    </span>
+                  ) : null;
+                })()}
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/pets"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Mascotas
-            </NavLink>
+            {isEnabled("pets") && (
+              <NavLink
+                to="/pets"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Mascotas
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/services"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Servicios
-            </NavLink>
+            {isEnabled("services") && (
+              <NavLink
+                to="/services"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Servicios
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/petshop"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              PetShop
-            </NavLink>
+            {isEnabled("petshop") && (
+              <NavLink
+                to="/petshop"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                PetShop
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/expenses/daily"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Gastos Diarios
-            </NavLink>
+            {isEnabled("expenses") && (
+              <>
+                <NavLink
+                  to="/expenses/daily"
+                  className={({ isActive }) => makeClassName(isActive)}
+                  onClick={handleNavigate}
+                >
+                  Gastos Diarios
+                </NavLink>
 
-            <NavLink
-              to="/expenses/fixed"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Gastos Fijos
-            </NavLink>
+                <NavLink
+                  to="/expenses/fixed"
+                  className={({ isActive }) => makeClassName(isActive)}
+                  onClick={handleNavigate}
+                >
+                  Gastos Fijos
+                </NavLink>
+              </>
+            )}
 
-            <NavLink
-              to="/catalog/service-types"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Tipos de Servicio
-            </NavLink>
+            {isEnabled("catalog") && (
+              <NavLink
+                to="/catalog/service-types"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Tipos de Servicio
+              </NavLink>
+            )}
 
-            <NavLink
-              to="/suppliers"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Proveedores
-            </NavLink>
+            {isEnabled("suppliers") && (
+              <NavLink
+                to="/suppliers"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Proveedores
+              </NavLink>
+            )}
 
             {showBackofficeLinks && (
               <>
@@ -169,13 +188,15 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </>
             )}
 
-            <NavLink
-              to="/employees"
-              className={({ isActive }) => makeClassName(isActive)}
-              onClick={handleNavigate}
-            >
-              Estilista
-            </NavLink>
+            {isEnabled("employees") && (
+              <NavLink
+                to="/employees"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Estilista
+              </NavLink>
+            )}
           </>
         )}
 
