@@ -10,6 +10,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -22,34 +23,29 @@ export default function LoginPage() {
     const password = form.password;
 
     if (!email || !password) {
-      alert("Completá email y contraseña.");
+      setError("Completá email y contraseña.");
       return;
     }
     if (password.length < 6) {
-      alert("La contraseña debe tener al menos 6 caracteres.");
+      setError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
+    setError(null);
     try {
       setSubmitting(true);
-      const data = await login({ email, password });
-      
-      // Intentar obtener el user directamente del resultado si login lo devolviera,
-      // o usar el estado. En AuthContext, login no devuelve nada pero actualiza el estado.
-      // Sin embargo, para mayor seguridad en el flujo de navegación, 
-      // podemos esperar a que el estado se actualice o usar la data del token si fuera accesible.
-      // Como AuthContext.login ya hizo setUser(data.user), y navigate es síncrono,
-      // es mejor si login devolviera el usuario o si consultamos el rol.
-      
-      // Re-leemos el usuario del context o lo inferimos.
-      // Optamos por una solución robusta: si es super_admin va a /admin/super
-      // Nota: AuthContext.login no devuelve data, pero podemos envolverlo.
-      // Mirando AuthContext.jsx, login pone setUser(data.user || null).
+      await login({ email, password });
     } catch (err) {
-      if (err?.message === "Invalid request body") {
-        alert("Credenciales inválidas. Verificá email y contraseña (mínimo 6 caracteres).");
+      if (err?.status === 403) {
+        const reason = err.payload?.suspended_reason;
+        setError(reason
+          ? `Cuenta suspendida: ${reason}`
+          : "Tu cuenta está suspendida. Contactá al administrador."
+        );
+      } else if (err?.message === "Invalid request body") {
+        setError("Credenciales inválidas. Verificá email y contraseña (mínimo 6 caracteres).");
       } else {
-        alert(err.message || "No se pudo iniciar sesión.");
+        setError(err.message || "No se pudo iniciar sesión.");
       }
     } finally {
       setSubmitting(false);
@@ -80,6 +76,20 @@ export default function LoginPage() {
         </div>
         <h1 className="login-title">{brandName}</h1>
         <p className="login-subtitle">Inicio de sesión</p>
+
+        {error && (
+          <div style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            borderRadius: 8,
+            padding: "10px 14px",
+            fontSize: "0.85rem",
+            marginBottom: 12,
+            textAlign: "center",
+          }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="login-form">
           <label className="login-label" htmlFor="email">

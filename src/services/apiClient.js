@@ -4,9 +4,14 @@ const DEFAULT_BASE_URL =
 const TOKEN_KEY = "bandidos_token";
 
 let unauthorizedHandler = null;
+let suspendedHandler = null;
 
 export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler;
+}
+
+export function setSuspendedHandler(handler) {
+  suspendedHandler = handler;
 }
 
 export function getStoredToken() {
@@ -90,12 +95,11 @@ export async function apiRequest(
     }
   }
 
-  if (res.status === 403 && unauthorizedHandler) {
-    // Clonar la respuesta para leer el body sin consumirlo dos veces
+  if (res.status === 403) {
     const clone = res.clone();
     clone.json().then((body) => {
-      if (body?.message === "Tenant is inactive") {
-        unauthorizedHandler();
+      if (body?.message === "Tenant is inactive" && suspendedHandler) {
+        suspendedHandler(body.suspended_reason ?? null);
       }
     }).catch(() => {});
   }

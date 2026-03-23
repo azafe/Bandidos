@@ -6,6 +6,7 @@ import {
   setStoredToken,
   getStoredToken,
   setUnauthorizedHandler,
+  setSuspendedHandler,
 } from "../services/apiClient";
 
 const AuthContext = createContext(null);
@@ -25,7 +26,10 @@ export function AuthProvider({ children }) {
     setUnauthorizedHandler(() => {
       logout();
     });
-  }, [logout]);
+    setSuspendedHandler(async () => {
+      await loadMe();
+    });
+  }, [logout, loadMe]);
 
   useEffect(() => {
     setStoredToken(token);

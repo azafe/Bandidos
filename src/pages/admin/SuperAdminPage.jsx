@@ -55,6 +55,12 @@ export default function SuperAdminPage() {
   const [editForm, setEditForm]           = useState(EMPTY_TENANT_FORM);
   const [savingEdit, setSavingEdit]       = useState(false);
 
+  // Modal: suspender tenant
+  const [suspendTarget, setSuspendTarget] = useState(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendCustom, setSuspendCustom] = useState("");
+  const [savingSuspend, setSavingSuspend] = useState(false);
+
   if (user?.role !== "super_admin") {
     return (
       <div className="page-content">
@@ -152,15 +158,34 @@ export default function SuperAdminPage() {
   }
 
   // ── Toggle status ─────────────────────────────────────────────────────────
-  async function toggleStatus(tenant) {
-    const next = tenant.status === "active" ? "inactive" : "active";
-    const label = next === "active" ? "activar" : "desactivar";
-    if (!window.confirm(`¿${label} el tenant "${tenant.name}"?`)) return;
+  function openSuspend(tenant) {
+    setSuspendTarget(tenant);
+    setSuspendReason("payment");
+    setSuspendCustom("");
+  }
+
+  async function handleSuspend(e) {
+    e.preventDefault();
+    const reason = suspendReason === "other" ? suspendCustom.trim() : suspendReason;
+    setSavingSuspend(true);
     try {
-      await updateTenant(tenant.id, { status: next });
+      await updateTenant(suspendTarget.id, { status: "inactive", suspended_reason: reason || null });
+      setSuspendTarget(null);
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo actualizar.");
+      alert(err.message || "No se pudo suspender.");
+    } finally {
+      setSavingSuspend(false);
+    }
+  }
+
+  async function reactivateTenant(tenant) {
+    if (!window.confirm(`¿Reactivar el tenant "${tenant.name}"?`)) return;
+    try {
+      await updateTenant(tenant.id, { status: "active", suspended_reason: null });
+      await load();
+    } catch (err) {
+      alert(err.message || "No se pudo reactivar.");
     }
   }
 
@@ -243,12 +268,15 @@ export default function SuperAdminPage() {
                 <button className="btn-secondary" onClick={() => { setAdminTarget(t); setAdminForm(EMPTY_ADMIN_FORM); }}>
                   Crear admin
                 </button>
-                <button
-                  className={t.status === "active" ? "btn-danger" : "btn-primary"}
-                  onClick={() => toggleStatus(t)}
-                >
-                  {t.status === "active" ? "Desactivar" : "Activar"}
-                </button>
+                {t.status === "active" ? (
+                  <button className="btn-danger" onClick={() => openSuspend(t)}>
+                    Suspender
+                  </button>
+                ) : (
+                  <button className="btn-primary" onClick={() => reactivateTenant(t)}>
+                    Reactivar
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -380,6 +408,39 @@ export default function SuperAdminPage() {
             <button type="button" className="btn-secondary" onClick={() => setAdminTarget(null)}>Cancelar</button>
             <button type="submit" className="btn-primary" disabled={savingAdmin}>
               {savingAdmin ? "Creando..." : "Crear admin"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: suspender tenant */}
+      <Modal isOpen={Boolean(suspendTarget)} onClose={() => setSuspendTarget(null)} title={`Suspender: ${suspendTarget?.name}`}>
+        <form onSubmit={handleSuspend}>
+          <div className="form-grid">
+            <div className="form-field">
+              <label>Motivo</label>
+              <select value={suspendReason} onChange={(e) => setSuspendReason(e.target.value)}>
+                <option value="payment">Falta de pago</option>
+                <option value="maintenance">Mantenimiento</option>
+                <option value="admin">Decisión administrativa</option>
+                <option value="other">Otro...</option>
+              </select>
+            </div>
+            {suspendReason === "other" && (
+              <div className="form-field">
+                <label>Especificá el motivo</label>
+                <input
+                  value={suspendCustom}
+                  onChange={(e) => setSuspendCustom(e.target.value)}
+                  placeholder="Motivo de suspensión..."
+                />
+              </div>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary" onClick={() => setSuspendTarget(null)}>Cancelar</button>
+            <button type="submit" className="btn-danger" disabled={savingSuspend}>
+              {savingSuspend ? "Suspendiendo..." : "Confirmar suspensión"}
             </button>
           </div>
         </form>
