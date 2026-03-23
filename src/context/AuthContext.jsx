@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   apiRequest,
   publicRequest,
@@ -23,17 +23,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    setUnauthorizedHandler(() => {
-      logout();
-    });
-    setSuspendedHandler(async () => {
-      await loadMe();
-    });
-  }, [logout, loadMe]);
-
-  useEffect(() => {
     setStoredToken(token);
   }, [token]);
+
+  // Ref para que el suspendedHandler siempre use la versión más reciente de loadMe
+  const loadMeRef = useRef(null);
 
   const loadMe = useCallback(async () => {
     if (!token) {
@@ -62,6 +56,17 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   }, [token, logout]);
+
+  // Mantener el ref actualizado con la última versión de loadMe
+  useEffect(() => {
+    loadMeRef.current = loadMe;
+  }, [loadMe]);
+
+  // Registrar handlers una sola vez al montar
+  useEffect(() => {
+    setUnauthorizedHandler(() => { logout(); });
+    setSuspendedHandler(() => { loadMeRef.current?.(); });
+  }, [logout]);
 
   useEffect(() => {
     loadMe();
