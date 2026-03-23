@@ -68,13 +68,17 @@ export default function LoginPage() {
     }
   }, [user, navigate]);
 
+  // Branding dinámico: si ya tenemos el usuario, podemos mostrar su marca
+  const brandName = user?.tenant_name || "Plataforma Gestión";
+  const brandLogo = user?.tenant_logo || logo;
+
   return (
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <img src={logo} alt="Logo Bandidos" />
+          <img src={brandLogo} alt={`${brandName} Logo`} />
         </div>
-        <h1 className="login-title">Bandidos</h1>
+        <h1 className="login-title">{brandName}</h1>
         <p className="login-subtitle">Inicio de sesión</p>
 
         <form onSubmit={handleSubmit} className="login-form">

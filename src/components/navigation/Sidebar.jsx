@@ -6,6 +6,12 @@ import { useAuth } from "../../context/AuthContext";
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
   const showBackofficeLinks = false;
+  
+  // Branding dinámico
+  const brandName = user?.tenant_name || "Bandidos";
+  const brandLogo = user?.tenant_logo || logo;
+  const brandSubtitle = user?.role === "super_admin" ? "SaaS Admin" : "Peluquería Canina";
+
   const handleNavigate = () => {
     if (onNavigate) onNavigate();
   };
@@ -18,14 +24,14 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       <div className="sidebar__brand">
         <div className="sidebar__logo-circle">
           <img
-            src={logo}
-            alt="Bandidos Logo"
+            src={brandLogo}
+            alt={`${brandName} Logo`}
             className="sidebar__logo-img"
           />
         </div>
         <div className="sidebar__brand-text">
-          <span className="sidebar__brand-title">Bandidos</span>
-          <span className="sidebar__brand-subtitle">Peluquería Canina</span>
+          <span className="sidebar__brand-title">{brandName}</span>
+          <span className="sidebar__brand-subtitle">{brandSubtitle}</span>
         </div>
       </div>
 
