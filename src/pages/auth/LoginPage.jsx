@@ -79,73 +79,55 @@ export default function LoginPage() {
         <p className="login-subtitle">Inicio de sesión</p>
 
         {error && (
-          <div style={{
-            background: "#fee2e2",
-            color: "#991b1b",
-            borderRadius: 8,
-            padding: "10px 14px",
-            fontSize: "0.85rem",
-            marginBottom: 12,
-            textAlign: "center",
-          }}>
-            {error}
-          </div>
+          <div className="login-error">{error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="login-form">
-          <label className="login-label" htmlFor="email">
-            Email
-          </label>
-          <div className="login-input">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="login-input__icon"
-            >
-              <path
-                d="M4 6.75C4 5.784 4.784 5 5.75 5h12.5C19.216 5 20 5.784 20 6.75v10.5c0 .966-.784 1.75-1.75 1.75H5.75C4.784 19 4 18.216 4 17.25V6.75zm1.75-.25a.25.25 0 0 0-.25.25v.317l6.5 4.55 6.5-4.55V6.75a.25.25 0 0 0-.25-.25H5.75zm12.75 2.384-5.96 4.172a1 1 0 0 1-1.08 0L5.5 8.884v8.366c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V8.884z"
-                fill="currentColor"
+          <div className="login-field">
+            <label className="login-label" htmlFor="email">Email</label>
+            <div className="login-input">
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="login-input__icon">
+                <path
+                  d="M4 6.75C4 5.784 4.784 5 5.75 5h12.5C19.216 5 20 5.784 20 6.75v10.5c0 .966-.784 1.75-1.75 1.75H5.75C4.784 19 4 18.216 4 17.25V6.75zm1.75-.25a.25.25 0 0 0-.25.25v.317l6.5 4.55 6.5-4.55V6.75a.25.25 0 0 0-.25-.25H5.75zm12.75 2.384-5.96 4.172a1 1 0 0 1-1.08 0L5.5 8.884v8.366c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V8.884z"
+                  fill="currentColor"
+                />
+              </svg>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="tu@email.com"
+                autoComplete="email"
+                aria-label="Email"
+                required
               />
-            </svg>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="tu@email.com"
-              autoComplete="email"
-              aria-label="Email"
-              required
-            />
+            </div>
           </div>
 
-          <label className="login-label" htmlFor="password">
-            Contraseña
-          </label>
-          <div className="login-input">
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="login-input__icon"
-            >
-              <path
-                d="M8.75 8V6.75a3.25 3.25 0 0 1 6.5 0V8h1.5A1.75 1.75 0 0 1 18.5 9.75v7.5A1.75 1.75 0 0 1 16.75 19h-9.5A1.75 1.75 0 0 1 5.5 17.25v-7.5A1.75 1.75 0 0 1 7.25 8h1.5zm1.5 0h3.5V6.75a1.75 1.75 0 0 0-3.5 0V8z"
-                fill="currentColor"
+          <div className="login-field">
+            <label className="login-label" htmlFor="password">Contraseña</label>
+            <div className="login-input">
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="login-input__icon">
+                <path
+                  d="M8.75 8V6.75a3.25 3.25 0 0 1 6.5 0V8h1.5A1.75 1.75 0 0 1 18.5 9.75v7.5A1.75 1.75 0 0 1 16.75 19h-9.5A1.75 1.75 0 0 1 5.5 17.25v-7.5A1.75 1.75 0 0 1 7.25 8h1.5zm1.5 0h3.5V6.75a1.75 1.75 0 0 0-3.5 0V8z"
+                  fill="currentColor"
+                />
+              </svg>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                aria-label="Contraseña"
+                minLength={6}
+                required
               />
-            </svg>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              aria-label="Contraseña"
-              minLength={6}
-              required
-            />
+            </div>
           </div>
 
           <button
