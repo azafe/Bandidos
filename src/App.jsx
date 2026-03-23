@@ -25,8 +25,16 @@ import SuperAdminPage from "./pages/admin/SuperAdminPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+
+function DashboardHomeWrapper() {
+  const { user } = useAuth();
+  if (user?.role === "super_admin") {
+    return <Navigate to="/admin/super" replace />;
+  }
+  return <DashboardHome />;
+}
 
 function App() {
   return (
@@ -41,7 +49,7 @@ function App() {
             <ProtectedRoute>
               <MainLayout>
                 <Routes>
-                  <Route path="/" element={<DashboardHome />} />
+                  <Route path="/" element={<DashboardHomeWrapper />} />
                   <Route path="/services" element={<ServicesListPage />} />
                   <Route path="/services/new" element={<ServiceFormPage />} />
                   <Route path="/services/:id" element={<ServiceFormPage />} />

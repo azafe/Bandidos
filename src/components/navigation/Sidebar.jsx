@@ -30,144 +30,148 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       </div>
 
       <nav className="sidebar__nav">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Inicio
-        </NavLink>
-
-        <NavLink
-          to="/agenda"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Agenda
-        </NavLink>
-
-        <NavLink
-          to="/comunicaciones"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-          style={{ display: "flex", alignItems: "center" }}
-        >
-          Comunicaciones
-          {(() => {
-            const today = new Date().toISOString().split("T")[0];
-            const count = Number(localStorage.getItem("bandidos_comunicaciones_count") || 0);
-            const seen = localStorage.getItem("bandidos_comunicaciones_seen");
-            return count > 0 && seen !== today ? (
-              <span style={{
-                background: "#ef4444",
-                color: "white",
-                fontSize: "10px",
-                fontWeight: "600",
-                padding: "2px 6px",
-                borderRadius: "10px",
-                marginLeft: "6px",
-                lineHeight: 1.4,
-              }}>
-                {count}
-              </span>
-            ) : null;
-          })()}
-        </NavLink>
-
-        <NavLink
-          to="/pets"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Mascotas
-        </NavLink>
-
-        <NavLink
-          to="/services"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Servicios
-        </NavLink>
-
-        <NavLink
-          to="/petshop"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          PetShop
-        </NavLink>
-
-        <NavLink
-          to="/expenses/daily"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Gastos Diarios
-        </NavLink>
-
-        <NavLink
-          to="/expenses/fixed"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Gastos Fijos
-        </NavLink>
-
-        <NavLink
-          to="/catalog/service-types"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Tipos de Servicio
-        </NavLink>
-
-        <NavLink
-          to="/suppliers"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Proveedores
-        </NavLink>
-
-        {showBackofficeLinks && (
+        {user?.role !== "super_admin" && (
           <>
             <NavLink
-              to="/catalog/payment-methods"
+              to="/"
+              end
               className={({ isActive }) => makeClassName(isActive)}
               onClick={handleNavigate}
             >
-              Método de Pago
+              Inicio
             </NavLink>
 
             <NavLink
-              to="/catalog/expense-categories"
+              to="/agenda"
               className={({ isActive }) => makeClassName(isActive)}
               onClick={handleNavigate}
             >
-              Categoría Gastos
+              Agenda
             </NavLink>
 
-            {user?.role === "admin" && (
-              <NavLink
-                to="/admin/users"
-                className={({ isActive }) => makeClassName(isActive)}
-                onClick={handleNavigate}
-              >
-                Usuarios
-              </NavLink>
+            <NavLink
+              to="/comunicaciones"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              Comunicaciones
+              {(() => {
+                const today = new Date().toISOString().split("T")[0];
+                const count = Number(localStorage.getItem("bandidos_comunicaciones_count") || 0);
+                const seen = localStorage.getItem("bandidos_comunicaciones_seen");
+                return count > 0 && seen !== today ? (
+                  <span style={{
+                    background: "#ef4444",
+                    color: "white",
+                    fontSize: "10px",
+                    fontWeight: "600",
+                    padding: "2px 6px",
+                    borderRadius: "10px",
+                    marginLeft: "6px",
+                    lineHeight: 1.4,
+                  }}>
+                    {count}
+                  </span>
+                ) : null;
+              })()}
+            </NavLink>
+
+            <NavLink
+              to="/pets"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Mascotas
+            </NavLink>
+
+            <NavLink
+              to="/services"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Servicios
+            </NavLink>
+
+            <NavLink
+              to="/petshop"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              PetShop
+            </NavLink>
+
+            <NavLink
+              to="/expenses/daily"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Gastos Diarios
+            </NavLink>
+
+            <NavLink
+              to="/expenses/fixed"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Gastos Fijos
+            </NavLink>
+
+            <NavLink
+              to="/catalog/service-types"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Tipos de Servicio
+            </NavLink>
+
+            <NavLink
+              to="/suppliers"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Proveedores
+            </NavLink>
+
+            {showBackofficeLinks && (
+              <>
+                <NavLink
+                  to="/catalog/payment-methods"
+                  className={({ isActive }) => makeClassName(isActive)}
+                  onClick={handleNavigate}
+                >
+                  Método de Pago
+                </NavLink>
+
+                <NavLink
+                  to="/catalog/expense-categories"
+                  className={({ isActive }) => makeClassName(isActive)}
+                  onClick={handleNavigate}
+                >
+                  Categoría Gastos
+                </NavLink>
+
+                {user?.role === "admin" && (
+                  <NavLink
+                    to="/admin/users"
+                    className={({ isActive }) => makeClassName(isActive)}
+                    onClick={handleNavigate}
+                  >
+                    Usuarios
+                  </NavLink>
+                )}
+              </>
             )}
+
+            <NavLink
+              to="/employees"
+              className={({ isActive }) => makeClassName(isActive)}
+              onClick={handleNavigate}
+            >
+              Estilista
+            </NavLink>
           </>
         )}
-
-        <NavLink
-          to="/employees"
-          className={({ isActive }) => makeClassName(isActive)}
-          onClick={handleNavigate}
-        >
-          Estilista
-        </NavLink>
 
         {user?.role === "super_admin" && (
           <NavLink

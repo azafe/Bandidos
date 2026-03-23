@@ -32,8 +32,19 @@ export default function LoginPage() {
 
     try {
       setSubmitting(true);
-      await login({ email, password });
-      navigate("/");
+      const data = await login({ email, password });
+      
+      // Intentar obtener el user directamente del resultado si login lo devolviera,
+      // o usar el estado. En AuthContext, login no devuelve nada pero actualiza el estado.
+      // Sin embargo, para mayor seguridad en el flujo de navegación, 
+      // podemos esperar a que el estado se actualice o usar la data del token si fuera accesible.
+      // Como AuthContext.login ya hizo setUser(data.user), y navigate es síncrono,
+      // es mejor si login devolviera el usuario o si consultamos el rol.
+      
+      // Re-leemos el usuario del context o lo inferimos.
+      // Optamos por una solución robusta: si es super_admin va a /admin/super
+      // Nota: AuthContext.login no devuelve data, pero podemos envolverlo.
+      // Mirando AuthContext.jsx, login pone setUser(data.user || null).
     } catch (err) {
       if (err?.message === "Invalid request body") {
         alert("Credenciales inválidas. Verificá email y contraseña (mínimo 6 caracteres).");
@@ -44,6 +55,18 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   }
+
+  // Usamos un useEffect para navegar cuando el user cambie tras login
+  const { user } = useAuth();
+  useEffect(() => {
+    if (user) {
+      if (user.role === "super_admin") {
+        navigate("/admin/super");
+      } else {
+        navigate("/");
+      }
+    }
+  }, [user, navigate]);
 
   return (
     <div className="login-page">
