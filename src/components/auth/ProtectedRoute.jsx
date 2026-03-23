@@ -1,6 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import SuspendedPage from "../../pages/auth/SuspendedPage";
 
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -19,7 +18,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (user.tenant_status === "inactive") {
-    return <SuspendedPage reason={user.suspended_reason} />;
+    return <Navigate to="/suspended" replace state={{ reason: user.suspended_reason }} />;
   }
 
   return children;

@@ -14,6 +14,7 @@ import EmployeeDetailPage from "./pages/employees/EmployeeDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
+import SuspendedPage from "./pages/auth/SuspendedPage";
 import CustomersPage from "./pages/customers/CustomersPage";
 import PetsPage from "./pages/pets/PetsPage";
 import PetDetailPage from "./pages/pets/PetDetailPage";
@@ -43,6 +44,7 @@ function App() {
       <ThemeApplier />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/suspended" element={<SuspendedPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route

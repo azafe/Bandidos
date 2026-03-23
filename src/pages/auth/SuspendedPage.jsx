@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import "./login.css";
 
@@ -7,12 +8,11 @@ const REASON_LABELS = {
   admin: "Suspensión administrativa",
 };
 
-export default function SuspendedPage({ reason }) {
+export default function SuspendedPage() {
   const { logout } = useAuth();
-
-  const reasonLabel = reason
-    ? REASON_LABELS[reason] ?? reason
-    : null;
+  const { state } = useLocation();
+  const reason = state?.reason ?? null;
+  const reasonLabel = reason ? (REASON_LABELS[reason] ?? reason) : null;
 
   return (
     <div className="login-page">
