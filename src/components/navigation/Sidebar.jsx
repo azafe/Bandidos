@@ -12,6 +12,13 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
   const brandLogo = user?.tenant_logo || logo;
   const brandSubtitle = user?.role === "super_admin" ? "SaaS Admin" : "Peluquería Canina";
 
+  const handleNavigate = () => {
+    if (onNavigate) onNavigate();
+  };
+
+  const makeClassName = (isActive) =>
+    "sidebar__nav-link" + (isActive ? " sidebar__nav-link--active" : "");
+
   const isEnabled = (mod) => {
     if (user?.role === "super_admin") return true;
     if (!user?.enabled_modules) return true;
