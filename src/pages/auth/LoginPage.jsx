@@ -1,7 +1,6 @@
 // src/pages/auth/LoginPage.jsx
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
 import "./login.css";
 
@@ -64,15 +63,17 @@ export default function LoginPage() {
     }
   }, [user, navigate]);
 
-  // Branding dinámico: si ya tenemos el usuario, podemos mostrar su marca
-  const brandName = user?.tenant_name || "Plataforma Gestión";
-  const brandLogo = user?.tenant_logo || logo;
+  const brandName = user?.tenant_name || "PeluCan";
+  const brandLogo = user?.tenant_logo || null;
 
   return (
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <img src={brandLogo} alt={`${brandName} Logo`} />
+          {brandLogo
+            ? <img src={brandLogo} alt={`${brandName} logo`} />
+            : <div className="login-logo-default">🐾</div>
+          }
         </div>
         <h1 className="login-title">{brandName}</h1>
         <p className="login-subtitle">Inicio de sesión</p>
