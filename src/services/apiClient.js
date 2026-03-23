@@ -90,5 +90,15 @@ export async function apiRequest(
     }
   }
 
+  if (res.status === 403 && unauthorizedHandler) {
+    // Clonar la respuesta para leer el body sin consumirlo dos veces
+    const clone = res.clone();
+    clone.json().then((body) => {
+      if (body?.message === "Tenant is inactive") {
+        unauthorizedHandler();
+      }
+    }).catch(() => {});
+  }
+
   return handleResponse(res);
 }
