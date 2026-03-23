@@ -1,5 +1,5 @@
 // src/pages/auth/LoginPage.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
