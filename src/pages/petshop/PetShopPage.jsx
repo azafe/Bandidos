@@ -98,6 +98,16 @@ export default function PetShopPage() {
     refresh: refreshSales,
   } = useApiResource("/v2/petshop/sales", salesFilters);
 
+  const [cierreDate, setCierreDate] = useState(todayISO);
+  const [cierreSalesFilters, setCierreSalesFilters] = useState(() => {
+    const t = todayISO();
+    return { from: t, to: t };
+  });
+  const { items: cierreSales, loading: cierreLoading } = useApiResource(
+    "/v2/petshop/sales",
+    cierreSalesFilters
+  );
+
   const [saleForm, setSaleForm] = useState({
     date: todayISO(),
     payment_method_id: "",
@@ -204,12 +214,36 @@ export default function PetShopPage() {
     return list;
   }, [products, productSearch, showOnlyCritical, productSort]);
 
+  const cierreCount = cierreSales.length;
+  const cierreTotal = useMemo(
+    () => cierreSales.reduce((sum, s) => sum + toNumber(s.total), 0),
+    [cierreSales]
+  );
+  const cierreByMethod = useMemo(() => {
+    const map = new Map();
+    cierreSales.forEach((sale) => {
+      const method = paymentMethods.find((m) => m.id === sale.payment_method_id);
+      const key = method ? method.id : "__none__";
+      const label = method ? method.name : "Sin método";
+      if (!map.has(key)) map.set(key, { label, total: 0, count: 0 });
+      const entry = map.get(key);
+      entry.total += toNumber(sale.total);
+      entry.count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }, [cierreSales, paymentMethods]);
+
   function toggleSort(col) {
     setProductSort((prev) =>
       prev.col === col
         ? { col, dir: prev.dir === "asc" ? "desc" : "asc" }
         : { col, dir: col === "name" ? "asc" : "desc" }
     );
+  }
+
+  function handleCierreDateChange(newDate) {
+    setCierreDate(newDate);
+    setCierreSalesFilters({ from: newDate, to: newDate });
   }
 
   useEffect(() => {
@@ -517,6 +551,13 @@ export default function PetShopPage() {
             onClick={() => setActiveTab("products")}
           >
             Productos
+          </button>
+          <button
+            type="button"
+            className={activeTab === "cierre" ? "tab tab--active" : "tab"}
+            onClick={() => setActiveTab("cierre")}
+          >
+            Cierre del día
           </button>
         </div>
       </div>
@@ -1212,6 +1253,137 @@ export default function PetShopPage() {
               </>
             )}
           </Modal>
+        </>
+      ) : null}
+
+      {activeTab === "cierre" ? (
+        <>
+          <div className="card" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <label
+              htmlFor="cierre_date"
+              style={{ fontSize: "0.85rem", color: "var(--color-text-soft)", whiteSpace: "nowrap" }}
+            >
+              Fecha del cierre
+            </label>
+            <input
+              id="cierre_date"
+              type="date"
+              value={cierreDate}
+              max={todayISO()}
+              onChange={(e) => handleCierreDateChange(e.target.value)}
+              style={{
+                borderRadius: "var(--radius-md)",
+                border: "1px solid var(--color-border-soft)",
+                padding: "8px 10px",
+                background: "#f9f9fc",
+                fontSize: "0.88rem",
+              }}
+            />
+          </div>
+
+          <div className="petshop-summary">
+            <div className="petshop-kpi card">
+              <div className="petshop-kpi__label">
+                <span className="petshop-kpi__icon" aria-hidden="true">🧾</span>
+                Ventas del día
+              </div>
+              <strong className="petshop-kpi__value">{cierreCount}</strong>
+            </div>
+            <div className="petshop-kpi petshop-kpi--success card">
+              <div className="petshop-kpi__label">
+                <span className="petshop-kpi__icon" aria-hidden="true">💸</span>
+                Total del día
+              </div>
+              <strong className="petshop-kpi__value petshop-amount">
+                {formatCurrency(cierreTotal)}
+              </strong>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">Por método de pago</h2>
+            <p className="card-subtitle">{formatDateLabel(cierreDate)}</p>
+            {cierreLoading ? (
+              <div className="card-subtitle">Cargando...</div>
+            ) : cierreByMethod.length === 0 ? (
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
+                Sin ventas para esta fecha.
+              </div>
+            ) : (
+              <div className="petshop-cierre-methods">
+                {cierreByMethod.map((entry) => (
+                  <div key={entry.label} className="petshop-cierre-method-row">
+                    <span className="petshop-cierre-method-row__label">{entry.label}</span>
+                    <span className="petshop-cierre-method-row__count">
+                      {entry.count} {entry.count === 1 ? "venta" : "ventas"}
+                    </span>
+                    <span className="petshop-cierre-method-row__divider" />
+                    <span className="petshop-cierre-method-row__total petshop-amount">
+                      {formatCurrency(entry.total)}
+                    </span>
+                  </div>
+                ))}
+                {cierreByMethod.length > 1 && (
+                  <div className="petshop-cierre-method-row petshop-cierre-method-row--total">
+                    <span className="petshop-cierre-method-row__label">Total</span>
+                    <span className="petshop-cierre-method-row__count">
+                      {cierreCount} ventas
+                    </span>
+                    <span className="petshop-cierre-method-row__divider" />
+                    <span className="petshop-cierre-method-row__total petshop-amount">
+                      {formatCurrency(cierreTotal)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">Ventas del día</h2>
+            <p className="card-subtitle">{formatDateLabel(cierreDate)}</p>
+            {cierreLoading ? (
+              <div className="card-subtitle">Cargando ventas...</div>
+            ) : cierreSales.length === 0 ? (
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "32px 0" }}>
+                No hay ventas para esta fecha.
+              </div>
+            ) : (
+              <table className="petshop-sales-table">
+                <tbody>
+                  {cierreSales.map((sale, saleIdx) => (
+                    <tr
+                      key={sale.id}
+                      className={`petshop-sales-table__row${saleIdx % 2 === 1 ? " petshop-sales-table__row--alt" : ""}`}
+                    >
+                      <td className="petshop-sales-table__items">
+                        {(sale.items || []).map((item, i) => (
+                          <span key={i} className="petshop-sales-table__item">
+                            {formatProductName(item.product_id)}
+                            {item.quantity > 1 && (
+                              <span className="petshop-sales-table__qty"> ×{item.quantity}</span>
+                            )}
+                            {i < sale.items.length - 1 && (
+                              <span className="petshop-sales-table__sep">,  </span>
+                            )}
+                          </span>
+                        ))}
+                        {sale.notes && (
+                          <span className="petshop-sales-table__note"> · {sale.notes}</span>
+                        )}
+                      </td>
+                      <td className="petshop-sales-table__method">
+                        {formatPaymentMethod(sale.payment_method_id)}
+                      </td>
+                      <td className="petshop-sales-table__total petshop-amount">
+                        {formatCurrency(sale.total)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </>
       ) : null}
 
