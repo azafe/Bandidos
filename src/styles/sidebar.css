@@ -57,6 +57,24 @@
   color: rgba(230, 233, 245, 0.65);
 }
 
+.sidebar__brand-role {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(230, 233, 245, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 6px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.sidebar__brand-role--admin {
+  color: rgba(167, 220, 190, 0.9);
+  background: rgba(100, 200, 140, 0.12);
+}
+
 /* Navegación */
 .sidebar__nav {
   display: flex;
