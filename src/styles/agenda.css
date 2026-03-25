@@ -1419,7 +1419,7 @@
 
   .agenda-command__top {
     grid-template-columns: 1fr;
-    align-items: stretch;
+    align-items: start;
   }
 
   .agenda-command__actions {

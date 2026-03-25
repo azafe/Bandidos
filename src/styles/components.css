@@ -1503,7 +1503,7 @@
   .fe-cards-grid { grid-template-columns: 1fr; }
   .fixed-expenses-header-actions { flex-direction: column; align-items: stretch; }
   .pet-cards-grid { grid-template-columns: 1fr; }
-  .pets-search-input { min-width: 0; width: 100%; }
+  .pets-search-input { min-width: 0; width: 100%; border-radius: 12px; }
   .employee-cards-grid { grid-template-columns: 1fr; }
   .emp-detail-range { flex-direction: column; align-items: flex-start; }
   .emp-detail-range__label { margin-left: 0; }
