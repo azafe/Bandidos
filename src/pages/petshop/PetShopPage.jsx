@@ -1002,6 +1002,20 @@ export default function PetShopPage() {
       {activeTab === "registradas" ? (
         <>
           <div className="card" style={{ paddingTop: 12, paddingBottom: 12 }}>
+            <div className="petshop-date-range" style={{ marginBottom: 10 }}>
+              <input
+                type="date"
+                value={salesFilters.from}
+                max={todayISO()}
+                onChange={(e) => setSalesFilters((prev) => ({ ...prev, from: e.target.value }))}
+              />
+              <input
+                type="date"
+                value={salesFilters.to}
+                max={todayISO()}
+                onChange={(e) => setSalesFilters((prev) => ({ ...prev, to: e.target.value }))}
+              />
+            </div>
             <div className="filters-period-quick">
               {[
                 { label: "Hoy", range: () => { const t = todayISO(); return { from: t, to: t }; } },
