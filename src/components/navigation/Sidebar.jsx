@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
-  const showBackofficeLinks = false;
+  const showBackofficeLinks = user?.role === "admin" || user?.role === "super_admin";
   
   // Branding dinámico
   const brandName = user?.tenant_name || "Bandidos";
