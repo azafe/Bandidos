@@ -105,7 +105,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </NavLink>
             )}
 
-            {isEnabled("services") && (
+            {isEnabled("services") && user?.role !== "staff" && (
               <NavLink
                 to="/services"
                 className={({ isActive }) => makeClassName(isActive)}

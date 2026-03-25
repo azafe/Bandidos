@@ -65,9 +65,9 @@ function App() {
               <MainLayout>
                 <Routes>
                   <Route path="/" element={<DashboardHomeWrapper />} />
-                  <Route path="/services" element={<ServicesListPage />} />
-                  <Route path="/services/new" element={<ServiceFormPage />} />
-                  <Route path="/services/:id" element={<ServiceFormPage />} />
+                  <Route path="/services" element={<StaffGuard><ServicesListPage /></StaffGuard>} />
+                  <Route path="/services/new" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
+                  <Route path="/services/:id" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/agenda" element={<AgendaPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
