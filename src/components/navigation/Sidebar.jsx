@@ -44,7 +44,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       <nav className="sidebar__nav">
         {user?.role !== "super_admin" && (
           <>
-            {isEnabled("dashboard") && (
+            {isEnabled("dashboard") && user?.role !== "staff" && (
               <NavLink
                 to="/"
                 end

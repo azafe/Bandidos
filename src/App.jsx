@@ -35,6 +35,9 @@ function DashboardHomeWrapper() {
   if (user?.role === "super_admin") {
     return <Navigate to="/admin/super" replace />;
   }
+  if (user?.role === "staff") {
+    return <Navigate to="/agenda" replace />;
+  }
   return <DashboardHome />;
 }
 
