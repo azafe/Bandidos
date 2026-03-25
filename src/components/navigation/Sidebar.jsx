@@ -39,10 +39,10 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
           <span className="sidebar__brand-title">{brandName}</span>
           <span className="sidebar__brand-subtitle">{brandSubtitle}</span>
           {user?.role === "staff" && (
-            <span className="sidebar__brand-role">Empleado</span>
+            <span className="sidebar__brand-role">staff</span>
           )}
           {user?.role === "admin" && (
-            <span className="sidebar__brand-role sidebar__brand-role--admin">Administrador</span>
+            <span className="sidebar__brand-role sidebar__brand-role--admin">admin</span>
           )}
         </div>
       </div>
