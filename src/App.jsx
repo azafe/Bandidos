@@ -41,6 +41,14 @@ function DashboardHomeWrapper() {
   return <DashboardHome />;
 }
 
+function StaffGuard({ children, redirectTo = "/agenda" }) {
+  const { user } = useAuth();
+  if (user?.role === "staff") {
+    return <Navigate to={redirectTo} replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -65,7 +73,7 @@ function App() {
                   <Route path="/pets" element={<PetsPage />} />
                   <Route path="/pets/:id" element={<PetDetailPage />} />
                   <Route path="/expenses/daily" element={<DailyExpensesPage />} />
-                  <Route path="/expenses/fixed" element={<FixedExpensesPage />} />
+                  <Route path="/expenses/fixed" element={<StaffGuard><FixedExpensesPage /></StaffGuard>} />
                   <Route path="/employees" element={<EmployeesPage />} />
                   <Route path="/employees/:id" element={<EmployeeDetailPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />

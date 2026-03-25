@@ -135,13 +135,15 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
                   Gastos Diarios
                 </NavLink>
 
-                <NavLink
-                  to="/expenses/fixed"
-                  className={({ isActive }) => makeClassName(isActive)}
-                  onClick={handleNavigate}
-                >
-                  Gastos Fijos
-                </NavLink>
+                {user?.role !== "staff" && (
+                  <NavLink
+                    to="/expenses/fixed"
+                    className={({ isActive }) => makeClassName(isActive)}
+                    onClick={handleNavigate}
+                  >
+                    Gastos Fijos
+                  </NavLink>
+                )}
               </>
             )}
 
