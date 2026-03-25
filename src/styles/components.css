@@ -468,6 +468,7 @@
   }
 
   .services-panel__controls .services-search {
+    flex: none;
     width: 100%;
   }
 }
