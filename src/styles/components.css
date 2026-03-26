@@ -256,6 +256,11 @@
   gap: 16px;
 }
 
+.services-analytics__charts .card {
+  min-width: 0;
+  overflow: hidden;
+}
+
 @media (max-width: 760px) {
   .services-analytics__charts { grid-template-columns: 1fr; }
 }
