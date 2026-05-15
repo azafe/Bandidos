@@ -43,6 +43,7 @@ export default function SupplierDetailPage() {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
   const [movModalOpen, setMovModalOpen] = useState(false);
+  const [editingMovId, setEditingMovId] = useState(null);
   const [saving, setSaving]           = useState(false);
   const [form, setForm]               = useState({
     date: todayISO(),
@@ -122,8 +123,26 @@ export default function SupplierDetailPage() {
     return parseFloat(val.replace(/\./g, "").replace(",", ".")) || 0;
   }
 
+  // Convierte número almacenado (15000.5) al formato display "15.000,50"
+  function formatMontoForEdit(n) {
+    return Number(n || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function resetForm() {
     setForm({ date: todayISO(), tipo: "", monto: "", descripcion: "", referencia: "" });
+    setEditingMovId(null);
+  }
+
+  function openEditModal(m) {
+    setForm({
+      date:        String(m.date).split("T")[0],
+      tipo:        m.tipo,
+      monto:       formatMontoForEdit(m.monto),
+      descripcion: m.descripcion || "",
+      referencia:  m.referencia  || "",
+    });
+    setEditingMovId(m.id);
+    setMovModalOpen(true);
   }
 
   async function handleSaveMovement(e) {
@@ -132,18 +151,20 @@ export default function SupplierDetailPage() {
       alert("Completá fecha, tipo y monto.");
       return;
     }
+    const body = {
+      date:        form.date,
+      tipo:        form.tipo,
+      monto:       parseMontoValue(form.monto),
+      descripcion: form.descripcion.trim() || null,
+      referencia:  form.referencia.trim() || null,
+    };
     try {
       setSaving(true);
-      await apiRequest(`/v2/suppliers/${id}/movements`, {
-        method: "POST",
-        body: {
-          date:        form.date,
-          tipo:        form.tipo,
-          monto:       parseMontoValue(form.monto),
-          descripcion: form.descripcion.trim() || null,
-          referencia:  form.referencia.trim() || null,
-        },
-      });
+      if (editingMovId) {
+        await apiRequest(`/v2/supplier-movements/${editingMovId}`, { method: "PUT", body });
+      } else {
+        await apiRequest(`/v2/suppliers/${id}/movements`, { method: "POST", body });
+      }
       setMovModalOpen(false);
       resetForm();
       await load();
@@ -268,7 +289,7 @@ export default function SupplierDetailPage() {
                 className="btn-primary"
                 onClick={() => { resetForm(); setMovModalOpen(true); }}
               >
-                + Registrar movimiento
+                + Nuevo movimiento
               </button>
             </div>
 
@@ -320,7 +341,15 @@ export default function SupplierDetailPage() {
                         <td style={{ fontWeight: 600, whiteSpace: "nowrap", color: m.balanceAfter === 0 ? "#22c55e" : "#f97316" }}>
                           {fmt(m.balanceAfter)}
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: "4px 10px", fontSize: "0.78rem", marginRight: 6 }}
+                            onClick={() => openEditModal(m)}
+                          >
+                            Editar
+                          </button>
                           <button
                             type="button"
                             className="btn-danger"
@@ -343,8 +372,8 @@ export default function SupplierDetailPage() {
       {/* Modal: nuevo movimiento */}
       <Modal
         isOpen={movModalOpen}
-        onClose={() => setMovModalOpen(false)}
-        title="Registrar movimiento"
+        onClose={() => { setMovModalOpen(false); resetForm(); }}
+        title={editingMovId ? "Editar movimiento" : "Registrar movimiento"}
       >
         <form onSubmit={handleSaveMovement}>
           <div className="form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -420,7 +449,7 @@ export default function SupplierDetailPage() {
               Cancelar
             </button>
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? "Guardando…" : "Guardar movimiento"}
+              {saving ? "Guardando…" : editingMovId ? "Guardar cambios" : "Guardar movimiento"}
             </button>
           </div>
         </form>
