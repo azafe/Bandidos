@@ -9,6 +9,7 @@ import AgendaPage from "./pages/agenda/AgendaPage";
 import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
 import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
+import SupplierDetailPage from "./pages/suppliers/SupplierDetailPage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
 import EmployeeDetailPage from "./pages/employees/EmployeeDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -77,6 +78,7 @@ function App() {
                   <Route path="/employees" element={<EmployeesPage />} />
                   <Route path="/employees/:id" element={<EmployeeDetailPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
                   <Route
                     path="/catalog/service-types"
                     element={<ServiceTypesPage />}

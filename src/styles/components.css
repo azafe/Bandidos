@@ -1599,3 +1599,22 @@
     margin-left: auto;
   }
 }
+
+/* ── Supplier card: saldo badge ─────────────────────────────────────────── */
+.supplier-card__saldo { margin-top: 6px; }
+.supplier-card__saldo-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+/* ── Supplier movements table: tipo badge ───────────────────────────────── */
+.sup-mov-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 99px;
+}

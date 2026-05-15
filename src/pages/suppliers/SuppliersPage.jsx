@@ -1,7 +1,7 @@
 // src/pages/suppliers/SuppliersPage.jsx
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
-import Modal from "../../components/ui/Modal";
 
 const SUPPLIER_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -19,25 +19,32 @@ function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
 }
 
+function fmt(n) {
+  return `$${Math.round(Number(n || 0)).toLocaleString("es-AR")}`;
+}
+
 export default function SuppliersPage() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({ q: "", category: "" });
   const {
-    items: suppliers, loading, error, createItem, updateItem, deleteItem,
+    items: suppliers, loading, error, createItem, updateItem,
   } = useApiResource("/v2/suppliers", filters);
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", category: "", phone: "", payment: "", notes: "" });
-  const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalForm, setModalForm] = useState({ name: "", category: "", phone: "", payment_method_id: "", notes: "" });
 
   // ── Cálculos ──────────────────────────────────────────────────────────────
   const uniqueCategories = useMemo(() => {
     const cats = suppliers.map((s) => s.category).filter(Boolean);
     return [...new Set(cats)];
   }, [suppliers]);
+
+  const totalSaldo = useMemo(
+    () => suppliers.reduce((acc, s) => acc + Number(s.saldo || 0), 0),
+    [suppliers]
+  );
 
   const paymentMethodById = useMemo(
     () => new Map(paymentMethods.map((m) => [m.id, m.name])),
@@ -78,38 +85,6 @@ export default function SuppliersPage() {
       alert(err.message || "No se pudo guardar el proveedor.");
     }
   }
-
-  async function handleDelete(id) {
-    if (!window.confirm("¿Eliminar este proveedor?")) return false;
-    try { await deleteItem(id); return true; }
-    catch (err) { alert(err.message || "No se pudo eliminar el proveedor."); return false; }
-  }
-
-  function openModalEdit(s) {
-    setModalForm({ name: s.name || "", category: s.category || "", phone: s.phone || "", payment_method_id: s.payment_method_id || "", notes: s.notes || "" });
-    setIsEditingModal(true);
-  }
-
-  async function handleModalSave() {
-    if (!selectedSupplier) return;
-    if (!modalForm.name.trim()) { alert("Ingresá el nombre del proveedor."); return; }
-    try {
-      const payload = {
-        name: modalForm.name.trim(),
-        category: modalForm.category.trim(),
-        phone: modalForm.phone.trim(),
-        payment_method_id: modalForm.payment_method_id || null,
-        notes: modalForm.notes.trim(),
-      };
-      await updateItem(selectedSupplier.id, payload);
-      setSelectedSupplier((prev) => prev ? { ...prev, ...payload } : prev);
-      setIsEditingModal(false);
-    } catch (err) {
-      alert(err.message || "No se pudo guardar el proveedor.");
-    }
-  }
-
-  function closeModal() { setSelectedSupplier(null); setIsEditingModal(false); }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -159,7 +134,13 @@ export default function SuppliersPage() {
             <span>Rubros distintos</span>
             <strong>{uniqueCategories.length}</strong>
           </div>
-          {uniqueCategories.slice(0, 2).map((cat) => (
+          <div className="fe-kpi fe-kpi--total">
+            <span>Saldo total pendiente</span>
+            <strong style={{ color: totalSaldo === 0 ? "#22c55e" : "#f97316" }}>
+              {fmt(totalSaldo)}
+            </strong>
+          </div>
+          {uniqueCategories.slice(0, 1).map((cat) => (
             <div key={cat} className="fe-kpi">
               <span>{cat}</span>
               <strong>{suppliers.filter((s) => s.category === cat).length}</strong>
@@ -210,7 +191,7 @@ export default function SuppliersPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
           <div>
             <h2 className="card-title">Proveedores</h2>
-            <p className="card-subtitle">{suppliers.length} registros · Hacé clic para ver detalle.</p>
+            <p className="card-subtitle">{suppliers.length} registros · Hacé clic para ver la cuenta corriente.</p>
           </div>
         </div>
 
@@ -226,12 +207,13 @@ export default function SuppliersPage() {
           {suppliers.map((s) => {
             const color = supplierColor(s.name);
             const payment = paymentName(s);
+            const saldo = Number(s.saldo || 0);
             return (
               <div
                 key={s.id}
                 className="supplier-card"
-                style={{ "--sup-color": color }}
-                onClick={() => setSelectedSupplier(s)}
+                style={{ "--sup-color": color, cursor: "pointer" }}
+                onClick={() => navigate(`/suppliers/${s.id}`)}
               >
                 <div className="supplier-card__accent" style={{ background: color }} />
                 <div className="supplier-card__body">
@@ -259,6 +241,18 @@ export default function SuppliersPage() {
                     )}
                   </div>
 
+                  <div className="supplier-card__saldo">
+                    <span
+                      className="supplier-card__saldo-badge"
+                      style={{
+                        background: saldo === 0 ? "#22c55e20" : "#f9731620",
+                        color:      saldo === 0 ? "#22c55e"   : "#f97316",
+                      }}
+                    >
+                      {saldo === 0 ? "Al día" : `Debe ${fmt(saldo)}`}
+                    </span>
+                  </div>
+
                   {s.notes && (
                     <p className="employee-card__notes">
                       {s.notes.length > 70 ? s.notes.slice(0, 70) + "…" : s.notes}
@@ -270,78 +264,6 @@ export default function SuppliersPage() {
           })}
         </div>
       </div>
-
-      {/* Modal detalle / edición */}
-      <Modal isOpen={Boolean(selectedSupplier)} onClose={closeModal} title="Proveedor">
-        {selectedSupplier && (
-          <>
-            {isEditingModal ? (
-              <>
-                <label className="form-field"><span>Nombre</span>
-                  <input type="text" value={modalForm.name} onChange={(e) => setModalForm((p) => ({ ...p, name: e.target.value }))} />
-                </label>
-                <label className="form-field"><span>Rubro</span>
-                  <input type="text" value={modalForm.category} onChange={(e) => setModalForm((p) => ({ ...p, category: e.target.value }))} />
-                </label>
-                <label className="form-field"><span>Teléfono</span>
-                  <input type="text" value={modalForm.phone} onChange={(e) => setModalForm((p) => ({ ...p, phone: e.target.value }))} />
-                </label>
-                <label className="form-field"><span>Método de pago</span>
-                  <select value={modalForm.payment_method_id} onChange={(e) => setModalForm((p) => ({ ...p, payment_method_id: e.target.value }))}>
-                    <option value="">Seleccioná</option>
-                    {paymentMethods.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
-                </label>
-                <label className="form-field"><span>Notas</span>
-                  <textarea rows={3} value={modalForm.notes} onChange={(e) => setModalForm((p) => ({ ...p, notes: e.target.value }))} />
-                </label>
-              </>
-            ) : (
-              <div className="fe-modal-detail">
-                <div className="pet-modal-header">
-                  <div className="pet-modal-avatar" style={{ background: supplierColor(selectedSupplier.name) }}>
-                    {initial(selectedSupplier.name)}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "1.2rem" }}>{selectedSupplier.name}</div>
-                    {selectedSupplier.category && (
-                      <span className="supplier-card__category">{selectedSupplier.category}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="fe-modal-detail__rows">
-                  <div><strong>Teléfono</strong><span>{selectedSupplier.phone || "-"}</span></div>
-                  <div><strong>Método de pago</strong><span>{paymentName(selectedSupplier) || "-"}</span></div>
-                  {selectedSupplier.notes && (
-                    <div style={{ flexDirection: "column", alignItems: "flex-start" }}>
-                      <strong>Notas</strong>
-                      <span style={{ marginTop: 4, fontSize: "0.88rem" }}>{selectedSupplier.notes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <div className="modal-actions">
-              {isEditingModal ? (
-                <>
-                  <button type="button" className="btn-secondary" onClick={() => setIsEditingModal(false)}>Cancelar</button>
-                  <button type="button" className="btn-primary" onClick={handleModalSave}>Guardar cambios</button>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="btn-danger"
-                    onClick={async () => { const ok = await handleDelete(selectedSupplier.id); if (ok) closeModal(); }}>
-                    Eliminar
-                  </button>
-                  <button type="button" className="btn-primary" onClick={() => openModalEdit(selectedSupplier)}>
-                    Editar
-                  </button>
-                </>
-              )}
-            </div>
-          </>
-        )}
-      </Modal>
     </div>
   );
 }
