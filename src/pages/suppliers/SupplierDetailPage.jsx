@@ -46,7 +46,7 @@ export default function SupplierDetailPage() {
   const [saving, setSaving]           = useState(false);
   const [form, setForm]               = useState({
     date: todayISO(),
-    tipo: "cargo",
+    tipo: "",
     monto: "",
     descripcion: "",
     referencia: "",
@@ -104,14 +104,32 @@ export default function SupplierDetailPage() {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  // Formato $1.111.111,11 mientras el usuario escribe
+  function handleMontoChange(e) {
+    let raw = e.target.value.replace(/[^\d,]/g, "");
+    const parts = raw.split(",");
+    if (parts.length > 2) raw = parts[0] + "," + parts.slice(1).join("");
+    const intFormatted = (parts[0] || "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const result = parts.length > 1
+      ? intFormatted + "," + parts[1].slice(0, 2)
+      : intFormatted;
+    setForm((prev) => ({ ...prev, monto: result }));
+  }
+
+  // Convierte "1.234,56" → 1234.56
+  function parseMontoValue(val) {
+    if (!val) return 0;
+    return parseFloat(val.replace(/\./g, "").replace(",", ".")) || 0;
+  }
+
   function resetForm() {
-    setForm({ date: todayISO(), tipo: "cargo", monto: "", descripcion: "", referencia: "" });
+    setForm({ date: todayISO(), tipo: "", monto: "", descripcion: "", referencia: "" });
   }
 
   async function handleSaveMovement(e) {
     e.preventDefault();
-    if (!form.date || !form.tipo || !form.monto || !form.descripcion.trim()) {
-      alert("Completá todos los campos obligatorios.");
+    if (!form.date || !form.tipo || !form.monto) {
+      alert("Completá fecha, tipo y monto.");
       return;
     }
     try {
@@ -121,8 +139,8 @@ export default function SupplierDetailPage() {
         body: {
           date:        form.date,
           tipo:        form.tipo,
-          monto:       Number(form.monto),
-          descripcion: form.descripcion.trim(),
+          monto:       parseMontoValue(form.monto),
+          descripcion: form.descripcion.trim() || null,
           referencia:  form.referencia.trim() || null,
         },
       });
@@ -343,24 +361,32 @@ export default function SupplierDetailPage() {
             </div>
             <div className="form-field">
               <label htmlFor="mov-tipo">Tipo</label>
-              <select id="mov-tipo" name="tipo" value={form.tipo} onChange={handleFormChange}>
+              <select id="mov-tipo" name="tipo" value={form.tipo} onChange={handleFormChange} required>
+                <option value="" disabled>Seleccioná tipo…</option>
                 <option value="cargo">Cargo (mercadería recibida)</option>
                 <option value="pago">Pago realizado</option>
               </select>
             </div>
             <div className="form-field">
               <label htmlFor="mov-monto">Monto</label>
-              <input
-                id="mov-monto"
-                name="monto"
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="Ej: 15000"
-                value={form.monto}
-                onChange={handleFormChange}
-                required
-              />
+              <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <span style={{
+                  position: "absolute", left: 11,
+                  color: "#6a7184", fontWeight: 600,
+                  fontSize: "0.95rem", pointerEvents: "none",
+                }}>$</span>
+                <input
+                  id="mov-monto"
+                  name="monto"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  value={form.monto}
+                  onChange={handleMontoChange}
+                  required
+                  style={{ paddingLeft: 24 }}
+                />
+              </div>
             </div>
             <div className="form-field">
               <label htmlFor="mov-ref">Referencia (opcional)</label>
@@ -379,10 +405,9 @@ export default function SupplierDetailPage() {
                 id="mov-desc"
                 name="descripcion"
                 type="text"
-                placeholder="Ej: Compra shampoo x24"
+                placeholder="Ej: Compra shampoo x24 (opcional)"
                 value={form.descripcion}
                 onChange={handleFormChange}
-                required
               />
             </div>
           </div>
