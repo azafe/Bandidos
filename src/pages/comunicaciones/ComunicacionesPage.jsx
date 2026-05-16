@@ -38,7 +38,7 @@ export default function ComunicacionesPage() {
   );
   const [diasMin, setDiasMin] = useState(30);
   const [cumpleFiltro, setCumpleFiltro] = useState("semana"); // "hoy" | "semana" | "mes"
-  const [enviados, setEnviados] = useState({});
+  const [mensajesEnviados, setMensajesEnviados] = useState([]);
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -75,6 +75,21 @@ export default function ComunicacionesPage() {
       }
     }
     fetchTurnos();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchMensajesEnviados() {
+      try {
+        const data = await apiRequest("/v2/comunicaciones");
+        if (!active) return;
+        setMensajesEnviados(Array.isArray(data) ? data : []);
+      } catch {
+        // No bloquear si falla; simplemente no hay historial cargado
+      }
+    }
+    fetchMensajesEnviados();
     return () => { active = false; };
   }, []);
 
@@ -128,8 +143,17 @@ export default function ComunicacionesPage() {
       .sort((a, b) => b.dias - a.dias);
   }, [turnos, diasMin]);
 
-  const pendientes = recordatorios.filter((r) => !enviados[r.pet_id ?? r.pet?.id]);
-  const enviadosHoy = Object.keys(enviados).length;
+  function estaEnviado(petId, type) {
+    return mensajesEnviados.some(
+      (m) => String(m.petId) === String(petId) && m.type === type
+    );
+  }
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const pendientes = recordatorios.filter((r) => !estaEnviado(r.pet_id ?? r.pet?.id, "turno"));
+  const enviadosHoy = mensajesEnviados.filter(
+    (m) => String(m.sentAt).startsWith(todayStr)
+  ).length;
   const diasPromedio = recordatorios.length
     ? Math.round(recordatorios.reduce((s, r) => s + r.dias, 0) / recordatorios.length)
     : 0;
@@ -191,11 +215,28 @@ export default function ComunicacionesPage() {
     setCopiadoModal(false);
   }
 
-  function marcarEnviado(petId) {
-    setEnviados((prev) => ({ ...prev, [petId]: true }));
+  async function marcarEnviado(petId, type, petName, ownerName) {
+    const record = { petId, type, petName, ownerName, sentAt: new Date().toISOString().split("T")[0] };
+    // Actualizar estado local inmediatamente para respuesta visual instantánea
+    setMensajesEnviados((prev) => {
+      const filtered = prev.filter((m) => !(String(m.petId) === String(petId) && m.type === type));
+      return [...filtered, record];
+    });
+    try {
+      const saved = await apiRequest("/v2/comunicaciones", {
+        method: "POST",
+        body: { petId, type, petName, ownerName: ownerName ?? null },
+      });
+      setMensajesEnviados((prev) => {
+        const filtered = prev.filter((m) => !(String(m.petId) === String(petId) && m.type === type));
+        return [...filtered, saved];
+      });
+    } catch {
+      // El estado visual ya está marcado; el registro se sincronizará en el próximo refresh
+    }
   }
 
-  function abrirWhatsApp(phone, mensaje, petId) {
+  function abrirWhatsApp(phone, mensaje) {
     const tel = limpiarTelefono(phone);
     if (!tel) {
       alert("Este cliente no tiene teléfono cargado.");
@@ -206,7 +247,6 @@ export default function ComunicacionesPage() {
       "_blank",
       "noopener,noreferrer"
     );
-    if (petId) marcarEnviado(petId);
   }
 
   // ── Todos tab items ────────────────────────────────────────────
@@ -378,7 +418,7 @@ export default function ComunicacionesPage() {
               ) : (
                 recordatorios.map((turno) => {
                   const { petId, petName, ownerName, ownerPhone } = getPetInfo(turno);
-                  const yaEnviado = Boolean(enviados[petId]);
+                  const yaEnviado = estaEnviado(petId, "turno");
                   const diasBadgeStyle =
                     turno.dias >= 90
                       ? { background: "#b91c1c18", color: "#b91c1c" }
@@ -431,6 +471,44 @@ export default function ComunicacionesPage() {
               )}
             </div>
           </div>
+
+          {/* Sección: Ya contactados (turnos) */}
+          {mensajesEnviados.filter((m) => m.type === "turno").length > 0 && (
+            <div className="card services-panel" style={{ marginTop: 16 }}>
+              <div className="services-panel__header">
+                <div>
+                  <h2 className="card-title">Ya contactados</h2>
+                  <p className="card-subtitle">Mascotas que recibieron un mensaje de recordatorio de turno.</p>
+                </div>
+              </div>
+              <div className="services-list">
+                <div className="recordatorio-header">
+                  <div>Mascota / Dueño</div>
+                  <div>Mensaje enviado</div>
+                  <div></div>
+                  <div></div>
+                  <div></div>
+                </div>
+                {mensajesEnviados
+                  .filter((m) => m.type === "turno")
+                  .sort((a, b) => String(b.sentAt).localeCompare(String(a.sentAt)))
+                  .map((m) => (
+                    <div key={`${m.petId}_turno`} className="service-item recordatorio-item" style={{ opacity: 0.55 }}>
+                      <div>
+                        <div className="service-item__title">{m.petName}</div>
+                        <div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)", marginTop: 2 }}>{m.ownerName || "-"}</div>
+                      </div>
+                      <div className="recordatorio-item__date">{formatFecha(m.sentAt)}</div>
+                      <div />
+                      <div />
+                      <div>
+                        <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -502,7 +580,7 @@ export default function ComunicacionesPage() {
                     <BirthdayCard
                       key={pet.id}
                       pet={pet}
-                      enviado={Boolean(enviados[pet.id])}
+                      enviado={estaEnviado(pet.id, "cumple")}
                       highlight
                       onOpenModal={abrirModalCumple}
                     />
@@ -526,7 +604,7 @@ export default function ComunicacionesPage() {
                     <BirthdayCard
                       key={pet.id}
                       pet={pet}
-                      enviado={Boolean(enviados[pet.id])}
+                      enviado={estaEnviado(pet.id, "cumple")}
                       onOpenModal={abrirModalCumple}
                     />
                   ))
@@ -538,13 +616,13 @@ export default function ComunicacionesPage() {
             {cumpleFiltro === "mes" && (
               <div>
                 {todayBirthdays.map((pet) => (
-                  <BirthdayCard key={pet.id} pet={pet} enviado={Boolean(enviados[pet.id])} highlight onOpenModal={abrirModalCumple} />
+                  <BirthdayCard key={pet.id} pet={pet} enviado={estaEnviado(pet.id, "cumple")} highlight onOpenModal={abrirModalCumple} />
                 ))}
                 {weekBirthdays.map((pet) => (
-                  <BirthdayCard key={pet.id} pet={pet} enviado={Boolean(enviados[pet.id])} onOpenModal={abrirModalCumple} />
+                  <BirthdayCard key={pet.id} pet={pet} enviado={estaEnviado(pet.id, "cumple")} onOpenModal={abrirModalCumple} />
                 ))}
                 {monthBirthdays.map((pet) => (
-                  <BirthdayCard key={pet.id} pet={pet} enviado={Boolean(enviados[pet.id])} onOpenModal={abrirModalCumple} />
+                  <BirthdayCard key={pet.id} pet={pet} enviado={estaEnviado(pet.id, "cumple")} onOpenModal={abrirModalCumple} />
                 ))}
                 {todayBirthdays.length === 0 && weekBirthdays.length === 0 && monthBirthdays.length === 0 && (
                   <div className="services-empty">🎂 Ninguna mascota cumple años este mes</div>
@@ -558,6 +636,37 @@ export default function ComunicacionesPage() {
               </div>
             )}
           </div>
+
+          {/* Sección: Ya contactados (cumpleaños) */}
+          {mensajesEnviados.filter((m) => m.type === "cumple").length > 0 && (
+            <div className="card services-panel" style={{ marginTop: 16 }}>
+              <div className="services-panel__header">
+                <div>
+                  <h2 className="card-title">Ya contactados</h2>
+                  <p className="card-subtitle">Mascotas que recibieron felicitación de cumpleaños.</p>
+                </div>
+              </div>
+              <div className="services-list">
+                {mensajesEnviados
+                  .filter((m) => m.type === "cumple")
+                  .sort((a, b) => String(b.sentAt).localeCompare(String(a.sentAt)))
+                  .map((m) => (
+                    <div key={`${m.petId}_cumple`} className="service-item recordatorio-item" style={{ opacity: 0.55 }}>
+                      <div>
+                        <div className="service-item__title">{m.petName}</div>
+                        <div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)", marginTop: 2 }}>{m.ownerName || "-"}</div>
+                      </div>
+                      <div className="recordatorio-item__date">{formatFecha(m.sentAt)}</div>
+                      <div />
+                      <div />
+                      <div>
+                        <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -589,7 +698,7 @@ export default function ComunicacionesPage() {
                 if (item.type === "cumple-hoy" || item.type === "cumple-semana") {
                   const pet = item.pet;
                   const edad = calcularEdad(pet.birth_date);
-                  const yaEnviado = Boolean(enviados[pet.id]);
+                  const yaEnviado = estaEnviado(pet.id, "cumple");
                   return (
                     <div
                       key={item.key}
@@ -636,7 +745,7 @@ export default function ComunicacionesPage() {
                 // turno item
                 const turno = item.turno;
                 const { petId, petName, ownerName, ownerPhone } = getPetInfo(turno);
-                const yaEnviado = Boolean(enviados[petId]);
+                const yaEnviado = estaEnviado(petId, "turno");
                 const badgeLabel = item.type === "turno-60" ? "📅 +60d" : "📅 +30d";
                 const badgeStyle = item.type === "turno-60"
                   ? { background: "#d9770618", color: "#d97706" }
@@ -738,7 +847,8 @@ export default function ComunicacionesPage() {
                   const petId = selected.type === "turno"
                     ? (selected.turno.pet_id ?? selected.turno.pet?.id)
                     : selected.petId;
-                  abrirWhatsApp(selected.ownerPhone, mensajeEdit, petId);
+                  abrirWhatsApp(selected.ownerPhone, mensajeEdit);
+                  marcarEnviado(petId, selected.type, selected.petName, selected.ownerName);
                   cerrarModal();
                 }}
               >
