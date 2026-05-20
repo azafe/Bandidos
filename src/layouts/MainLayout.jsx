@@ -72,8 +72,8 @@ export default function MainLayout({ children }) {
         <div
           style={{
             position: "fixed",
-            bottom: 24,
-            right: 24,
+            bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+            right: "calc(24px + env(safe-area-inset-right, 0px))",
             zIndex: 9999,
             background: "#1f2937",
             color: "#fff",

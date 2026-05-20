@@ -3,8 +3,8 @@
 /* --- Botón flotante --- */
 .ai-fab {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -42,8 +42,8 @@
 /* --- Panel principal --- */
 .ai-panel {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
   z-index: 1000;
   width: 400px;
   height: 560px;
@@ -487,7 +487,7 @@
   }
 
   .ai-fab {
-    bottom: 16px;
-    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
   }
 }
