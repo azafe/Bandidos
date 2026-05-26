@@ -17,6 +17,19 @@ import {
 
 const DAYS_RANGE = 180;
 const TAB_KEY = "bandidos_comunicaciones_tab";
+const PAGE_SIZE = 20;
+
+function pageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current]);
+  if (current > 1) pages.add(current - 1);
+  if (current < total) pages.add(current + 1);
+  return [...pages].sort((a, b) => a - b).reduce((acc, n, i, arr) => {
+    if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
+    acc.push(n);
+    return acc;
+  }, []);
+}
 
 function toISODateLocal(date) {
   const yyyy = date.getFullYear();
@@ -38,6 +51,9 @@ export default function ComunicacionesPage() {
   );
   const [diasMin, setDiasMin] = useState(30);
   const [cumpleFiltro, setCumpleFiltro] = useState("semana"); // "hoy" | "semana" | "mes"
+  const [pageRecordatorios, setPageRecordatorios] = useState(1);
+  const [pageContactados, setPageContactados] = useState(1);
+  const [pageTodos, setPageTodos] = useState(1);
   const [mensajesEnviados, setMensajesEnviados] = useState([]);
   const [turnos, setTurnos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +112,7 @@ export default function ComunicacionesPage() {
   function switchTab(tab) {
     setActiveTab(tab);
     localStorage.setItem(TAB_KEY, tab);
+    setPageTodos(1);
   }
 
   // ── Turnos logic ──────────────────────────────────────────────
@@ -186,6 +203,25 @@ export default function ComunicacionesPage() {
   const monthBirthdays = useMemo(
     () => petsWithBirthday.filter((p) => esCumpleanosEsteMes(p.birth_date)),
     [petsWithBirthday]
+  );
+
+  // ── Paginación ─────────────────────────────────────────────────
+  const recordatoriosTotalPages = Math.ceil(recordatorios.length / PAGE_SIZE);
+  const recordatoriosPaginados = useMemo(
+    () => recordatorios.slice((pageRecordatorios - 1) * PAGE_SIZE, pageRecordatorios * PAGE_SIZE),
+    [recordatorios, pageRecordatorios]
+  );
+
+  const contactadosTurno = useMemo(
+    () => mensajesEnviados
+      .filter((m) => m.type === "turno")
+      .sort((a, b) => String(b.sentAt).localeCompare(String(a.sentAt))),
+    [mensajesEnviados]
+  );
+  const contactadosTotalPages = Math.ceil(contactadosTurno.length / PAGE_SIZE);
+  const contactadosPaginados = useMemo(
+    () => contactadosTurno.slice((pageContactados - 1) * PAGE_SIZE, pageContactados * PAGE_SIZE),
+    [contactadosTurno, pageContactados]
   );
 
   // ── Badge count update ─────────────────────────────────────────
@@ -286,6 +322,12 @@ export default function ComunicacionesPage() {
     return items;
   }, [todayBirthdays, weekBirthdays, recordatorios]);
 
+  const todosTotalPages = Math.ceil(todosItems.length / PAGE_SIZE);
+  const todosPaginados = useMemo(
+    () => todosItems.slice((pageTodos - 1) * PAGE_SIZE, pageTodos * PAGE_SIZE),
+    [todosItems, pageTodos]
+  );
+
   // ── Render ─────────────────────────────────────────────────────
   return (
     <div className="page-content">
@@ -352,7 +394,7 @@ export default function ComunicacionesPage() {
                   key={d}
                   type="button"
                   className={`filters-period-pill${diasMin === d ? " is-active" : ""}`}
-                  onClick={() => setDiasMin(d)}
+                  onClick={() => { setDiasMin(d); setPageRecordatorios(1); }}
                 >
                   {d} días
                 </button>
@@ -362,7 +404,7 @@ export default function ComunicacionesPage() {
                 min={1}
                 max={365}
                 value={diasMin}
-                onChange={(e) => setDiasMin(Number(e.target.value) || 1)}
+                onChange={(e) => { setDiasMin(Number(e.target.value) || 1); setPageRecordatorios(1); }}
                 style={{
                   width: 60,
                   padding: "4px 8px",
@@ -439,7 +481,7 @@ export default function ComunicacionesPage() {
                   Ningún cliente lleva más de {diasMin} días sin turno. ¡Todo al día!
                 </div>
               ) : (
-                recordatorios.map((turno) => {
+                recordatoriosPaginados.map((turno) => {
                   const { petId, petName, ownerName, ownerPhone } = getPetInfo(turno);
                   const yaEnviado = estaEnviado(petId, "turno");
                   const diasBadgeStyle =
@@ -493,10 +535,23 @@ export default function ComunicacionesPage() {
                 })
               )}
             </div>
+            {recordatoriosTotalPages > 1 && (
+              <div className="pets-pagination">
+                <button type="button" className="pets-pagination__btn" onClick={() => setPageRecordatorios((p) => Math.max(1, p - 1))} disabled={pageRecordatorios === 1}>← Anterior</button>
+                <div className="pets-pagination__pages">
+                  {pageNumbers(pageRecordatorios, recordatoriosTotalPages).map((n, i) =>
+                    n === "…" ? <span key={`e-${i}`} className="pets-pagination__ellipsis">…</span> : (
+                      <button key={n} type="button" className={`pets-pagination__btn pets-pagination__btn--page${pageRecordatorios === n ? " is-active" : ""}`} onClick={() => setPageRecordatorios(n)}>{n}</button>
+                    )
+                  )}
+                </div>
+                <button type="button" className="pets-pagination__btn" onClick={() => setPageRecordatorios((p) => Math.min(recordatoriosTotalPages, p + 1))} disabled={pageRecordatorios === recordatoriosTotalPages}>Siguiente →</button>
+              </div>
+            )}
           </div>
 
           {/* Sección: Ya contactados (turnos) */}
-          {mensajesEnviados.filter((m) => m.type === "turno").length > 0 && (
+          {contactadosTurno.length > 0 && (
             <div className="card services-panel" style={{ marginTop: 16 }}>
               <div className="services-panel__header">
                 <div>
@@ -512,32 +567,42 @@ export default function ComunicacionesPage() {
                   <div></div>
                   <div></div>
                 </div>
-                {mensajesEnviados
-                  .filter((m) => m.type === "turno")
-                  .sort((a, b) => String(b.sentAt).localeCompare(String(a.sentAt)))
-                  .map((m) => (
-                    <div key={`${m.petId}_turno`} className="service-item recordatorio-item" style={{ opacity: 0.55 }}>
-                      <div>
-                        <div className="service-item__title">{m.petName}</div>
-                        <div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)", marginTop: 2 }}>{m.ownerName || "-"}</div>
-                      </div>
-                      <div className="recordatorio-item__date">{formatFecha(m.sentAt)}</div>
-                      <div />
-                      <div />
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6 }}
-                          onClick={() => resetearEnviado(m.petId, "turno")}
-                        >
-                          Resetear
-                        </button>
-                      </div>
+                {contactadosPaginados.map((m) => (
+                  <div key={`${m.petId}_turno`} className="service-item recordatorio-item" style={{ opacity: 0.55 }}>
+                    <div>
+                      <div className="service-item__title">{m.petName}</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)", marginTop: 2 }}>{m.ownerName || "-"}</div>
                     </div>
-                  ))}
+                    <div className="recordatorio-item__date">{formatFecha(m.sentAt)}</div>
+                    <div />
+                    <div />
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6 }}
+                        onClick={() => resetearEnviado(m.petId, "turno")}
+                      >
+                        Resetear
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
+              {contactadosTotalPages > 1 && (
+                <div className="pets-pagination">
+                  <button type="button" className="pets-pagination__btn" onClick={() => setPageContactados((p) => Math.max(1, p - 1))} disabled={pageContactados === 1}>← Anterior</button>
+                  <div className="pets-pagination__pages">
+                    {pageNumbers(pageContactados, contactadosTotalPages).map((n, i) =>
+                      n === "…" ? <span key={`e-${i}`} className="pets-pagination__ellipsis">…</span> : (
+                        <button key={n} type="button" className={`pets-pagination__btn pets-pagination__btn--page${pageContactados === n ? " is-active" : ""}`} onClick={() => setPageContactados(n)}>{n}</button>
+                      )
+                    )}
+                  </div>
+                  <button type="button" className="pets-pagination__btn" onClick={() => setPageContactados((p) => Math.min(contactadosTotalPages, p + 1))} disabled={pageContactados === contactadosTotalPages}>Siguiente →</button>
+                </div>
+              )}
             </div>
           )}
         </>
@@ -733,7 +798,7 @@ export default function ComunicacionesPage() {
             ) : todosItems.length === 0 ? (
               <div className="services-empty">No hay avisos pendientes. ¡Todo al día!</div>
             ) : (
-              todosItems.map((item) => {
+              todosPaginados.map((item) => {
                 if (item.type === "cumple-hoy" || item.type === "cumple-semana") {
                   const pet = item.pet;
                   const edad = calcularEdad(pet.birth_date);
@@ -830,6 +895,19 @@ export default function ComunicacionesPage() {
               })
             )}
           </div>
+          {todosTotalPages > 1 && (
+            <div className="pets-pagination">
+              <button type="button" className="pets-pagination__btn" onClick={() => setPageTodos((p) => Math.max(1, p - 1))} disabled={pageTodos === 1}>← Anterior</button>
+              <div className="pets-pagination__pages">
+                {pageNumbers(pageTodos, todosTotalPages).map((n, i) =>
+                  n === "…" ? <span key={`e-${i}`} className="pets-pagination__ellipsis">…</span> : (
+                    <button key={n} type="button" className={`pets-pagination__btn pets-pagination__btn--page${pageTodos === n ? " is-active" : ""}`} onClick={() => setPageTodos(n)}>{n}</button>
+                  )
+                )}
+              </div>
+              <button type="button" className="pets-pagination__btn" onClick={() => setPageTodos((p) => Math.min(todosTotalPages, p + 1))} disabled={pageTodos === todosTotalPages}>Siguiente →</button>
+            </div>
+          )}
         </div>
       )}
 
