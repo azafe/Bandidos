@@ -215,6 +215,17 @@ export default function ComunicacionesPage() {
     setCopiadoModal(false);
   }
 
+  async function resetearEnviado(petId, type) {
+    setMensajesEnviados((prev) =>
+      prev.filter((m) => !(String(m.petId) === String(petId) && m.type === type))
+    );
+    try {
+      await apiRequest(`/v2/comunicaciones/${petId}/${type}`, { method: "DELETE" });
+    } catch {
+      // El estado visual ya está actualizado
+    }
+  }
+
   async function marcarEnviado(petId, type, petName, ownerName) {
     const record = { petId, type, petName, ownerName, sentAt: new Date().toISOString().split("T")[0] };
     // Actualizar estado local inmediatamente para respuesta visual instantánea
@@ -501,8 +512,16 @@ export default function ComunicacionesPage() {
                       <div className="recordatorio-item__date">{formatFecha(m.sentAt)}</div>
                       <div />
                       <div />
-                      <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6 }}
+                          onClick={() => resetearEnviado(m.petId, "turno")}
+                        >
+                          Resetear
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -659,8 +678,16 @@ export default function ComunicacionesPage() {
                       <div className="recordatorio-item__date">{formatFecha(m.sentAt)}</div>
                       <div />
                       <div />
-                      <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ color: "#15803d", fontWeight: 600, fontSize: 13 }}>✓ Enviado</span>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6 }}
+                          onClick={() => resetearEnviado(m.petId, "cumple")}
+                        >
+                          Resetear
+                        </button>
                       </div>
                     </div>
                   ))}
