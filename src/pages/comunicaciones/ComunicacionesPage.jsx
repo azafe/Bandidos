@@ -144,9 +144,21 @@ export default function ComunicacionesPage() {
   }, [turnos, diasMin]);
 
   function estaEnviado(petId, type) {
-    return mensajesEnviados.some(
+    const registro = mensajesEnviados.find(
       (m) => String(m.petId) === String(petId) && m.type === type
     );
+    if (!registro) return false;
+    if (type === "turno") {
+      const sentDate = String(registro.sentAt).split("T")[0];
+      const tieneVisitaNueva = turnos.some(
+        (t) =>
+          (t.status === "finished" || t.status === "finalizado") &&
+          String(t.pet_id) === String(petId) &&
+          String(t.date).split("T")[0] > sentDate
+      );
+      if (tieneVisitaNueva) return false;
+    }
+    return true;
   }
 
   const todayStr = new Date().toISOString().split("T")[0];
