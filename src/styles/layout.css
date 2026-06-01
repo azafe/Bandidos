@@ -68,6 +68,12 @@
   border-radius: 50%;
 }
 
+.app-header__brand-text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .app-header__brand-title {
   font-size: 0.95rem;
   font-weight: 700;
@@ -79,21 +85,12 @@
   color: #d3d3d3;
 }
 
-.app-header__menu-button {
+.app-header__brand--button {
   border: none;
   background: transparent;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px;
+  padding: 0;
   cursor: pointer;
-}
-
-.app-header__menu-button span {
-  width: 18px;
-  height: 2px;
-  border-radius: 999px;
-  background: #ffffff;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ===== Estilos de cabecera de página (Dashboard, etc.) ===== */

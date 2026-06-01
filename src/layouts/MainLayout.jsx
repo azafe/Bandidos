@@ -38,7 +38,11 @@ export default function MainLayout({ children }) {
       <div className="app-main">
         {/* HEADER: solo visible en mobile (lo controlamos por CSS) */}
         <header className="app-header">
-          <div className="app-header__brand">
+          <button
+            type="button"
+            className="app-header__brand app-header__brand--button"
+            onClick={toggleSidebar}
+          >
             <div className="app-header__logo">
               <img src={logo} alt="Logo Bandidos" />
             </div>
@@ -48,16 +52,6 @@ export default function MainLayout({ children }) {
                 Peluquería Canina
               </span>
             </div>
-          </div>
-
-          <button
-            type="button"
-            className="app-header__menu-button"
-            onClick={toggleSidebar}
-          >
-            <span />
-            <span />
-            <span />
           </button>
         </header>
 
