@@ -2,6 +2,16 @@ const DEFAULT_BASE_URL =
   "https://bandidos-backend-production.up.railway.app";
 
 const TOKEN_KEY = "bandidos_token";
+const DEVICE_ID_KEY = "bandidos_device_id";
+
+export function getDeviceId() {
+  let id = window.localStorage.getItem(DEVICE_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.localStorage.setItem(DEVICE_ID_KEY, id);
+  }
+  return id;
+}
 
 let unauthorizedHandler = null;
 let suspendedHandler = null;
@@ -84,6 +94,7 @@ export async function apiRequest(
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "X-Device-Id": getDeviceId(),
     },
     body: body ? JSON.stringify(body) : undefined,
   });

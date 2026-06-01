@@ -1,11 +1,42 @@
 // src/components/navigation/Sidebar.jsx
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "../../assets/bandidos-logo.jpg";
 import { useAuth } from "../../context/AuthContext";
+import {
+  subscribeToPush,
+  unsubscribeFromPush,
+  getSubscriptionStatus,
+} from "../../services/pushNotifications.js";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
   const showBackofficeLinks = user?.role === "admin" || user?.role === "super_admin";
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const pushSupported = "serviceWorker" in navigator && "PushManager" in window;
+
+  useEffect(() => {
+    if (!pushSupported) return;
+    getSubscriptionStatus().then(setPushEnabled);
+  }, [pushSupported]);
+
+  async function handlePushToggle() {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        await subscribeToPush();
+        setPushEnabled(true);
+      }
+    } catch (err) {
+      alert(err.message || "Error al configurar notificaciones.");
+    } finally {
+      setPushLoading(false);
+    }
+  }
   
   // Branding dinámico
   const brandName = user?.tenant_name || "Bandidos";
@@ -227,6 +258,16 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       </nav>
 
       <div className="sidebar__nav" style={{ marginTop: "auto" }}>
+        {pushSupported && user?.role !== "super_admin" && (
+          <button
+            type="button"
+            className={`sidebar__nav-link sidebar__push-toggle${pushEnabled ? " sidebar__push-toggle--on" : ""}`}
+            onClick={handlePushToggle}
+            disabled={pushLoading}
+          >
+            {pushLoading ? "..." : pushEnabled ? "🔔 Notificaciones activas" : "🔕 Activar notificaciones"}
+          </button>
+        )}
         <button
           type="button"
           className="sidebar__nav-link sidebar__nav-link--logout"
