@@ -2355,7 +2355,7 @@ export default function AgendaPage() {
                     name="traslado_direccion"
                     value={form.traslado_direccion}
                     onChange={handleFormChange}
-                    placeholder="Ej: Av. Siempreviva 742, Piso 3"
+                    placeholder="Ej: Virgen de la Merced 843, San Miguel de Tucumán, Tucumán"
                     autoComplete="off"
                   />
                 </label>
