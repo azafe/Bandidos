@@ -679,6 +679,29 @@
   color: #1d4ed8;
 }
 
+.agenda-card__pill--traslado {
+  background: rgba(234, 88, 12, 0.14);
+  color: #c2410c;
+}
+
+.agenda-traslado-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.agenda-traslado-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-primary, #c2410c);
+}
+
 .agenda-card__side {
   display: grid;
   justify-items: end;

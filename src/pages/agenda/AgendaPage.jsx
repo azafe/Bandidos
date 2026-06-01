@@ -299,6 +299,8 @@ export default function AgendaPage() {
     status: "reserved",
     base_price: "",
     final_price: "",
+    traslado: false,
+    traslado_direccion: "",
   });
 
   const { items: serviceTypes } = useApiResource("/v2/service-types");
@@ -637,6 +639,8 @@ export default function AgendaPage() {
       status: "reserved",
       base_price: "",
       final_price: "",
+      traslado: false,
+      traslado_direccion: "",
     });
     setDurationMode("preset");
     setCustomDuration("");
@@ -693,6 +697,8 @@ export default function AgendaPage() {
       status: normalizeStatus(turno.status),
       final_price: catalogPrice,
       base_price: catalogPrice,
+      traslado: turno.traslado ?? false,
+      traslado_direccion: turno.traslado_direccion || "",
     });
     if (DURATION_OPTIONS.includes(normalizedDuration)) {
       setDurationMode("preset");
@@ -1023,6 +1029,8 @@ export default function AgendaPage() {
         groomer_id: groomerId ?? undefined,
         status: normalizeStatus(form.status),
         price: Number.isFinite(priceValue) && priceValue > 0 ? priceValue : undefined,
+        traslado: form.traslado,
+        traslado_direccion: form.traslado ? form.traslado_direccion.trim() || null : null,
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
@@ -1496,6 +1504,11 @@ export default function AgendaPage() {
                               {turno.payment_method.name}
                             </span>
                           ) : null}
+                          {turno.traslado ? (
+                            <span className="agenda-card__pill agenda-card__pill--traslado">
+                              Traslado
+                            </span>
+                          ) : null}
                         </div>
                       </div>
                       <div className="agenda-card__side">
@@ -1940,6 +1953,14 @@ export default function AgendaPage() {
                       "Sin notas cargadas para este turno."}
                   </p>
                 </article>
+                {selectedTurno.traslado && (
+                  <article className="agenda-turno-modal__panel">
+                    <h4>Traslado</h4>
+                    <p className="agenda-turno-modal__notes">
+                      {selectedTurno.traslado_direccion || "Sin dirección registrada."}
+                    </p>
+                  </article>
+                )}
               </div>
 
               {showFinishForm ? (
@@ -2310,6 +2331,35 @@ export default function AgendaPage() {
                   Ir a Mascotas para crear una nueva
                 </Link>
               </label>
+              <div className="agenda-form__group-label">Traslado</div>
+              <label className="form-field agenda-traslado-toggle">
+                <input
+                  type="checkbox"
+                  name="traslado"
+                  checked={form.traslado}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      traslado: e.target.checked,
+                      traslado_direccion: e.target.checked ? prev.traslado_direccion : "",
+                    }))
+                  }
+                />
+                <span>¿Necesita traslado?</span>
+              </label>
+              {form.traslado && (
+                <label className="form-field">
+                  <span>Dirección de traslado</span>
+                  <input
+                    type="text"
+                    name="traslado_direccion"
+                    value={form.traslado_direccion}
+                    onChange={handleFormChange}
+                    placeholder="Ej: Av. Siempreviva 742, Piso 3"
+                    autoComplete="off"
+                  />
+                </label>
+              )}
             </div>
           ) : isEditing ? (
             <div className="agenda-form__section">
