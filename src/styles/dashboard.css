@@ -11,12 +11,12 @@
 .dashboard-title {
   font-family: "Fredoka", system-ui, sans-serif;
   font-size: 2rem;
-  color: #f7f8ff;
+  color: var(--text-strong);
   margin: 0;
 }
 
 .dashboard-subtitle {
-  color: rgba(240, 242, 250, 0.75);
+  color: var(--text-muted);
   font-size: 0.85rem;
   margin-top: 2px;
 }
@@ -48,7 +48,7 @@
 .dashboard-month-nav__label {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #f7f8ff;
+  color: var(--text-strong);
   text-align: center;
   white-space: nowrap;
 }
@@ -599,9 +599,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.2) 25%,
-    rgba(255, 255, 255, 0.35) 50%,
-    rgba(255, 255, 255, 0.2) 75%
+    var(--bg-subtle) 25%,
+    var(--border) 50%,
+    var(--bg-subtle) 75%
   );
   background-size: 200% 100%;
   border-radius: 14px;
