@@ -1486,9 +1486,6 @@ export default function AgendaPage() {
                         setIsEditing(false);
                       }}
                     >
-                      <div className="agenda-card__avatar" aria-hidden="true">
-                        🐕
-                      </div>
                       <div className="agenda-card__body">
                         <div className="agenda-card__header">
                           <span className="agenda-card__title">
