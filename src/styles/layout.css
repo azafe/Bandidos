@@ -204,6 +204,12 @@
   .app-main-content {
     padding: 16px calc(16px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
   }
+
+  /* El AppBar ya muestra el título: ocultarlo dentro del contenido */
+  .page-title,
+  .page-subtitle {
+    display: none;
+  }
 }
 
 /* ===== DESKTOP (desde 900px) ===== */
