@@ -744,36 +744,50 @@
 
 
 .agenda-badge {
-  font-size: 0.75rem;
-  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(17, 24, 39, 0.1);
-  color: #1f2937;
+  background: rgba(17, 24, 39, 0.07);
+  color: var(--text-strong);
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .agenda-badge--reserved {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
 }
 
 .agenda-badge--confirmed {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.1);
   color: #047857;
+  border-color: rgba(16, 185, 129, 0.25);
 }
 
 .agenda-badge--finished {
-  background: rgba(34, 197, 94, 0.15);
+  background: rgba(22, 163, 74, 0.1);
   color: #15803d;
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+.agenda-badge--reserved {
+  background: rgba(217, 119, 6, 0.1);
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.3);
 }
 
 .agenda-badge--cancelled {
-  background: rgba(248, 113, 113, 0.15);
+  background: rgba(220, 38, 38, 0.08);
   color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.25);
 }
 
 .agenda-badge--no_show {
-  background: rgba(251, 191, 36, 0.2);
+  background: rgba(217, 119, 6, 0.1);
   color: #92400e;
+  border-color: rgba(217, 119, 6, 0.25);
 }
 
 .agenda-card__amount {
@@ -1917,14 +1931,13 @@
 /* ─── FASE 2: Avatar on timeline card ───────────────────────── */
 
 .agenda-card__avatar {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--grad-brand);
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 700;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-size: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;

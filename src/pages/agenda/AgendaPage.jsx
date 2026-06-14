@@ -1487,7 +1487,7 @@ export default function AgendaPage() {
                       }}
                     >
                       <div className="agenda-card__avatar" aria-hidden="true">
-                        {(turno.pet_name || "?")[0].toUpperCase()}
+                        🐕
                       </div>
                       <div className="agenda-card__body">
                         <div className="agenda-card__header">
