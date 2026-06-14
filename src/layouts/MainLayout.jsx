@@ -1,16 +1,36 @@
 // src/layouts/MainLayout.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/navigation/Sidebar";
 import AsistenteIA from "../components/dashboard/AsistenteIA";
-import logo from "../assets/bandidos-logo.jpg";
 
 const LS_KEY = "bandidos_vio_recordatorios";
+
+const PAGE_TITLES = {
+  "/":                        "Inicio",
+  "/agenda":                  "Agenda",
+  "/services":                "Servicios",
+  "/pets":                    "Mascotas",
+  "/customers":               "Clientes",
+  "/expenses/daily":          "Gastos Diarios",
+  "/expenses/fixed":          "Gastos Fijos",
+  "/employees":               "Equipo",
+  "/suppliers":               "Proveedores",
+  "/catalog/service-types":   "Tipos de Servicio",
+  "/catalog/payment-methods": "Métodos de Pago",
+  "/catalog/expense-categories": "Categorías de Gastos",
+  "/admin/users":             "Usuarios",
+  "/petshop":                 "PetShop",
+  "/comunicaciones":          "Comunicaciones",
+};
 
 export default function MainLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showToast, setShowToast] = useState(!localStorage.getItem(LS_KEY));
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const pageTitle = PAGE_TITLES[pathname] ?? PAGE_TITLES[Object.keys(PAGE_TITLES).find(k => pathname.startsWith(k) && k !== "/") ?? ""] ?? "Bandidos";
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -40,26 +60,20 @@ export default function MainLayout({ children }) {
         <header className="app-header">
           <button
             type="button"
-            className="app-header__brand app-header__brand--button"
+            className="app-header__hamburger"
             onClick={toggleSidebar}
+            aria-label="Abrir menú"
           >
-            <div className="app-header__logo">
-              <img src={logo} alt="Logo Bandidos" />
-            </div>
-            <div className="app-header__brand-text">
-              <span className="app-header__brand-title">Bandidos</span>
-              <span className="app-header__brand-subtitle">
-                Peluquería Canina
-              </span>
-            </div>
+            ☰
           </button>
+          <h1 className="app-header__page-title">{pageTitle}</h1>
         </header>
 
         <main className="app-main-content">{children}</main>
       </div>
 
-      {/* Asistente IA flotante */}
-      <AsistenteIA />
+      {/* Asistente IA: solo en Inicio */}
+      {pathname === "/" && <AsistenteIA />}
 
       {/* Toast de bienvenida: Recordatorios */}
       {showToast && (
