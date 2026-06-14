@@ -275,6 +275,9 @@ export default function AgendaPage() {
   const [pendingStatus, setPendingStatus] = useState("reserved");
   const [showFinishForm, setShowFinishForm] = useState(false);
   const finishFormRef = useRef(null);
+  const [noteExpanded, setNoteExpanded] = useState(false);
+  const touchStartX = useRef(null);
+  const dateInputRef = useRef(null);
   const [durationMode, setDurationMode] = useState("preset");
   const [customDuration, setCustomDuration] = useState("");
   const [finishForm, setFinishForm] = useState({
@@ -1226,17 +1229,8 @@ export default function AgendaPage() {
   return (
     <div className="page-content agenda-page">
       <div className="agenda-header">
-        <div>
-          <h1 className="page-title">Agenda</h1>
-          <p className="page-subtitle">
-            Turnos diarios y control rapido del dia.
-          </p>
-        </div>
-        {viewMode === "operation" ? (
-          <button type="button" className="btn-primary agenda-cta" onClick={openCreate}>
-            + Nuevo turno
-          </button>
-        ) : null}
+        <h1 className="page-title">Agenda</h1>
+        <p className="page-subtitle">Turnos diarios y control rápido del día.</p>
       </div>
 
       <div className="agenda-mode-bar card">
@@ -1267,112 +1261,111 @@ export default function AgendaPage() {
         </p>
       </div>
 
-      <div className="agenda-command card">
-        <div className="agenda-command__top">
-          <div className="agenda-command__date">
-            <span className="agenda-daybar__label">{formatDateLong(selectedDate)}</span>
-            <div className="agenda-date__controls">
-              <div className="agenda-date__nav-row">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
-                >
-                  ←
-                </button>
-                <div className="date-field__control">
-                  <input
-                    type="text"
-                    className="date-field__display"
-                    value={formatDateDisplay(selectedDate)}
-                    placeholder="DD-MM-AAAA"
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  />
-                  <input
-                    type="date"
-                    className="date-field__native"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
-                >
-                  →
-                </button>
-              </div>
-              <div className="agenda-date__today-row">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setSelectedDate(todayISO())}
-                >
-                  Hoy
-                </button>
-              </div>
-            </div>
+      {/* Navegación de fecha */}
+      <div
+        className="agenda-date-nav card"
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const diff = touchStartX.current - e.changedTouches[0].clientX;
+          if (Math.abs(diff) > 50) setSelectedDate((prev) => addDays(prev, diff > 0 ? 1 : -1));
+          touchStartX.current = null;
+        }}
+      >
+        <div className="agenda-date-nav__row">
+          <button
+            type="button"
+            className="agenda-date-nav__arrow"
+            onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+            aria-label="Día anterior"
+          >
+            ←
+          </button>
+          <div className="agenda-date-nav__center">
+            <button
+              type="button"
+              className="agenda-date-nav__label-btn"
+              onClick={() => dateInputRef.current?.showPicker?.()}
+            >
+              {formatDateLong(selectedDate)}
+            </button>
+            {selectedDate === todayISO() && (
+              <span className="agenda-date-nav__today-badge">● HOY</span>
+            )}
+            <input
+              ref={dateInputRef}
+              type="date"
+              className="agenda-date-nav__picker"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              tabIndex={-1}
+              aria-hidden="true"
+            />
           </div>
-
-          {viewMode === "operation" ? (
-            <div className="agenda-command__search">
-              <input
-                className="pets-search-input"
-                type="text"
-                placeholder="Buscar por mascota, dueño o groomer..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-          ) : (
-            <div className={`agenda-close-mini-note${closeReadyToFinishDay ? " is-ready" : " is-pending"}`}>
-              {closeReadyToFinishDay
-                ? "Cierre operativo al día."
-                : "Hay pendientes antes del cierre final."}
-            </div>
-          )}
-
-          <div className="agenda-command__actions">
-            {viewMode === "operation" ? (
-              <>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={resetFilters}
-                  disabled={activeFilterChips.length === 0}
-                >
-                  Limpiar
-                </button>
-              </>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            className="agenda-date-nav__arrow"
+            onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+            aria-label="Día siguiente"
+          >
+            →
+          </button>
         </div>
+
+        {selectedDate !== todayISO() && (
+          <div className="agenda-date-nav__today-row">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setSelectedDate(todayISO())}
+            >
+              Hoy
+            </button>
+          </div>
+        )}
 
         {warning ? <div className="agenda-warning">{warning}</div> : null}
 
-        {viewMode === "operation" ? (
-          <>
-            <div className="fixed-expenses-summary__kpis agenda-kpi-row">
-              <div className="fe-kpi">
-                <span>Turnos</span>
-                <strong>{summary.total}</strong>
-              </div>
-              <div className="fe-kpi">
-                <span>Pendientes</span>
-                <strong>{summary.reserved}</strong>
-              </div>
-              <div className="fe-kpi fe-kpi--total">
-                <span>Finalizados</span>
-                <strong>{summary.finished}</strong>
-              </div>
+        {viewMode === "operation" && (
+          <div className="agenda-date-nav__kpis">
+            <div className="agenda-date-kpi">
+              <span>Turnos</span>
+              <strong>{summary.total}</strong>
             </div>
+            <div className="agenda-date-kpi">
+              <span>Pendientes</span>
+              <strong>{summary.reserved}</strong>
+            </div>
+            <div className="agenda-date-kpi agenda-date-kpi--ok">
+              <span>Finalizados</span>
+              <strong>{summary.finished}</strong>
+            </div>
+          </div>
+        )}
 
-            <div className="agenda-filter-chips">
-              {activeFilterChips.length > 0 ? (
-                activeFilterChips.map((chip) => (
+        {viewMode === "close" && (
+          <div className={`agenda-close-mini-note${closeReadyToFinishDay ? " is-ready" : " is-pending"}`}>
+            {closeReadyToFinishDay
+              ? "Cierre operativo al día."
+              : "Hay pendientes antes del cierre final."}
+          </div>
+        )}
+      </div>
+
+      {/* Búsqueda y filtros */}
+      {viewMode === "operation" && (
+        <div className="agenda-search-card card">
+          <input
+            className="agenda-search-input"
+            type="text"
+            placeholder="Buscar por mascota, dueño o groomer..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {activeFilterChips.length > 0 ? (
+            <div className="agenda-filter-row">
+              <div className="agenda-filter-chips">
+                {activeFilterChips.map((chip) => (
                   <button
                     key={chip.key}
                     type="button"
@@ -1381,16 +1374,54 @@ export default function AgendaPage() {
                   >
                     {chip.label} <span aria-hidden="true">×</span>
                   </button>
-                ))
-              ) : (
-                <span className="agenda-filter-chips__empty">
-                  Sin filtros activos. Mostrando agenda completa del día.
-                </span>
-              )}
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={resetFilters}
+              >
+                Limpiar
+              </button>
             </div>
-          </>
-        ) : null}
-      </div>
+          ) : (
+            <span className="agenda-filter-chips__empty">
+              Sin filtros activos. Mostrando agenda completa del día.
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Nota del día (collapsible) */}
+      {viewMode === "operation" && (
+        <div className="agenda-note-card card">
+          <button
+            type="button"
+            className="agenda-note-card__toggle"
+            onClick={() => setNoteExpanded((p) => !p)}
+          >
+            <span>📝 Nota del día</span>
+            <span className="agenda-note-card__arrow">{noteExpanded ? "▲" : "▼"}</span>
+          </button>
+          {noteExpanded && (
+            <div className="agenda-note-card__body">
+              <p className="card-subtitle">
+                Observaciones operativas del día (equipo, pagos, ausencias, etc.).
+              </p>
+              <textarea
+                rows={3}
+                placeholder='Ej: "Hoy Ana no asiste" · "Pagar $20.000 a Marco".'
+                value={reminder}
+                onChange={(e) => setReminder(e.target.value)}
+                onBlur={saveReminder}
+              />
+              <button type="button" className="btn-secondary" onClick={saveReminder}>
+                {reminderSaved ? "Guardado" : "Guardar nota"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {viewMode === "operation" ? (
         <>
@@ -1403,34 +1434,6 @@ export default function AgendaPage() {
                 </p>
               </div>
             </div>
-            <div className="agenda-day__note">
-              <div className="agenda-reminder__header">
-                <div>
-                  <h3 className="agenda-day__note-title">
-                    <span className="agenda-reminder__icon" aria-hidden="true">
-                      📝
-                    </span>{" "}
-                    Nota del día
-                  </h3>
-                  <p className="card-subtitle">
-                    Observaciones operativas del día (equipo, pagos, ausencias, etc.).
-                  </p>
-                </div>
-                <div className="agenda-reminder__actions">
-                  <button type="button" className="btn-secondary" onClick={saveReminder}>
-                    {reminderSaved ? "Guardado" : "Guardar nota"}
-                  </button>
-                </div>
-              </div>
-              <textarea
-                rows={3}
-                placeholder='Ej: "Hoy Ana no asiste" · "Pagar $20.000 a Marco".'
-                value={reminder}
-                onChange={(e) => setReminder(e.target.value)}
-                onBlur={saveReminder}
-              />
-            </div>
-
             {error && <div className="agenda-empty">{error}</div>}
             {loading ? (
               <div className="agenda-skeleton">
@@ -1485,6 +1488,12 @@ export default function AgendaPage() {
                         setIsEditing(false);
                       }}
                     >
+                      <div
+                        className="agenda-card__avatar"
+                        aria-hidden="true"
+                      >
+                        {(turno.pet_name || "?")[0].toUpperCase()}
+                      </div>
                       <div className="agenda-card__body">
                         <div className="agenda-card__title">
                           {turno.pet_name || "Mascota"} -{" "}
@@ -1864,6 +1873,7 @@ export default function AgendaPage() {
         isOpen={Boolean(selectedTurno)}
         onClose={() => setSelectedTurno(null)}
         title="Detalle del turno"
+        className="agenda-bottom-sheet"
       >
         {selectedTurno && (
           <>
@@ -2537,6 +2547,18 @@ export default function AgendaPage() {
           </div>
         </div>
       </Modal>
+
+      {/* FAB nuevo turno */}
+      {viewMode === "operation" && (
+        <button
+          type="button"
+          className="agenda-fab-new"
+          onClick={openCreate}
+          aria-label="Nuevo turno"
+        >
+          + Nuevo turno
+        </button>
+      )}
     </div>
   );
 }

@@ -8,28 +8,60 @@
 
 /* ===== Variables ===== */
 :root {
-  --color-primary: #d948ef;
-  --color-primary-light: #f6d7fb;
-  --color-primary-dark: #b12fd1;
-  --color-accent: #ff4fa8;
-  --color-accent-strong: #b344ff;
+  /* ── v2 tokens ──────────────────────────────────────────────────── */
+  --bg-app:        #f4f5fa;
+  --bg-card:       #ffffff;
+  --bg-subtle:     #eef0f6;
+  --border:        #ececf3;
+  --border-soft:   #f1f2f8;
+  --bg-sidebar:    #0f1016;
 
-  --color-bg: #0f1016;
-  --color-bg-soft: #171a24;
-  --color-surface: rgba(255, 255, 255, 0.92);
-  --color-surface-strong: #ffffff;
+  --text-strong:   #14151c;
+  --text-muted:    #6b7180;
+  --text-faint:    #9aa0b4;
 
-  --color-text: #10131f;
-  --color-text-soft: #6a7184;
-  --color-border-soft: #e1e5f0;
-  --color-focus: #d948ef;
+  --brand-magenta: #d948ef;
+  --brand-rosa:    #ff4fa8;
+  --brand-violeta: #8356ff;
+  --grad-brand:    linear-gradient(135deg, #ff4fa8, #8356ff);
 
-  --radius-lg: 16px;
+  --ok:            #16a34a;  --ok-bg:   #e7f6ee;
+  --warn:          #d97706;  --warn-bg: #fdf1e3;
+  --bad:           #dc2626;  --bad-bg:  #fdecec;
+
+  --pill-groomer:    #2563eb; --pill-groomer-bg:  #e8eefc;
+  --pill-pago:       #5b6170; --pill-pago-bg:     #eef0f6;
+  --pill-traslado:   #ea580c; --pill-traslado-bg: #fdeee2;
+
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 3px rgba(16,18,27,.06), 0 4px 12px rgba(16,18,27,.08);
+
+  /* ── Aliases de compatibilidad con código existente ──────────────── */
+  --color-primary:        #d948ef;
+  --color-primary-light:  #f6d7fb;
+  --color-primary-dark:   #b12fd1;
+  --color-accent:         #ff4fa8;
+  --color-accent-strong:  #8356ff;
+
+  --color-bg:             var(--bg-app);
+  --color-bg-soft:        var(--bg-subtle);
+  --color-surface:        var(--bg-card);
+  --color-surface-strong: var(--bg-card);
+  --color-surface-alt:    var(--bg-subtle);
+
+  --color-text:           var(--text-strong);
+  --color-text-soft:      var(--text-muted);
+  --color-text-muted:     var(--text-muted);
+  --color-border-soft:    var(--border);
+  --color-focus:          var(--brand-magenta);
+
+  --radius-lg: var(--radius-card);
   --radius-md: 12px;
   --radius-sm: 8px;
 
-  --shadow-soft: 0 16px 40px rgba(12, 14, 23, 0.18);
-  --shadow-strong: 0 24px 60px rgba(10, 12, 20, 0.28);
+  --shadow-soft:   var(--shadow-card);
+  --shadow-strong: 0 8px 32px rgba(16,18,27,.14);
 }
 
 /* iOS Safari: prevent auto-zoom on form focus */
@@ -59,30 +91,9 @@ body,
 /* ===== Body ===== */
 body {
   font-family: "Poppins", system-ui, sans-serif;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(255, 79, 168, 0.25), transparent 55%),
-    radial-gradient(circle at 80% 10%, rgba(80, 230, 220, 0.2), transparent 60%),
-    radial-gradient(circle at 40% 60%, rgba(131, 86, 255, 0.22), transparent 65%),
-    radial-gradient(circle at top left, #2a2e45, #0f1016 60%);
+  background: var(--bg-app);
   background-attachment: fixed;
-  color: var(--color-text);
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(255, 255, 255, 0.035),
-    rgba(255, 255, 255, 0.035) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  opacity: 0.12;
-  mix-blend-mode: soft-light;
-  z-index: 0;
+  color: var(--text-strong);
 }
 
 #root {
