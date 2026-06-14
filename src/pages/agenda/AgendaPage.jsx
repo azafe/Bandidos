@@ -1472,9 +1472,8 @@ export default function AgendaPage() {
                     )}`}
                   >
                     <div className="agenda-timeline__time">
-                      <span className="agenda-time-range">
-                        {formatTime(turno.time)} -{" "}
-                        {getEndTime(turno.time, turno.duration || 60)}
+                      <span className="agenda-time-start">
+                        {formatTime(turno.time)}
                       </span>
                       <span className="agenda-time-dot" aria-hidden="true" />
                       <span className="agenda-time-line" aria-hidden="true" />
@@ -1483,55 +1482,54 @@ export default function AgendaPage() {
                       type="button"
                       className="agenda-card agenda-card--timeline"
                       onClick={() => {
-                        console.log("[turno detalle]", turno);
                         setSelectedTurno(turno);
                         setIsEditing(false);
                       }}
                     >
-                      <div
-                        className="agenda-card__avatar"
-                        aria-hidden="true"
-                      >
+                      <div className="agenda-card__avatar" aria-hidden="true">
                         {(turno.pet_name || "?")[0].toUpperCase()}
                       </div>
                       <div className="agenda-card__body">
-                        <div className="agenda-card__title">
-                          {turno.pet_name || "Mascota"} -{" "}
-                          {getServiceName(turno, serviceTypes) || "Servicio"}
+                        <div className="agenda-card__header">
+                          <span className="agenda-card__title">
+                            {turno.pet_name || "Mascota"} · {getServiceName(turno, serviceTypes) || "Servicio"}
+                          </span>
+                          <span
+                            className={`agenda-badge agenda-badge--${normalizeStatus(turno.status)}`}
+                          >
+                            {STATUS_LABELS[normalizeStatus(turno.status)]}
+                          </span>
                         </div>
                         <div className="agenda-card__meta">
                           {turno.owner_name || "-"} · {turno.breed || "-"}
                         </div>
-                        <div className="agenda-card__pills">
-                          {turno.groomer?.name ? (
-                            <span className="agenda-card__pill agenda-card__pill--groomer">
-                              {turno.groomer.name}
-                            </span>
-                          ) : null}
-                          {turno.payment_method?.name ? (
-                            <span className="agenda-card__pill">
-                              {turno.payment_method.name}
-                            </span>
-                          ) : null}
-                          {turno.traslado ? (
-                            <span className="agenda-card__pill agenda-card__pill--traslado">
-                              Traslado
-                            </span>
-                          ) : null}
+                        <div className="agenda-card__footer">
+                          <div className="agenda-card__pills">
+                            {turno.groomer?.name && (
+                              <span className="agenda-card__pill agenda-card__pill--groomer">
+                                {turno.groomer.name}
+                              </span>
+                            )}
+                            {turno.payment_method?.name && (
+                              <span className="agenda-card__pill">
+                                {turno.payment_method.name}
+                              </span>
+                            )}
+                            {turno.traslado && (
+                              <span className="agenda-card__pill agenda-card__pill--traslado">
+                                Traslado
+                              </span>
+                            )}
+                          </div>
+                          <span className="agenda-card__amount">
+                            {formatCurrency(getServicePrice(turno))}
+                          </span>
                         </div>
-                      </div>
-                      <div className="agenda-card__side">
-                        <span
-                          className={`agenda-badge agenda-badge--${normalizeStatus(
-                            turno.status
-                          )}`}
-                          title={STATUS_LABELS[normalizeStatus(turno.status)]}
-                        >
-                          {STATUS_LABELS[normalizeStatus(turno.status)]}
-                        </span>
-                        <div className="agenda-card__amount">
-                          {formatCurrency(getServicePrice(turno))}
-                        </div>
+                        {normalizeStatus(turno.status) === "reserved" && (
+                          <p className="agenda-card__hint">
+                            ↑ tocá para ver detalle / finalizar
+                          </p>
+                        )}
                       </div>
                     </button>
                   </div>
