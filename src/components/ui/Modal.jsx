@@ -1,7 +1,7 @@
 // src/components/ui/Modal.jsx
 import { useEffect } from "react";
 
-export default function Modal({ isOpen, onClose, title, children }) {
+export default function Modal({ isOpen, onClose, title, children, className = "" }) {
   useEffect(() => {
     if (!isOpen) return;
     document.body.style.overflow = "hidden";
@@ -24,7 +24,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true">
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-card">
+      <div className={`modal-card${className ? ` ${className}` : ""}`}>
         <div className="modal-header">
           <h3>{title}</h3>
           <button
