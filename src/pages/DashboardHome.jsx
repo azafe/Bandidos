@@ -135,7 +135,7 @@ export default function DashboardHome() {
         onMonthOffsetChange={setMonthOffset}
       />
 
-      <DecisionCenter kpis={metrics.kpis} fixedExpenses={rawFixedExpenses} />
+      <DecisionCenter kpis={metrics.kpis} />
 
     </div>
   );
