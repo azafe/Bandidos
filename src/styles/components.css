@@ -1599,12 +1599,14 @@
 }
 
 @media (max-width: 640px) {
-  /* Filters: dates side-by-side, category + button full width */
+  /* Filters: take full width (page-header hides title/subtitle on mobile) */
   .fixed-expenses-header-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     align-items: stretch;
+    width: 100%;
+    flex: 1;
   }
   .fixed-expenses-header-actions > *:nth-child(3),
   .fixed-expenses-header-actions > *:nth-child(4) {

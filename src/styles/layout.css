@@ -210,6 +210,12 @@
   .page-subtitle {
     display: none;
   }
+
+  /* Cuando el título está oculto, el page-header sólo tiene las acciones — estirarlas al ancho completo */
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 /* ===== DESKTOP (desde 900px) ===== */
