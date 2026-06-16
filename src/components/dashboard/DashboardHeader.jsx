@@ -8,14 +8,7 @@ export default function DashboardHeader({
 
   return (
     <header className="dashboard-header">
-      <div>
-        <h1 className="dashboard-title">Inicio</h1>
-        <p className="dashboard-subtitle">
-          Tu negocio en un vistazo · {label}
-        </p>
-      </div>
-
-      <div className="dashboard-header__actions">
+      <div className="dashboard-month-nav">
         <button
           type="button"
           className="btn-secondary dashboard-month-nav__arrow"
