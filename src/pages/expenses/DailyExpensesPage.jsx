@@ -351,15 +351,15 @@ export default function DailyExpensesPage() {
       )}
 
       {/* Lista de gastos */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+      <div className="card" style={{ marginTop: 16, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "16px 20px 12px" }}>
           <div>
             <h2 className="card-title">Gastos registrados</h2>
             <p className="card-subtitle">{expenses.length} registros · Hacé clic para editar o eliminar.</p>
           </div>
         </div>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        {loading && <div className="card-subtitle" style={{ padding: "0 20px 16px" }}>Cargando...</div>}
 
         {!loading && expenses.length === 0 && (
           <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
@@ -367,37 +367,66 @@ export default function DailyExpensesPage() {
           </div>
         )}
 
-        <div className="fe-cards-grid">
-          {expenses.map((e) => {
-            const accentColor = getCategoryColor(e);
-            return (
-              <div
-                key={e.id}
-                className="fe-card"
-                style={{ "--fe-accent": accentColor }}
-                onClick={() => setSelectedExpense(e)}
-              >
-                <div className="fe-card__accent" />
-                <div className="fe-card__body">
-                  <div className="fe-card__top">
-                    <span className="fe-card__name">{e.description || "(Sin detalle)"}</span>
-                    <span className="fe-card__date-badge">{formatDate(e.date)}</span>
+        {!loading && expenses.length > 0 && (() => {
+          const sorted = [...expenses].sort((a, b) =>
+            String(b.date || "").slice(0, 10).localeCompare(String(a.date || "").slice(0, 10))
+          );
+          const byDate = sorted.reduce((acc, e) => {
+            const d = String(e.date || "").slice(0, 10) || "sin-fecha";
+            if (!acc[d]) acc[d] = [];
+            acc[d].push(e);
+            return acc;
+          }, {});
+          const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+          return (
+            <div className="fe-expense-list">
+              {dates.map((date) => {
+                const dayExpenses = byDate[date];
+                const dayTotal = dayExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+                return (
+                  <div key={date} className="fe-expense-group">
+                    <div className="fe-expense-group__header">
+                      <span className="fe-expense-group__date">{formatDate(date)}</span>
+                      <span className="fe-expense-group__count">
+                        {dayExpenses.length} gasto{dayExpenses.length !== 1 ? "s" : ""}
+                      </span>
+                      <span className="fe-expense-group__subtotal">{formatCurrency(dayTotal)}</span>
+                    </div>
+                    {dayExpenses.map((e) => {
+                      const color = getCategoryColor(e);
+                      return (
+                        <div key={e.id} className="fe-expense-row" onClick={() => setSelectedExpense(e)}>
+                          <div className="fe-expense-row__accent" style={{ background: color }} />
+                          <div className="fe-expense-row__main">
+                            <span className="fe-expense-row__desc">{e.description || "(Sin detalle)"}</span>
+                            <div className="fe-expense-row__tags">
+                              <span
+                                className="fe-expense-row__cat"
+                                style={{ background: color + "22", color }}
+                              >
+                                {categoryName(e)}
+                              </span>
+                              {paymentName(e) !== "-" && (
+                                <span className="fe-expense-row__tag">{paymentName(e)}</span>
+                              )}
+                              {supplierName(e) && (
+                                <span className="fe-expense-row__tag">{supplierName(e)}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="fe-expense-row__amount" style={{ color }}>
+                            {formatCurrency(e.amount)}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="fe-card__amount">{formatCurrency(e.amount)}</div>
-                  <div className="fe-card__meta">
-                    <span className="fe-card__badge">{categoryName(e)}</span>
-                    {paymentName(e) !== "-" && (
-                      <span className="fe-card__meta-item">{paymentName(e)}</span>
-                    )}
-                    {supplierName(e) && (
-                      <span className="fe-card__meta-item">{supplierName(e)}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Modal detalle / edición */}

@@ -834,7 +834,114 @@
   transition: width 0.4s ease;
 }
 
-/* Cards de gastos */
+/* Lista compacta de gastos agrupada por fecha */
+.fe-expense-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.fe-expense-group {
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+.fe-expense-group:first-child { border-top: none; }
+
+.fe-expense-group__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: var(--color-surface-alt, #f5f5f9);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.fe-expense-group__date {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fe-expense-group__count {
+  flex: 1;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.fe-expense-group__subtotal {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.fe-expense-row {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-bottom: 1px solid var(--color-border, #f0f0f5);
+}
+.fe-expense-row:last-child { border-bottom: none; }
+.fe-expense-row:hover { background: var(--color-surface-alt, #f9f9fc); }
+
+.fe-expense-row__accent {
+  width: 4px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.fe-expense-row__main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  min-width: 0;
+}
+
+.fe-expense-row__desc {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fe-expense-row__tags {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.fe-expense-row__cat {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.fe-expense-row__tag {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--color-surface-alt, #f0f0f5);
+  white-space: nowrap;
+}
+
+.fe-expense-row__amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 11px 20px 11px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Cards de gastos (Gastos Fijos) */
 .fe-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1492,8 +1599,26 @@
 }
 
 @media (max-width: 640px) {
+  /* Filters: dates side-by-side, category + button full width */
+  .fixed-expenses-header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .fixed-expenses-header-actions > *:nth-child(3),
+  .fixed-expenses-header-actions > *:nth-child(4) {
+    grid-column: 1 / -1;
+  }
+
+  /* Compact expense rows: tags wrap below description on small screens */
+  .fe-expense-row__main { flex-wrap: wrap; gap: 6px; }
+  .fe-expense-row__desc { white-space: normal; }
+  .fe-expense-row__tags { flex-wrap: wrap; }
+  .fe-expense-row__amount { padding-right: 14px; font-size: 0.88rem; }
+  .fe-expense-group__header { padding: 7px 14px; }
+
   .fe-cards-grid { grid-template-columns: 1fr; }
-  .fixed-expenses-header-actions { flex-direction: column; align-items: stretch; }
   .pet-cards-grid { grid-template-columns: 1fr; }
   .pets-search-input { min-width: 0; width: 100%; border-radius: 12px; }
   .employee-cards-grid { grid-template-columns: 1fr; }
