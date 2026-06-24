@@ -43,7 +43,7 @@ export default function DailyIncomesPage() {
         setSystemTotals(totals || []);
 
         const map = {};
-        if (data && Array.isArray(data.incomes) && data.incomes.length > 0) {
+        if (data && data.is_declared) {
           // Si ya existen datos guardados en la DB, los usamos
           data.incomes.forEach((inc) => {
             map[`${inc.concept}-${inc.payment_method_id}`] = inc.amount > 0 ? String(inc.amount) : "";
