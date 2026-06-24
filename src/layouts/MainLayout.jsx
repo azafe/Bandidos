@@ -12,6 +12,7 @@ const PAGE_TITLES = {
   "/services":                "Servicios",
   "/pets":                    "Mascotas",
   "/customers":               "Clientes",
+  "/expenses/daily-incomes":  "Rendición de Caja",
   "/expenses/daily":          "Gastos Diarios",
   "/expenses/fixed":          "Gastos Fijos",
   "/employees":               "Equipo",

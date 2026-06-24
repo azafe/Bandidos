@@ -165,6 +165,14 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
             {isEnabled("expenses") && (
               <>
                 <NavLink
+                  to="/expenses/daily-incomes"
+                  className={({ isActive }) => makeClassName(isActive)}
+                  onClick={handleNavigate}
+                >
+                  Rendición de Caja
+                </NavLink>
+
+                <NavLink
                   to="/expenses/daily"
                   className={({ isActive }) => makeClassName(isActive)}
                   onClick={handleNavigate}

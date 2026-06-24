@@ -8,6 +8,7 @@ import ServiceFormPage from "./pages/services/ServiceFormPage";
 import AgendaPage from "./pages/agenda/AgendaPage";
 import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
 import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
+import DailyIncomesPage from "./pages/expenses/DailyIncomesPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import SupplierDetailPage from "./pages/suppliers/SupplierDetailPage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
@@ -73,6 +74,7 @@ function App() {
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
                   <Route path="/pets/:id" element={<PetDetailPage />} />
+                  <Route path="/expenses/daily-incomes" element={<DailyIncomesPage />} />
                   <Route path="/expenses/daily" element={<DailyExpensesPage />} />
                   <Route path="/expenses/fixed" element={<StaffGuard><FixedExpensesPage /></StaffGuard>} />
                   <Route path="/employees" element={<EmployeesPage />} />

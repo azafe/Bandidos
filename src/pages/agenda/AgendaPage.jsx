@@ -285,6 +285,7 @@ export default function AgendaPage() {
     service_type_id: "",
     price: "",
     payment_method_id: "",
+    traslado_amount: "",
   });
   const [form, setForm] = useState({
     date: selectedDate,
@@ -304,6 +305,7 @@ export default function AgendaPage() {
     final_price: "",
     traslado: false,
     traslado_direccion: "",
+    traslado_amount: "",
   });
 
   const { items: serviceTypes } = useApiResource("/v2/service-types");
@@ -341,6 +343,10 @@ export default function AgendaPage() {
           ? String(selectedTurno.price)
           : "",
       payment_method_id: selectedTurno.payment_method_id || "",
+      traslado_amount:
+        selectedTurno.traslado_amount !== null && selectedTurno.traslado_amount !== undefined
+          ? String(selectedTurno.traslado_amount)
+          : "",
     });
   }, [selectedTurno]);
 
@@ -644,6 +650,7 @@ export default function AgendaPage() {
       final_price: "",
       traslado: false,
       traslado_direccion: "",
+      traslado_amount: "",
     });
     setDurationMode("preset");
     setCustomDuration("");
@@ -702,6 +709,10 @@ export default function AgendaPage() {
       base_price: catalogPrice,
       traslado: turno.traslado ?? false,
       traslado_direccion: turno.traslado_direccion || "",
+      traslado_amount:
+        turno.traslado_amount !== null && turno.traslado_amount !== undefined
+          ? String(turno.traslado_amount)
+          : "",
     });
     if (DURATION_OPTIONS.includes(normalizedDuration)) {
       setDurationMode("preset");
@@ -1034,6 +1045,7 @@ export default function AgendaPage() {
         price: Number.isFinite(priceValue) && priceValue > 0 ? priceValue : undefined,
         traslado: form.traslado,
         traslado_direccion: form.traslado ? form.traslado_direccion.trim() || null : null,
+        traslado_amount: form.traslado ? Number(form.traslado_amount || 0) : 0,
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
@@ -1155,11 +1167,13 @@ export default function AgendaPage() {
       return;
     }
     const paymentMethodId = normalizeId(finishForm.payment_method_id);
+    const trasladoAmount = selectedTurno.traslado ? Number(finishForm.traslado_amount || 0) : 0;
     await updateStatusWithDetails(selectedTurno, "finished", {
       groomer_id: groomerId,
       service_type_id: serviceTypeId,
       price,
       ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
+      traslado_amount: trasladoAmount,
     });
   }
 
@@ -2070,6 +2084,27 @@ export default function AgendaPage() {
                         </select>
                       </label>
                     </div>
+                    {selectedTurno?.traslado && (
+                      <label className="form-field" style={{ marginTop: "12px" }}>
+                        <span>Monto traslado</span>
+                        <div className="agenda-input-currency">
+                          <span>$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={finishForm.traslado_amount}
+                            onChange={(e) =>
+                              setFinishForm((prev) => ({ ...prev, traslado_amount: e.target.value }))
+                            }
+                            placeholder="0"
+                          />
+                        </div>
+                        <small className="agenda-helper">
+                          Monto cobrado específicamente por el traslado.
+                        </small>
+                      </label>
+                    )}
                   </div>
                   <div className="agenda-turno-modal__finish-actions">
                     <button
@@ -2347,23 +2382,41 @@ export default function AgendaPage() {
                       ...prev,
                       traslado: e.target.checked,
                       traslado_direccion: e.target.checked ? prev.traslado_direccion : "",
+                      traslado_amount: e.target.checked ? prev.traslado_amount : "",
                     }))
                   }
                 />
                 <span>¿Necesita traslado?</span>
               </label>
               {form.traslado && (
-                <label className="form-field">
-                  <span>Dirección de traslado</span>
-                  <input
-                    type="text"
-                    name="traslado_direccion"
-                    value={form.traslado_direccion}
-                    onChange={handleFormChange}
-                    placeholder="Ej: Virgen de la Merced 843, San Miguel de Tucumán, Tucumán"
-                    autoComplete="off"
-                  />
-                </label>
+                <>
+                  <label className="form-field">
+                    <span>Dirección de traslado</span>
+                    <input
+                      type="text"
+                      name="traslado_direccion"
+                      value={form.traslado_direccion}
+                      onChange={handleFormChange}
+                      placeholder="Ej: Virgen de la Merced 843, San Miguel de Tucumán, Tucumán"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span>Monto de traslado</span>
+                    <div className="agenda-input-currency">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        name="traslado_amount"
+                        min="0"
+                        step="1"
+                        value={form.traslado_amount}
+                        onChange={handleFormChange}
+                        placeholder="0"
+                      />
+                    </div>
+                  </label>
+                </>
               )}
             </div>
           ) : isEditing ? (
