@@ -270,6 +270,7 @@ export default function AgendaPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
   const [reminderSaved, setReminderSaved] = useState(false);
+  const [isNewPet, setIsNewPet] = useState(false);
   const [petSearch, setPetSearch] = useState("");
   const [isPetOpen, setIsPetOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("reserved");
@@ -295,6 +296,7 @@ export default function AgendaPage() {
     pet_name: "",
     breed: "",
     owner_name: "",
+    owner_phone: "",
     service_type_id: "",
     payment_method_id: "",
     deposit_amount: "",
@@ -632,6 +634,7 @@ export default function AgendaPage() {
 
   function openCreate() {
     setSelectedTurno(null);
+    setIsNewPet(false);
     setForm({
       date: selectedDate,
       time: "",
@@ -640,6 +643,7 @@ export default function AgendaPage() {
       pet_name: "",
       breed: "",
       owner_name: "",
+      owner_phone: "",
       service_type_id: "",
       payment_method_id: "",
       deposit_amount: "",
@@ -929,7 +933,10 @@ export default function AgendaPage() {
       }
     }
     if (shouldValidate("pet_name") && !form.pet_name.trim()) {
-      errors.pet_name = "Ingresá la mascota.";
+      errors.pet_name = "Ingresá el nombre del bandido.";
+    }
+    if (isNewPet && shouldValidate("owner_name") && !form.owner_name.trim()) {
+      errors.owner_name = "Ingresá el nombre del dueño.";
     }
     if (isEditing && shouldValidate("service_type_id") && !form.service_type_id) {
       errors.service_type_id = "Seleccioná el servicio.";
@@ -1053,6 +1060,30 @@ export default function AgendaPage() {
         setSelectedTurno((prev) =>
           prev ? { ...prev, ...payload, price: payload.price ?? prev.price } : prev
         );
+      } else if (isNewPet) {
+        await apiRequest("/v2/agenda/with-new-pet", {
+          method: "POST",
+          body: {
+            date: normalizedDate,
+            time: form.time,
+            duration: resolveDuration(form.duration, 60),
+            pet_name: form.pet_name.trim(),
+            pet_breed: form.breed.trim() || null,
+            owner_name: form.owner_name.trim(),
+            owner_phone: form.owner_phone.trim() || null,
+            service_type_id: normalizeId(form.service_type_id) ?? undefined,
+            payment_method_id: normalizeId(form.payment_method_id) ?? undefined,
+            deposit_amount: Number(form.deposit_amount || 0),
+            notes: form.notes.trim(),
+            groomer_id: normalizeId(form.groomer_id) ?? undefined,
+            status: normalizeStatus(form.status),
+            price: Number.isFinite(priceValue) && priceValue > 0 ? priceValue : undefined,
+            traslado: form.traslado,
+            traslado_direccion: form.traslado ? form.traslado_direccion.trim() || null : null,
+            traslado_amount: form.traslado ? Number(form.traslado_amount || 0) : 0,
+          },
+        });
+        await refetch();
       } else {
         await createAgendaTurno(payload);
         await refetch();
@@ -2294,83 +2325,212 @@ export default function AgendaPage() {
                 ) : null}
               </label>
               <div className="agenda-form__group-label">Mascota</div>
-              <label
-                className={`form-field${fieldErrors.pet_name ? " form-field--error" : ""}`}
-              >
-                <span>Nombre</span>
-                <div className="combo-field">
-                  <input
-                    type="text"
-                    name="pet_name"
-                    id="agenda-pet"
-                    placeholder="Buscá por nombre..."
-                    value={petSearch}
-                    onChange={(e) => {
-                      const nextPetName = e.target.value;
-                      if (formError) setFormError("");
-                      clearFieldError("pet_name");
-                      clearFieldError("owner_name");
-                      setPetSearch(nextPetName);
-                      setIsPetOpen(true);
-                      setForm((prev) => {
-                        const selectedName = selectedPetRecord?.name || "";
-                        const shouldResetLinked = Boolean(prev.pet_id) && nextPetName !== selectedName;
-                        return {
-                          ...prev,
-                          pet_id: "",
-                          pet_name: nextPetName,
-                          breed: shouldResetLinked ? "" : prev.breed,
-                          owner_name: shouldResetLinked ? "" : prev.owner_name,
-                        };
-                      });
-                    }}
-                    onFocus={() => setIsPetOpen(true)}
-                    onBlur={() => setTimeout(() => setIsPetOpen(false), 120)}
-                    autoComplete="off"
-                    aria-invalid={Boolean(fieldErrors.pet_name)}
-                    required
-                  />
-                  {isPetOpen ? (
-                    <div className="combo-field__list" role="listbox">
-                      {filteredPets.length === 0 ? (
-                        <div className="combo-field__empty">Sin resultados</div>
-                      ) : (
-                        filteredPets.map((pet) => (
-                          <button
-                            key={pet.id}
-                            type="button"
-                            className="combo-field__option"
-                            onMouseDown={() => handlePetSelect(pet.id)}
-                          >
-                            {formatPetLabel(pet)}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                {selectedPetRecord ? (
-                  <div className="agenda-pet-chip">
-                    <span className="agenda-pet-chip__name">{selectedPetRecord.name}</span>
-                    {form.breed ? (
-                      <span className="agenda-pet-chip__detail">{form.breed}</span>
+              <label className="form-field agenda-traslado-toggle">
+                <input
+                  type="checkbox"
+                  checked={isNewPet}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setIsNewPet(next);
+                    setPetSearch("");
+                    setIsPetOpen(false);
+                    setForm((prev) => ({
+                      ...prev,
+                      pet_id: "",
+                      pet_name: "",
+                      breed: "",
+                      owner_name: "",
+                      owner_phone: "",
+                      service_type_id: next ? prev.service_type_id : "",
+                      deposit_amount: next ? prev.deposit_amount : "",
+                    }));
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.pet_name;
+                      delete next.owner_name;
+                      return next;
+                    });
+                  }}
+                />
+                <span>¿Nuevo Bandido?</span>
+              </label>
+
+              {isNewPet ? (
+                <>
+                  <label className={`form-field${fieldErrors.pet_name ? " form-field--error" : ""}`}>
+                    <span>Bandido (nombre) *</span>
+                    <input
+                      type="text"
+                      id="agenda-pet"
+                      name="pet_name"
+                      placeholder="Nombre del perro"
+                      value={form.pet_name}
+                      onChange={(e) => {
+                        clearFieldError("pet_name");
+                        setForm((prev) => ({ ...prev, pet_name: e.target.value }));
+                      }}
+                      autoComplete="off"
+                      aria-invalid={Boolean(fieldErrors.pet_name)}
+                    />
+                    {fieldErrors.pet_name ? (
+                      <small className="agenda-field-error">{fieldErrors.pet_name}</small>
                     ) : null}
-                    {form.owner_name ? (
-                      <span className="agenda-pet-chip__detail">· {form.owner_name}</span>
+                  </label>
+                  <label className="form-field">
+                    <span>Raza</span>
+                    <input
+                      type="text"
+                      name="breed"
+                      placeholder="Ej: Golden Retriever"
+                      value={form.breed}
+                      onChange={handleFormChange}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className={`form-field${fieldErrors.owner_name ? " form-field--error" : ""}`}>
+                    <span>Dueño *</span>
+                    <input
+                      type="text"
+                      id="agenda-owner"
+                      name="owner_name"
+                      placeholder="Nombre del dueño"
+                      value={form.owner_name}
+                      onChange={(e) => {
+                        clearFieldError("owner_name");
+                        handleFormChange(e);
+                      }}
+                      autoComplete="off"
+                      aria-invalid={Boolean(fieldErrors.owner_name)}
+                    />
+                    {fieldErrors.owner_name ? (
+                      <small className="agenda-field-error">{fieldErrors.owner_name}</small>
+                    ) : null}
+                  </label>
+                  <label className="form-field">
+                    <span>Celular</span>
+                    <input
+                      type="tel"
+                      name="owner_phone"
+                      placeholder="Ej: 381 123 4567"
+                      value={form.owner_phone}
+                      onChange={handleFormChange}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span>Servicio</span>
+                    <select
+                      name="service_type_id"
+                      value={form.service_type_id}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const st = serviceTypes.find((s) => String(s.id) === selectedId);
+                        setForm((prev) => ({
+                          ...prev,
+                          service_type_id: selectedId,
+                          base_price: st?.default_price ?? "",
+                          final_price: prev.final_price || (st?.default_price ? String(st.default_price) : ""),
+                        }));
+                      }}
+                    >
+                      <option value="">Sin especificar</option>
+                      {serviceTypes.map((st) => (
+                        <option key={st.id} value={st.id}>{st.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="form-field">
+                    <span>Seña / Anticipo</span>
+                    <div className="agenda-input-currency">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        name="deposit_amount"
+                        placeholder="0"
+                        min="0"
+                        step="1"
+                        value={form.deposit_amount}
+                        onChange={handleFormChange}
+                      />
+                    </div>
+                  </label>
+                </>
+              ) : (
+                <label
+                  className={`form-field${fieldErrors.pet_name ? " form-field--error" : ""}`}
+                >
+                  <span>Nombre</span>
+                  <div className="combo-field">
+                    <input
+                      type="text"
+                      name="pet_name"
+                      id="agenda-pet"
+                      placeholder="Buscá por nombre..."
+                      value={petSearch}
+                      onChange={(e) => {
+                        const nextPetName = e.target.value;
+                        if (formError) setFormError("");
+                        clearFieldError("pet_name");
+                        clearFieldError("owner_name");
+                        setPetSearch(nextPetName);
+                        setIsPetOpen(true);
+                        setForm((prev) => {
+                          const selectedName = selectedPetRecord?.name || "";
+                          const shouldResetLinked = Boolean(prev.pet_id) && nextPetName !== selectedName;
+                          return {
+                            ...prev,
+                            pet_id: "",
+                            pet_name: nextPetName,
+                            breed: shouldResetLinked ? "" : prev.breed,
+                            owner_name: shouldResetLinked ? "" : prev.owner_name,
+                          };
+                        });
+                      }}
+                      onFocus={() => setIsPetOpen(true)}
+                      onBlur={() => setTimeout(() => setIsPetOpen(false), 120)}
+                      autoComplete="off"
+                      aria-invalid={Boolean(fieldErrors.pet_name)}
+                      required
+                    />
+                    {isPetOpen ? (
+                      <div className="combo-field__list" role="listbox">
+                        {filteredPets.length === 0 ? (
+                          <div className="combo-field__empty">Sin resultados</div>
+                        ) : (
+                          filteredPets.map((pet) => (
+                            <button
+                              key={pet.id}
+                              type="button"
+                              className="combo-field__option"
+                              onMouseDown={() => handlePetSelect(pet.id)}
+                            >
+                              {formatPetLabel(pet)}
+                            </button>
+                          ))
+                        )}
+                      </div>
                     ) : null}
                   </div>
-                ) : (
-                  <small className="agenda-helper">
-                    Si la mascota no existe, podés crearla y volver al turno.
-                  </small>
-                )}
-                {fieldErrors.pet_name ? (
-                  <small className="agenda-field-error">{fieldErrors.pet_name}</small>
-                ) : null}
-                <Link className="agenda-link agenda-link--secondary" to="/pets">
-                  Ir a Mascotas para crear una nueva
-                </Link>
-              </label>
+                  {selectedPetRecord ? (
+                    <div className="agenda-pet-chip">
+                      <span className="agenda-pet-chip__name">{selectedPetRecord.name}</span>
+                      {form.breed ? (
+                        <span className="agenda-pet-chip__detail">{form.breed}</span>
+                      ) : null}
+                      {form.owner_name ? (
+                        <span className="agenda-pet-chip__detail">· {form.owner_name}</span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <small className="agenda-helper">
+                      Buscá por nombre del bandido o de su dueño.
+                    </small>
+                  )}
+                  {fieldErrors.pet_name ? (
+                    <small className="agenda-field-error">{fieldErrors.pet_name}</small>
+                  ) : null}
+                </label>
+              )}
               <div className="agenda-form__group-label">Traslado</div>
               <label className="form-field agenda-traslado-toggle">
                 <input
