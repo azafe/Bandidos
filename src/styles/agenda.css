@@ -1389,6 +1389,24 @@
   text-decoration: underline;
 }
 
+.agenda-new-pet-toggle {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #6b21a8;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  padding: 2px 0;
+}
+
+.agenda-new-pet-toggle:hover {
+  text-decoration: underline;
+}
+
 /* ── Form layout helpers ── */
 .agenda-form__group-label {
   font-size: 0.7rem;
