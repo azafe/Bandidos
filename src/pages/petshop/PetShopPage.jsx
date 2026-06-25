@@ -51,6 +51,11 @@ export default function PetShopPage() {
   const [showOnlyCritical, setShowOnlyCritical] = useState(false);
 
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
+  const { items: allEmployees } = useApiResource("/v2/employees");
+  const activeStylists = useMemo(
+    () => allEmployees.filter((e) => e.status === "active"),
+    [allEmployees]
+  );
 
   const {
     items: products,
@@ -100,6 +105,7 @@ export default function PetShopPage() {
 
   const [saleForm, setSaleForm] = useState({
     date: todayISO(),
+    stylist_id: "",
     payment_method_id: "",
     notes: "",
   });
@@ -115,6 +121,7 @@ export default function PetShopPage() {
   const [isEditingSaleModal, setIsEditingSaleModal] = useState(false);
   const [saleModalForm, setSaleModalForm] = useState({
     date: todayISO(),
+    stylist_id: "",
     payment_method_id: "",
     notes: "",
     items: [],
@@ -147,7 +154,7 @@ export default function PetShopPage() {
     [saleItems]
   );
   const saleSubmitDisabled =
-    saleSubmitting || !saleForm.payment_method_id || saleHasInvalidItems;
+    saleSubmitting || !saleForm.payment_method_id || !saleForm.stylist_id || saleHasInvalidItems;
 
   const salesByDay = useMemo(() => {
     const sorted = [...sales].sort((a, b) =>
@@ -387,6 +394,10 @@ export default function PetShopPage() {
   async function handleSaleSubmit(e) {
     e.preventDefault();
     setSaleError("");
+    if (!saleForm.stylist_id) {
+      setSaleError("Seleccioná el estilista que realizó la venta.");
+      return;
+    }
     if (!saleForm.payment_method_id) {
       setSaleError("Seleccioná un método de pago.");
       return;
@@ -403,6 +414,7 @@ export default function PetShopPage() {
     try {
       const payload = {
         date: saleForm.date,
+        stylist_id: saleForm.stylist_id,
         payment_method_id: saleForm.payment_method_id,
         notes: saleForm.notes.trim(),
         total: saleTotal,
@@ -415,6 +427,7 @@ export default function PetShopPage() {
       await apiRequest("/v2/petshop/sales", { method: "POST", body: payload });
       setSaleForm({
         date: todayISO(),
+        stylist_id: "",
         payment_method_id: "",
         notes: "",
       });
@@ -460,6 +473,7 @@ export default function PetShopPage() {
     }
     const payload = {
       date: saleModalForm.date,
+      stylist_id: saleModalForm.stylist_id || null,
       payment_method_id: saleModalForm.payment_method_id,
       notes: saleModalForm.notes.trim(),
       total: saleModalTotal,
@@ -492,6 +506,12 @@ export default function PetShopPage() {
   function formatPaymentMethod(id) {
     const method = paymentMethods.find((m) => String(m.id) === String(id));
     return method?.name || "-";
+  }
+
+  function formatStylist(id) {
+    if (!id) return "-";
+    const emp = allEmployees.find((e) => String(e.id) === String(id));
+    return emp?.name || "-";
   }
 
   function getSaleTitle(sale) {
@@ -560,6 +580,24 @@ export default function PetShopPage() {
                     setSaleForm((prev) => ({ ...prev, date: e.target.value }))
                   }
                 />
+              </div>
+              <div className="form-field">
+                <label htmlFor="sale_stylist">Estilista</label>
+                <select
+                  id="sale_stylist"
+                  value={saleForm.stylist_id}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, stylist_id: e.target.value }))
+                  }
+                  required
+                >
+                  <option value="">Seleccioná</option>
+                  {activeStylists.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -848,6 +886,21 @@ export default function PetShopPage() {
                     />
                   </div>
                   <div className="form-field">
+                    <label htmlFor="sale_modal_stylist">Estilista</label>
+                    <select
+                      id="sale_modal_stylist"
+                      value={saleModalForm.stylist_id}
+                      onChange={(e) =>
+                        setSaleModalForm((prev) => ({ ...prev, stylist_id: e.target.value }))
+                      }
+                    >
+                      <option value="">Sin asignar</option>
+                      {activeStylists.map((emp) => (
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-field">
                     <label htmlFor="sale_modal_payment">Método de pago</label>
                     <select
                       id="sale_modal_payment"
@@ -944,6 +997,7 @@ export default function PetShopPage() {
               <>
                 <div className="petshop-detail">
                   <div><strong>Fecha:</strong> {formatDateDisplay(selectedSale.date)}</div>
+                  <div><strong>Estilista:</strong> {formatStylist(selectedSale.stylist_id)}</div>
                   <div><strong>Método de pago:</strong> {formatPaymentMethod(selectedSale.payment_method_id)}</div>
                   <div><strong>Total:</strong> {formatCurrency(selectedSale.total)}</div>
                   <div><strong>Notas:</strong> {selectedSale.notes || "-"}</div>
@@ -1141,6 +1195,7 @@ export default function PetShopPage() {
                             setSelectedSale(sale);
                             setSaleModalForm({
                               date: sale.date || todayISO(),
+                              stylist_id: sale.stylist_id || "",
                               payment_method_id: sale.payment_method_id || "",
                               notes: sale.notes || "",
                               items: (sale.items || []).map((item) => ({
