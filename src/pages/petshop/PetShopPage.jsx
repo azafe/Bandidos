@@ -581,24 +581,6 @@ export default function PetShopPage() {
                   }
                 />
               </div>
-              <div className="form-field">
-                <label htmlFor="sale_stylist">Estilista</label>
-                <select
-                  id="sale_stylist"
-                  value={saleForm.stylist_id}
-                  onChange={(e) =>
-                    setSaleForm((prev) => ({ ...prev, stylist_id: e.target.value }))
-                  }
-                  required
-                >
-                  <option value="">Seleccioná</option>
-                  {activeStylists.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className="petshop-section-label">Productos</div>
@@ -816,6 +798,24 @@ export default function PetShopPage() {
                     ))}
                 </select>
               </div>
+              <div className="form-field">
+                <label htmlFor="sale_stylist">Vendedor</label>
+                <select
+                  id="sale_stylist"
+                  value={saleForm.stylist_id}
+                  onChange={(e) =>
+                    setSaleForm((prev) => ({ ...prev, stylist_id: e.target.value }))
+                  }
+                  required
+                >
+                  <option value="">Seleccioná</option>
+                  {activeStylists.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="form-grid">
@@ -886,7 +886,7 @@ export default function PetShopPage() {
                     />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="sale_modal_stylist">Estilista</label>
+                    <label htmlFor="sale_modal_stylist">Vendedor</label>
                     <select
                       id="sale_modal_stylist"
                       value={saleModalForm.stylist_id}
@@ -997,7 +997,7 @@ export default function PetShopPage() {
               <>
                 <div className="petshop-detail">
                   <div><strong>Fecha:</strong> {formatDateDisplay(selectedSale.date)}</div>
-                  <div><strong>Estilista:</strong> {formatStylist(selectedSale.stylist_id)}</div>
+                  <div><strong>Vendedor:</strong> {formatStylist(selectedSale.stylist_id)}</div>
                   <div><strong>Método de pago:</strong> {formatPaymentMethod(selectedSale.payment_method_id)}</div>
                   <div><strong>Total:</strong> {formatCurrency(selectedSale.total)}</div>
                   <div><strong>Notas:</strong> {selectedSale.notes || "-"}</div>
