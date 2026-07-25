@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
+import PhotoUpload from "../../components/ui/PhotoUpload";
 
 const PET_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -182,9 +183,17 @@ export default function PetDetailPage() {
             <div className="pet-detail-profile__bar" style={{ background: color }} />
             <div className="pet-detail-profile__body">
               <div className="pet-detail-profile__left">
-                <div className="pet-detail-profile__avatar" style={{ background: color }}>
-                  {petInitial(pet.name)}
-                </div>
+                <PhotoUpload
+                  photoUrl={pet.photo_url}
+                  uploadPath={`/v2/pets/${pet.id}/photo`}
+                  label="Cambiar foto"
+                  onUploaded={(updated) => setPet((prev) => (prev ? { ...prev, ...updated } : prev))}
+                  fallback={
+                    <div className="pet-detail-profile__avatar" style={{ background: color }}>
+                      {petInitial(pet.name)}
+                    </div>
+                  }
+                />
                 <div>
                   <h2 className="pet-detail-profile__name">{pet.name}</h2>
                   {pet.breed && <p className="pet-detail-profile__breed">{pet.breed}</p>}

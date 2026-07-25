@@ -31,8 +31,9 @@ export function useApiResource(path, params) {
 
   const createItem = useCallback(
     async (payload) => {
-      await apiRequest(path, { method: "POST", body: payload });
+      const created = await apiRequest(path, { method: "POST", body: payload });
       await fetchItems();
+      return created;
     },
     [path, fetchItems]
   );

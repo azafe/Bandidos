@@ -10,6 +10,7 @@ import {
 } from "../../services/agendaApi";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
+import PhotoUpload from "../../components/ui/PhotoUpload";
 import "../../styles/agenda.css";
 
 const STATUS_OPTIONS = [
@@ -2016,6 +2017,25 @@ export default function AgendaPage() {
                     </p>
                   </article>
                 )}
+
+                <article className="agenda-turno-modal__panel">
+                  <h4>Foto</h4>
+                  <PhotoUpload
+                    photoUrl={selectedTurno.photo_url}
+                    uploadPath={`/agenda/${selectedTurno.id}/photo`}
+                    size={96}
+                    rounded={false}
+                    onUploaded={(updated) => {
+                      setSelectedTurno((prev) => (prev ? { ...prev, ...updated } : prev));
+                      refetch();
+                    }}
+                    fallback={
+                      <span className="agenda-turno-modal__notes is-empty">
+                        Sin foto cargada para este turno.
+                      </span>
+                    }
+                  />
+                </article>
               </div>
 
               {showFinishForm ? (

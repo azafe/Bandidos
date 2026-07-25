@@ -2,8 +2,10 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import PhotoUpload from "../../components/ui/PhotoUpload";
 import { useAuth } from "../../context/AuthContext";
 import { calcularEdad } from "../../utils/cumpleanos";
+import { apiRequest } from "../../services/apiClient";
 
 const PAGE_SIZE = 24;
 
@@ -34,6 +36,7 @@ export default function PetsPage() {
     createItem,
     updateItem,
     deleteItem,
+    refresh,
   } = useApiResource("/v2/pets", filters);
   const { user } = useAuth();
 
@@ -75,10 +78,12 @@ export default function PetsPage() {
     notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "",
   });
   const [saving, setSaving] = useState(false);
+  const [stagedPhoto, setStagedPhoto] = useState(null);
 
   function resetForm() {
     setForm({ name: "", breed: "", owner_name: "", owner_phone: "", notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "" });
     setEditingId(null);
+    setStagedPhoto(null);
   }
 
   function handleChange(e) {
@@ -109,7 +114,14 @@ export default function PetsPage() {
       if (editingId) {
         await updateItem(editingId, payload);
       } else {
-        await createItem(payload);
+        const created = await createItem(payload);
+        if (stagedPhoto && created?.id) {
+          await apiRequest(`/v2/pets/${created.id}/photo`, {
+            method: "POST",
+            body: { image: stagedPhoto },
+          });
+          await refresh();
+        }
       }
       resetForm();
       setFormOpen(false);
@@ -213,6 +225,18 @@ export default function PetsPage() {
         <form className="form-card" onSubmit={handleSubmit}>
           <h2 className="card-title">{editingId ? "Editar mascota" : "Nueva mascota"}</h2>
           <p className="card-subtitle">Registrá los datos básicos para identificar a la mascota y su dueño.</p>
+          {!editingId && (
+            <PhotoUpload
+              photoUrl={null}
+              onFileStaged={setStagedPhoto}
+              size={48}
+              fallback={
+                <div className="pet-modal-avatar" style={{ background: petColor(form.name) }}>
+                  {petInitial(form.name)}
+                </div>
+              }
+            />
+          )}
           <div className="form-grid">
             <div className="form-field">
               <label htmlFor="name">Nombre mascota</label>
@@ -304,14 +328,16 @@ export default function PetsPage() {
                 style={{ "--pet-color": color }}
                 onClick={() => setSelectedPet(pet)}
               >
-                <div className="pet-card__avatar" style={{ background: color }}>
-                  {petInitial(pet.name)}
-                </div>
+                <div className="pet-card__avatar" style={{ background: color }} />
                 <div className="pet-card__body">
                   <div className="pet-card__name">
-                    <span className="pet-card__avatar-circle" style={{ background: color }}>
-                      {petInitial(pet.name)}
-                    </span>
+                    {pet.photo_url ? (
+                      <img src={pet.photo_url} alt="" className="pet-card__avatar-circle" />
+                    ) : (
+                      <span className="pet-card__avatar-circle" style={{ background: color }}>
+                        {petInitial(pet.name)}
+                      </span>
+                    )}
                     {pet.name}
                   </div>
                   {pet.breed && <div className="pet-card__breed">{pet.breed}</div>}
@@ -408,6 +434,20 @@ export default function PetsPage() {
           <>
             {isEditingModal ? (
               <>
+                <PhotoUpload
+                  photoUrl={selectedPet.photo_url}
+                  uploadPath={`/v2/pets/${selectedPet.id}/photo`}
+                  size={48}
+                  onUploaded={(updated) => {
+                    setSelectedPet((prev) => (prev ? { ...prev, ...updated } : prev));
+                    refresh();
+                  }}
+                  fallback={
+                    <div className="pet-modal-avatar" style={{ background: petColor(selectedPet.name) }}>
+                      {petInitial(selectedPet.name)}
+                    </div>
+                  }
+                />
                 <label className="form-field">
                   <span>Nombre</span>
                   <input type="text" value={modalForm.name}
@@ -469,9 +509,13 @@ export default function PetsPage() {
             ) : (
               <div className="fe-modal-detail">
                 <div className="pet-modal-header">
-                  <div className="pet-modal-avatar" style={{ background: petColor(selectedPet.name) }}>
-                    {petInitial(selectedPet.name)}
-                  </div>
+                  {selectedPet.photo_url ? (
+                    <img src={selectedPet.photo_url} alt="" className="pet-modal-avatar" />
+                  ) : (
+                    <div className="pet-modal-avatar" style={{ background: petColor(selectedPet.name) }}>
+                      {petInitial(selectedPet.name)}
+                    </div>
+                  )}
                   <div>
                     <div style={{ fontWeight: 700, fontSize: "1.2rem" }}>{selectedPet.name}</div>
                     {selectedPet.breed && <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>{selectedPet.breed}</div>}
