@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { apiRequest } from "../../services/apiClient";
+import Modal from "./Modal";
 
 const MAX_PHOTO_BYTES = 4 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -35,6 +36,7 @@ export default function PhotoUpload({
   const [stagedPreview, setStagedPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const displayUrl = stagedPreview || photoUrl;
 
@@ -79,7 +81,15 @@ export default function PhotoUpload({
     <div className={`photo-upload${className ? ` ${className}` : ""}`}>
       <div
         className="photo-upload__preview"
-        style={{ width: size, height: size, borderRadius: rounded ? "50%" : "10px" }}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: rounded ? "50%" : "10px",
+          cursor: displayUrl ? "pointer" : undefined,
+        }}
+        onClick={displayUrl ? () => setPreviewOpen(true) : undefined}
+        role={displayUrl ? "button" : undefined}
+        aria-label={displayUrl ? "Ver foto más grande" : undefined}
       >
         {displayUrl ? (
           <img src={displayUrl} alt="" className="photo-upload__image" />
@@ -87,6 +97,21 @@ export default function PhotoUpload({
           fallback
         )}
       </div>
+      <Modal isOpen={previewOpen} onClose={() => setPreviewOpen(false)} title="Foto">
+        {displayUrl && (
+          <img
+            src={displayUrl}
+            alt=""
+            style={{
+              display: "block",
+              width: "100%",
+              maxHeight: "70vh",
+              objectFit: "contain",
+              borderRadius: 10,
+            }}
+          />
+        )}
+      </Modal>
       <div className="photo-upload__actions">
         <button
           type="button"

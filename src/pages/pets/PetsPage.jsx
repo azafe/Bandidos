@@ -66,6 +66,7 @@ export default function PetsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
   const [isEditingModal, setIsEditingModal] = useState(false);
   const [modalForm, setModalForm] = useState({
     name: "", breed: "", owner_name: "", owner_phone: "",
@@ -510,7 +511,13 @@ export default function PetsPage() {
               <div className="fe-modal-detail">
                 <div className="pet-modal-header">
                   {selectedPet.photo_url ? (
-                    <img src={selectedPet.photo_url} alt="" className="pet-modal-avatar" />
+                    <img
+                      src={selectedPet.photo_url}
+                      alt=""
+                      className="pet-modal-avatar"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setPhotoPreviewOpen(true)}
+                    />
                   ) : (
                     <div className="pet-modal-avatar" style={{ background: petColor(selectedPet.name) }}>
                       {petInitial(selectedPet.name)}
@@ -571,6 +578,22 @@ export default function PetsPage() {
               )}
             </div>
           </>
+        )}
+      </Modal>
+
+      <Modal isOpen={photoPreviewOpen} onClose={() => setPhotoPreviewOpen(false)} title="Foto">
+        {selectedPet?.photo_url && (
+          <img
+            src={selectedPet.photo_url}
+            alt=""
+            style={{
+              display: "block",
+              width: "100%",
+              maxHeight: "70vh",
+              objectFit: "contain",
+              borderRadius: 10,
+            }}
+          />
         )}
       </Modal>
     </div>
