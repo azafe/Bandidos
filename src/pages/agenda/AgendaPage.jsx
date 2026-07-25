@@ -228,6 +228,15 @@ function getTurnoGroomerId(turno) {
   return turno?.groomer_id ?? turno?.groomer?.id ?? "";
 }
 
+function getGroomerName(turno, employeesById) {
+  return (
+    turno?.groomer?.name ||
+    (typeof turno?.groomer === "string" ? turno.groomer : "") ||
+    employeesById?.get(String(getTurnoGroomerId(turno) || ""))?.name ||
+    ""
+  );
+}
+
 function getEmployeeCommissionRate(employee) {
   if (!employee) return DEFAULT_GROOMER_COMMISSION;
   const raw =
@@ -414,11 +423,7 @@ export default function AgendaPage() {
           return false;
         if (filters.status && normalizeStatus(turno.status) !== filters.status) return false;
         if (!term) return true;
-        const groomerName =
-          turno.groomer?.name ||
-          (typeof turno.groomer === "string" ? turno.groomer : "") ||
-          employeesById.get(String(getTurnoGroomerId(turno) || ""))?.name ||
-          "";
+        const groomerName = getGroomerName(turno, employeesById);
         return [
           turno.pet_name,
           turno.owner_name,
@@ -1545,9 +1550,9 @@ export default function AgendaPage() {
                         <div className="agenda-card__meta">
                           {turno.owner_name || "-"} · {turno.breed || "-"}
                         </div>
-                        {turno.groomer?.name && (
+                        {getGroomerName(turno, employeesById) && (
                           <div className="agenda-card__groomer">
-                            {turno.groomer.name}
+                            {getGroomerName(turno, employeesById)}
                           </div>
                         )}
                         <div className="agenda-card__footer">
