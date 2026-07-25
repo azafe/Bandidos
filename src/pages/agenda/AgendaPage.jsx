@@ -1545,13 +1545,13 @@ export default function AgendaPage() {
                         <div className="agenda-card__meta">
                           {turno.owner_name || "-"} · {turno.breed || "-"}
                         </div>
+                        {turno.groomer?.name && (
+                          <div className="agenda-card__groomer">
+                            {turno.groomer.name}
+                          </div>
+                        )}
                         <div className="agenda-card__footer">
                           <div className="agenda-card__pills">
-                            {turno.groomer?.name && (
-                              <span className="agenda-card__pill agenda-card__pill--groomer">
-                                {turno.groomer.name}
-                              </span>
-                            )}
                             {turno.payment_method?.name && (
                               <span className="agenda-card__pill">
                                 {turno.payment_method.name}

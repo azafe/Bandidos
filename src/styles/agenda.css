@@ -680,6 +680,12 @@
   color: var(--text-muted);
 }
 
+.agenda-card__groomer {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
 .agenda-card__footer {
   display: flex;
   align-items: center;
