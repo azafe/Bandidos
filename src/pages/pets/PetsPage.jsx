@@ -359,6 +359,11 @@ export default function PetsPage() {
                     )}
                   </div>
                   <div className="pet-card__tags">
+                    {pet.customer_service_count > 0 && (
+                      <span className="pet-card__tag pet-card__tag--loyalty" title="Servicios realizados por el dueño">
+                        ★ {pet.customer_service_count} {pet.customer_service_count === 1 ? "servicio" : "servicios"}
+                      </span>
+                    )}
                     <span className={`pet-card__tag${pet.neutered ? " pet-card__tag--yes" : ""}`}>
                       {pet.neutered ? "Castrado" : "Sin castrar"}
                     </span>

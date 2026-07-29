@@ -1246,6 +1246,11 @@
   background: #dcfce7;
   color: #15803d;
 }
+.pet-card__tag--loyalty {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 700;
+}
 
 .pet-card__ficha-btn {
   display: block;
