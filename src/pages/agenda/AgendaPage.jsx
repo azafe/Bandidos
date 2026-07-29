@@ -6,6 +6,8 @@ import { useApiResource } from "../../hooks/useApiResource";
 import {
   createAgendaTurno,
   deleteAgendaTurno,
+  getAgendaDayNote,
+  saveAgendaDayNote,
   updateAgendaTurno,
 } from "../../services/agendaApi";
 import { apiRequest } from "../../services/apiClient";
@@ -211,8 +213,69 @@ function normalize(text) {
   return (text || "").toLowerCase();
 }
 
-function reminderKey(date) {
-  return `bandidos_agenda_reminder_${date}`;
+function formatNoteMeta(meta) {
+  if (!meta?.updatedAt) return "";
+  const date = new Date(meta.updatedAt);
+  const when = Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const who = meta.updatedByEmail ? ` · ${meta.updatedByEmail}` : "";
+  return when ? `Última edición: ${when}${who}` : "";
+}
+
+function DayNoteCard({
+  title,
+  subtitle,
+  placeholder,
+  note,
+  onChange,
+  onSave,
+  saved,
+  saving,
+  meta,
+  collapsible,
+  expanded,
+  onToggle,
+}) {
+  const body = (
+    <div className="agenda-note-card__body">
+      {subtitle && <p className="card-subtitle">{subtitle}</p>}
+      <textarea
+        rows={collapsible ? 3 : 4}
+        placeholder={placeholder}
+        value={note}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={onSave}
+      />
+      <div className="agenda-note-card__footer">
+        <span className="agenda-note-card__meta">{formatNoteMeta(meta)}</span>
+        <button type="button" className="btn-secondary" onClick={onSave} disabled={saving}>
+          {saved ? "Guardado" : saving ? "Guardando..." : "Guardar nota"}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!collapsible) {
+    return (
+      <div className="agenda-note-card card">
+        <div className="agenda-note-card__header">
+          <span>📝 {title}</span>
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <div className="agenda-note-card card">
+      <button type="button" className="agenda-note-card__toggle" onClick={onToggle}>
+        <span>📝 {title}</span>
+        <span className="agenda-note-card__arrow">{expanded ? "▲" : "▼"}</span>
+      </button>
+      {expanded && body}
+    </div>
+  );
 }
 
 function normalizeStatus(status) {
@@ -280,6 +343,8 @@ export default function AgendaPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
   const [reminderSaved, setReminderSaved] = useState(false);
+  const [reminderSaving, setReminderSaving] = useState(false);
+  const [reminderMeta, setReminderMeta] = useState(null);
   const [isNewPet, setIsNewPet] = useState(false);
   const [petSearch, setPetSearch] = useState("");
   const [isPetOpen, setIsPetOpen] = useState(false);
@@ -333,13 +398,21 @@ export default function AgendaPage() {
   } = useAgendaDay(selectedDate);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(reminderKey(selectedDate));
-      setReminder(stored || "");
-      setReminderSaved(false);
-    } catch {
-      setReminder("");
-    }
+    let cancelled = false;
+    setReminderSaved(false);
+    setReminderMeta(null);
+    getAgendaDayNote(selectedDate)
+      .then(({ note, updatedAt, updatedByEmail }) => {
+        if (cancelled) return;
+        setReminder(note || "");
+        setReminderMeta(updatedAt ? { updatedAt, updatedByEmail } : null);
+      })
+      .catch(() => {
+        if (!cancelled) setReminder("");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDate]);
 
   useEffect(() => {
@@ -886,13 +959,21 @@ export default function AgendaPage() {
     clearFieldError("owner_name");
   }
 
-  function saveReminder() {
+  async function saveReminder() {
+    setReminderSaving(true);
     try {
-      window.localStorage.setItem(reminderKey(selectedDate), reminder.trim());
+      const { note, updatedAt, updatedByEmail } = await saveAgendaDayNote(
+        selectedDate,
+        reminder.trim()
+      );
+      setReminder(note || "");
+      setReminderMeta(updatedAt ? { updatedAt, updatedByEmail } : null);
       setReminderSaved(true);
       setTimeout(() => setReminderSaved(false), 1200);
-    } catch {
-      setReminderSaved(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReminderSaving(false);
     }
   }
 
@@ -1445,33 +1526,20 @@ export default function AgendaPage() {
 
       {/* Nota del día (collapsible) */}
       {viewMode === "operation" && (
-        <div className="agenda-note-card card">
-          <button
-            type="button"
-            className="agenda-note-card__toggle"
-            onClick={() => setNoteExpanded((p) => !p)}
-          >
-            <span>📝 Nota del día</span>
-            <span className="agenda-note-card__arrow">{noteExpanded ? "▲" : "▼"}</span>
-          </button>
-          {noteExpanded && (
-            <div className="agenda-note-card__body">
-              <p className="card-subtitle">
-                Observaciones operativas del día (equipo, pagos, ausencias, etc.).
-              </p>
-              <textarea
-                rows={3}
-                placeholder='Ej: "Hoy Ana no asiste" · "Pagar $20.000 a Marco".'
-                value={reminder}
-                onChange={(e) => setReminder(e.target.value)}
-                onBlur={saveReminder}
-              />
-              <button type="button" className="btn-secondary" onClick={saveReminder}>
-                {reminderSaved ? "Guardado" : "Guardar nota"}
-              </button>
-            </div>
-          )}
-        </div>
+        <DayNoteCard
+          title="Nota del día"
+          subtitle="Observaciones operativas del día (equipo, pagos, ausencias, etc.)."
+          placeholder='Ej: "Hoy Ana no asiste" · "Pagar $20.000 a Marco".'
+          note={reminder}
+          onChange={setReminder}
+          onSave={saveReminder}
+          saved={reminderSaved}
+          saving={reminderSaving}
+          meta={reminderMeta}
+          collapsible
+          expanded={noteExpanded}
+          onToggle={() => setNoteExpanded((p) => !p)}
+        />
       )}
 
       {viewMode === "operation" ? (
@@ -1887,31 +1955,17 @@ export default function AgendaPage() {
             )}
           </div>
 
-          <div className="agenda-reminder card agenda-reminder--close">
-            <div className="agenda-reminder__header">
-              <div>
-                <h2 className="card-title">
-                  <span className="agenda-reminder__icon" aria-hidden="true">
-                    📝
-                  </span>{" "}
-                  Nota de cierre
-                </h2>
-                <p className="card-subtitle">Dejá observaciones del día para el equipo.</p>
-              </div>
-              <div className="agenda-reminder__actions">
-                <button type="button" className="btn-secondary" onClick={saveReminder}>
-                  {reminderSaved ? "Guardado" : "Guardar nota"}
-                </button>
-              </div>
-            </div>
-            <textarea
-              rows={4}
-              placeholder="Ej: revisar pagos pendientes y confirmar transferencias."
-              value={reminder}
-              onChange={(e) => setReminder(e.target.value)}
-              onBlur={saveReminder}
-            />
-          </div>
+          <DayNoteCard
+            title="Nota de cierre"
+            subtitle="Dejá observaciones del día para el equipo."
+            placeholder="Ej: revisar pagos pendientes y confirmar transferencias."
+            note={reminder}
+            onChange={setReminder}
+            onSave={saveReminder}
+            saved={reminderSaved}
+            saving={reminderSaving}
+            meta={reminderMeta}
+          />
         </>
       )}
 

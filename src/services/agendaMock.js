@@ -55,3 +55,22 @@ export function deleteTurno(id) {
   save(cache);
   return true;
 }
+
+const DAY_NOTE_KEY_PREFIX = "bandidos_agenda_reminder_";
+
+export function getDayNote(date) {
+  try {
+    return window.localStorage.getItem(`${DAY_NOTE_KEY_PREFIX}${date}`) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function setDayNote(date, note) {
+  try {
+    window.localStorage.setItem(`${DAY_NOTE_KEY_PREFIX}${date}`, note);
+  } catch {
+    // localStorage unavailable, ignore
+  }
+  return note;
+}

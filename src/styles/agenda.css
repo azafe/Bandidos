@@ -365,38 +365,6 @@
   color: #92400e;
 }
 
-.agenda-reminder__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 0.85rem;
-  color: var(--color-text-soft);
-}
-
-.agenda-reminder__icon {
-  font-size: 1.1rem;
-}
-
-.agenda-reminder__actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.agenda-reminder textarea,
-.agenda-day__note textarea {
-  resize: vertical;
-  min-height: 58px;
-  border-radius: 10px;
-  border: 1px solid rgba(17, 24, 39, 0.12);
-  padding: 8px 10px;
-  font-size: 0.85rem;
-  font-family: inherit;
-  color: #1b1f2f;
-  background: rgba(255, 255, 255, 0.9);
-}
 
 .agenda-warning {
   background: rgba(251, 191, 36, 0.2);
@@ -446,21 +414,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.agenda-day__note {
-  border: 1px solid rgba(17, 24, 39, 0.1);
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.04);
-  padding: 10px 12px;
-  display: grid;
-  gap: 8px;
-}
-
-.agenda-day__note-title {
-  margin: 0;
-  font-size: 1rem;
-  color: #111827;
 }
 
 .agenda-close-overview {
@@ -1893,11 +1846,35 @@
   color: var(--text-muted);
 }
 
+.agenda-note-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
 .agenda-note-card__body {
   display: grid;
   gap: 10px;
   padding: 0 16px 14px;
   border-top: 1px solid var(--border);
+}
+
+.agenda-note-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agenda-note-card__meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .agenda-note-card__body .card-subtitle {

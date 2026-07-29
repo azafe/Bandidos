@@ -8,6 +8,7 @@ export const AGENDA_CONTRACT = {
   create: "/agenda",
   update: (id) => `/agenda/${id}`,
   remove: (id) => `/agenda/${id}`,
+  dayNote: "/agenda/day-note",
 };
 
 const isDev = import.meta.env.DEV;
@@ -102,6 +103,52 @@ export async function deleteAgendaTurno(id) {
   } catch (err) {
     if (isNotFound(err)) {
       return { ok: agendaMock.deleteTurno(id), fallback: true, error: err };
+    }
+    throw err;
+  }
+}
+
+export async function getAgendaDayNote(date) {
+  try {
+    debugLog("[agenda] GET", { url: AGENDA_CONTRACT.dayNote, params: { date } });
+    const data = await apiRequest(AGENDA_CONTRACT.dayNote, { params: { date } });
+    return {
+      note: data?.note || "",
+      updatedAt: data?.updated_at || null,
+      updatedByEmail: data?.updated_by_email || null,
+      fallback: false,
+    };
+  } catch (err) {
+    if (isNotFound(err)) {
+      return {
+        note: agendaMock.getDayNote(date),
+        updatedAt: null,
+        updatedByEmail: null,
+        fallback: true,
+        error: err,
+      };
+    }
+    throw err;
+  }
+}
+
+export async function saveAgendaDayNote(date, note) {
+  try {
+    debugLog("[agenda] PUT", { url: AGENDA_CONTRACT.dayNote, payload: { date, note } });
+    const data = await apiRequest(AGENDA_CONTRACT.dayNote, {
+      method: "PUT",
+      body: { date, note },
+    });
+    return {
+      note: data?.note ?? note,
+      updatedAt: data?.updated_at || null,
+      updatedByEmail: data?.updated_by_email || null,
+      fallback: false,
+    };
+  } catch (err) {
+    if (isNotFound(err)) {
+      agendaMock.setDayNote(date, note);
+      return { note, updatedAt: null, updatedByEmail: null, fallback: true, error: err };
     }
     throw err;
   }
