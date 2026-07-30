@@ -229,14 +229,16 @@ function DayNoteCard({
   placeholder,
   note,
   onChange,
-  onSave,
-  saved,
+  onFlush,
   saving,
   meta,
   collapsible,
   expanded,
   onToggle,
 }) {
+  const hasNote = note.trim().length > 0;
+  const statusLabel = saving ? "Guardando..." : formatNoteMeta(meta);
+
   const body = (
     <div className="agenda-note-card__body">
       {subtitle && <p className="card-subtitle">{subtitle}</p>}
@@ -245,13 +247,10 @@ function DayNoteCard({
         placeholder={placeholder}
         value={note}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={onSave}
+        onBlur={onFlush}
       />
       <div className="agenda-note-card__footer">
-        <span className="agenda-note-card__meta">{formatNoteMeta(meta)}</span>
-        <button type="button" className="btn-secondary" onClick={onSave} disabled={saving}>
-          {saved ? "Guardado" : saving ? "Guardando..." : "Guardar nota"}
-        </button>
+        <span className="agenda-note-card__meta">{statusLabel}</span>
       </div>
     </div>
   );
@@ -270,7 +269,12 @@ function DayNoteCard({
   return (
     <div className="agenda-note-card card">
       <button type="button" className="agenda-note-card__toggle" onClick={onToggle}>
-        <span>📝 {title}</span>
+        <span className="agenda-note-card__toggle-label">
+          📝 {title}
+          {hasNote && !expanded && (
+            <span className="agenda-note-card__dot" aria-hidden="true" />
+          )}
+        </span>
         <span className="agenda-note-card__arrow">{expanded ? "▲" : "▼"}</span>
       </button>
       {expanded && body}
@@ -342,9 +346,12 @@ export default function AgendaPage() {
   const [formStep, setFormStep] = useState("details");
   const [formLoading, setFormLoading] = useState(false);
   const [reminder, setReminder] = useState("");
-  const [reminderSaved, setReminderSaved] = useState(false);
   const [reminderSaving, setReminderSaving] = useState(false);
   const [reminderMeta, setReminderMeta] = useState(null);
+  const reminderTimeoutRef = useRef(null);
+  const reminderMountedRef = useRef(true);
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
   const [isNewPet, setIsNewPet] = useState(false);
   const [petSearch, setPetSearch] = useState("");
   const [isPetOpen, setIsPetOpen] = useState(false);
@@ -398,8 +405,20 @@ export default function AgendaPage() {
   } = useAgendaDay(selectedDate);
 
   useEffect(() => {
+    reminderMountedRef.current = true;
+    return () => {
+      reminderMountedRef.current = false;
+      if (reminderTimeoutRef.current) clearTimeout(reminderTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
-    setReminderSaved(false);
+    if (reminderTimeoutRef.current) {
+      clearTimeout(reminderTimeoutRef.current);
+      reminderTimeoutRef.current = null;
+    }
+    setReminderSaving(false);
     setReminderMeta(null);
     getAgendaDayNote(selectedDate)
       .then(({ note, updatedAt, updatedByEmail }) => {
@@ -959,22 +978,39 @@ export default function AgendaPage() {
     clearFieldError("owner_name");
   }
 
-  async function saveReminder() {
+  function persistReminder(date, value) {
     setReminderSaving(true);
-    try {
-      const { note, updatedAt, updatedByEmail } = await saveAgendaDayNote(
-        selectedDate,
-        reminder.trim()
-      );
-      setReminder(note || "");
-      setReminderMeta(updatedAt ? { updatedAt, updatedByEmail } : null);
-      setReminderSaved(true);
-      setTimeout(() => setReminderSaved(false), 1200);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setReminderSaving(false);
-    }
+    saveAgendaDayNote(date, value.trim())
+      .then(({ note, updatedAt, updatedByEmail }) => {
+        if (!reminderMountedRef.current || date !== selectedDateRef.current) return;
+        setReminder(note || "");
+        setReminderMeta(updatedAt ? { updatedAt, updatedByEmail } : null);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        if (reminderMountedRef.current && date === selectedDateRef.current) {
+          setReminderSaving(false);
+        }
+      });
+  }
+
+  function handleReminderChange(value) {
+    setReminder(value);
+    if (reminderTimeoutRef.current) clearTimeout(reminderTimeoutRef.current);
+    const date = selectedDate;
+    reminderTimeoutRef.current = setTimeout(() => {
+      reminderTimeoutRef.current = null;
+      persistReminder(date, value);
+    }, 1000);
+  }
+
+  function flushReminderSave() {
+    if (!reminderTimeoutRef.current) return;
+    clearTimeout(reminderTimeoutRef.current);
+    reminderTimeoutRef.current = null;
+    persistReminder(selectedDate, reminder);
   }
 
   function validateForm(onlyFields) {
@@ -1531,9 +1567,8 @@ export default function AgendaPage() {
           subtitle="Observaciones operativas del día (equipo, pagos, ausencias, etc.)."
           placeholder='Ej: "Hoy Ana no asiste" · "Pagar $20.000 a Marco".'
           note={reminder}
-          onChange={setReminder}
-          onSave={saveReminder}
-          saved={reminderSaved}
+          onChange={handleReminderChange}
+          onFlush={flushReminderSave}
           saving={reminderSaving}
           meta={reminderMeta}
           collapsible
@@ -1960,9 +1995,8 @@ export default function AgendaPage() {
             subtitle="Dejá observaciones del día para el equipo."
             placeholder="Ej: revisar pagos pendientes y confirmar transferencias."
             note={reminder}
-            onChange={setReminder}
-            onSave={saveReminder}
-            saved={reminderSaved}
+            onChange={handleReminderChange}
+            onFlush={flushReminderSave}
             saving={reminderSaving}
             meta={reminderMeta}
           />

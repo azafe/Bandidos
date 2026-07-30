@@ -1841,6 +1841,20 @@
   background: var(--bg-subtle);
 }
 
+.agenda-note-card__toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agenda-note-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-primary, #a855f7);
+  flex-shrink: 0;
+}
+
 .agenda-note-card__arrow {
   font-size: 0.75rem;
   color: var(--text-muted);
