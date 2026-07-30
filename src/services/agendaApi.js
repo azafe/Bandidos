@@ -4,7 +4,9 @@ import * as agendaMock from "./agendaMock";
 
 export const AGENDA_CONTRACT = {
   listDay: "/agenda",
+  listRange: "/agenda",
   summary: "/agenda/summary",
+  counts: "/agenda/counts",
   create: "/agenda",
   update: (id) => `/agenda/${id}`,
   remove: (id) => `/agenda/${id}`,
@@ -32,6 +34,53 @@ export async function listAgendaDay(date) {
     if (isNotFound(err)) {
       const items = agendaMock.listByDate(date);
       return { items, fallback: true, error: err };
+    }
+    throw err;
+  }
+}
+
+export async function listAgendaRange({ from, to }) {
+  try {
+    const params = { from, to };
+    debugLog("[agenda] GET", { url: AGENDA_CONTRACT.listRange, params });
+    const data = await apiRequest(AGENDA_CONTRACT.listRange, { params });
+    return { items: Array.isArray(data) ? data : data?.items || [], fallback: false };
+  } catch (err) {
+    if (isNotFound(err)) {
+      const items = agendaMock.listByRange(from, to);
+      return { items, fallback: true, error: err };
+    }
+    throw err;
+  }
+}
+
+function turnoDateKey(value) {
+  return String(value || "").split("T")[0];
+}
+
+function countsFromItems(items) {
+  const byDate = new Map();
+  items.forEach((turno) => {
+    const date = turnoDateKey(turno.date);
+    if (!date) return;
+    const entry = byDate.get(date) || { date, total: 0, finished: 0, reserved: 0, cancelled: 0 };
+    entry.total += 1;
+    if (entry[turno.status] !== undefined) entry[turno.status] += 1;
+    byDate.set(date, entry);
+  });
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export async function listAgendaCounts({ from, to }) {
+  try {
+    const params = { from, to };
+    debugLog("[agenda] GET", { url: AGENDA_CONTRACT.counts, params });
+    const data = await apiRequest(AGENDA_CONTRACT.counts, { params });
+    return { rows: Array.isArray(data) ? data : [], fallback: false };
+  } catch (err) {
+    if (isNotFound(err)) {
+      const rows = countsFromItems(agendaMock.listByRange(from, to));
+      return { rows, fallback: true, error: err };
     }
     throw err;
   }
