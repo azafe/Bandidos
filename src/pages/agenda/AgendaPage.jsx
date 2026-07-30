@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAgendaDay } from "../../hooks/useAgendaDay";
+import { useAgendaRange } from "../../hooks/useAgendaRange";
+import { useAgendaCounts } from "../../hooks/useAgendaCounts";
 import { useApiResource } from "../../hooks/useApiResource";
 import {
   createAgendaTurno,
@@ -13,6 +15,17 @@ import {
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
+import AgendaWeekView from "../../components/agenda/AgendaWeekView";
+import AgendaMonthView from "../../components/agenda/AgendaMonthView";
+import {
+  addDaysISO,
+  addWeeksISO,
+  addMonthsISO,
+  startOfWeekISO,
+  monthBoundsISO,
+  formatWeekLabel,
+  formatMonthLabel,
+} from "../../utils/dates";
 import "../../styles/agenda.css";
 
 const STATUS_OPTIONS = [
@@ -26,6 +39,13 @@ const STATUS_LABELS = {
   finished: "Finalizado",
   cancelled: "Cancelado",
 };
+
+const CALENDAR_VIEWS = [
+  { value: "day", label: "Día" },
+  { value: "week", label: "Semana" },
+  { value: "month", label: "Mes" },
+];
+const CALENDAR_VIEW_KEY = "bandidos_agenda_calendar_view";
 
 const DEFAULT_GROOMER_COMMISSION = 40;
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 150];
@@ -339,6 +359,14 @@ export default function AgendaPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState("operation");
+  const [calendarView, setCalendarView] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(CALENDAR_VIEW_KEY);
+      return CALENDAR_VIEWS.some((view) => view.value === stored) ? stored : "day";
+    } catch {
+      return "day";
+    }
+  });
   const [closeGroomerId, setCloseGroomerId] = useState("");
   const [showZeroFinishedRows, setShowZeroFinishedRows] = useState(false);
   const [formError, setFormError] = useState("");
@@ -403,6 +431,24 @@ export default function AgendaPage() {
     warning,
     refetch,
   } = useAgendaDay(selectedDate);
+
+  const weekStart = useMemo(() => startOfWeekISO(selectedDate), [selectedDate]);
+  const weekEnd = useMemo(() => addDaysISO(weekStart, 6), [weekStart]);
+  const monthBounds = useMemo(() => monthBoundsISO(selectedDate), [selectedDate]);
+  const weekRange = useAgendaRange(weekStart, weekEnd, calendarView === "week");
+  const monthCounts = useAgendaCounts(
+    monthBounds.first,
+    monthBounds.last,
+    calendarView === "month"
+  );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CALENDAR_VIEW_KEY, calendarView);
+    } catch {
+      /* localStorage no disponible */
+    }
+  }, [calendarView]);
 
   useEffect(() => {
     reminderMountedRef.current = true;
@@ -730,11 +776,47 @@ export default function AgendaPage() {
 
 
 
-  function openCreate() {
+  async function refreshAgendaData() {
+    await refetch();
+    weekRange.invalidate();
+    monthCounts.invalidate();
+  }
+
+  function navigatePeriod(direction) {
+    setSelectedDate((prev) => {
+      if (calendarView === "week") return addWeeksISO(prev, direction);
+      if (calendarView === "month") return addMonthsISO(prev, direction);
+      return addDays(prev, direction);
+    });
+  }
+
+  const todayIso = todayISO();
+  const periodLabel =
+    calendarView === "week"
+      ? `Semana del ${formatWeekLabel(weekStart)}`
+      : calendarView === "month"
+      ? formatMonthLabel(selectedDate)
+      : formatDateLong(selectedDate);
+  const isTodayInPeriod =
+    calendarView === "week"
+      ? todayIso >= weekStart && todayIso <= weekEnd
+      : calendarView === "month"
+      ? selectedDate.slice(0, 7) === todayIso.slice(0, 7)
+      : selectedDate === todayIso;
+  const activeWarning =
+    calendarView === "week"
+      ? weekRange.warning
+      : calendarView === "month"
+      ? monthCounts.warning
+      : warning;
+
+  // dateOverride: string ISO opcional; se usa como onClick={openCreate} directo,
+  // por eso el guard de typeof (recibiría el click event).
+  function openCreate(dateOverride) {
     setSelectedTurno(null);
     setIsNewPet(false);
     setForm({
-      date: selectedDate,
+      date: typeof dateOverride === "string" ? dateOverride : selectedDate,
       time: "",
       duration: 60,
       pet_id: "",
@@ -1179,7 +1261,7 @@ export default function AgendaPage() {
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
-        await refetch();
+        await refreshAgendaData();
         setSelectedTurno((prev) =>
           prev ? { ...prev, ...payload, price: payload.price ?? prev.price } : prev
         );
@@ -1206,10 +1288,10 @@ export default function AgendaPage() {
             traslado_amount: form.traslado ? Number(form.traslado_amount || 0) : 0,
           },
         });
-        await refetch();
+        await refreshAgendaData();
       } else {
         await createAgendaTurno(payload);
-        await refetch();
+        await refreshAgendaData();
       }
       setIsCreating(false);
       setIsEditing(false);
@@ -1247,7 +1329,7 @@ export default function AgendaPage() {
       if (status === "finished" && previousStatus !== "finished") {
         await createServiceFromTurno(updatedTurno);
       }
-      await refetch();
+      await refreshAgendaData();
       setSelectedTurno((prev) => (prev ? { ...prev, ...(extra || {}), status } : prev));
     } catch (err) {
       const details = err?.status ? ` (${err.status})` : "";
@@ -1290,7 +1372,7 @@ export default function AgendaPage() {
     if (!ok) return;
     try {
       await deleteAgendaTurno(turno.id);
-      await refetch();
+      await refreshAgendaData();
       setSelectedTurno(null);
     } catch (err) {
       const details = err?.status ? ` (${err.status})` : "";
@@ -1402,31 +1484,51 @@ export default function AgendaPage() {
       </div>
 
       <div className="agenda-mode-bar card">
-        <div className="agenda-mode-switch" role="tablist" aria-label="Modo de agenda">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "operation"}
-            className={viewMode === "operation" ? "is-active" : ""}
-            onClick={() => setViewMode("operation")}
-          >
-            Operación
-          </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "close"}
-              className={viewMode === "close" ? "is-active" : ""}
-              onClick={() => setViewMode("close")}
-            >
-              Cierre del día
-            </button>
+        <div className="agenda-mode-bar__switches">
+          <div className="agenda-mode-switch" role="tablist" aria-label="Vista de calendario">
+            {CALENDAR_VIEWS.map((view) => (
+              <button
+                key={view.value}
+                type="button"
+                role="tab"
+                aria-selected={calendarView === view.value}
+                className={calendarView === view.value ? "is-active" : ""}
+                onClick={() => setCalendarView(view.value)}
+              >
+                {view.label}
+              </button>
+            ))}
+          </div>
+          {calendarView === "day" && (
+            <div className="agenda-mode-switch" role="tablist" aria-label="Modo de agenda">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "operation"}
+                className={viewMode === "operation" ? "is-active" : ""}
+                onClick={() => setViewMode("operation")}
+              >
+                Operación
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "close"}
+                className={viewMode === "close" ? "is-active" : ""}
+                onClick={() => setViewMode("close")}
+              >
+                Cierre del día
+              </button>
+            </div>
+          )}
         </div>
-        <p className="agenda-mode-hint">
-          {viewMode === "operation"
-            ? "Usá este modo para cargar, editar y ejecutar turnos del día."
-            : "Usá este modo para cerrar el día: revisar finalizados y liquidar por groomer."}
-        </p>
+        {calendarView === "day" && (
+          <p className="agenda-mode-hint">
+            {viewMode === "operation"
+              ? "Usá este modo para cargar, editar y ejecutar turnos del día."
+              : "Usá este modo para cerrar el día: revisar finalizados y liquidar por groomer."}
+          </p>
+        )}
       </div>
 
       {/* Navegación de fecha */}
@@ -1436,7 +1538,7 @@ export default function AgendaPage() {
         onTouchEnd={(e) => {
           if (touchStartX.current === null) return;
           const diff = touchStartX.current - e.changedTouches[0].clientX;
-          if (Math.abs(diff) > 50) setSelectedDate((prev) => addDays(prev, diff > 0 ? 1 : -1));
+          if (Math.abs(diff) > 50) navigatePeriod(diff > 0 ? 1 : -1);
           touchStartX.current = null;
         }}
       >
@@ -1444,8 +1546,14 @@ export default function AgendaPage() {
           <button
             type="button"
             className="agenda-date-nav__arrow"
-            onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
-            aria-label="Día anterior"
+            onClick={() => navigatePeriod(-1)}
+            aria-label={
+              calendarView === "week"
+                ? "Semana anterior"
+                : calendarView === "month"
+                ? "Mes anterior"
+                : "Día anterior"
+            }
           >
             ←
           </button>
@@ -1455,9 +1563,9 @@ export default function AgendaPage() {
               className="agenda-date-nav__label-btn"
               onClick={() => dateInputRef.current?.showPicker?.()}
             >
-              {formatDateLong(selectedDate)}
+              {periodLabel}
             </button>
-            {selectedDate === todayISO() && (
+            {isTodayInPeriod && (
               <span className="agenda-date-nav__today-badge">● HOY</span>
             )}
             <input
@@ -1473,8 +1581,14 @@ export default function AgendaPage() {
           <button
             type="button"
             className="agenda-date-nav__arrow"
-            onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
-            aria-label="Día siguiente"
+            onClick={() => navigatePeriod(1)}
+            aria-label={
+              calendarView === "week"
+                ? "Semana siguiente"
+                : calendarView === "month"
+                ? "Mes siguiente"
+                : "Día siguiente"
+            }
           >
             →
           </button>
@@ -1492,9 +1606,9 @@ export default function AgendaPage() {
           </div>
         )}
 
-        {warning ? <div className="agenda-warning">{warning}</div> : null}
+        {activeWarning ? <div className="agenda-warning">{activeWarning}</div> : null}
 
-        {viewMode === "operation" && (
+        {calendarView === "day" && viewMode === "operation" && (
           <div className="agenda-date-nav__kpis">
             <div className="agenda-date-kpi">
               <span>Turnos</span>
@@ -1511,7 +1625,7 @@ export default function AgendaPage() {
           </div>
         )}
 
-        {viewMode === "close" && (
+        {calendarView === "day" && viewMode === "close" && (
           <div className={`agenda-close-mini-note${closeReadyToFinishDay ? " is-ready" : " is-pending"}`}>
             {closeReadyToFinishDay
               ? "Cierre operativo al día."
@@ -1521,7 +1635,7 @@ export default function AgendaPage() {
       </div>
 
       {/* Búsqueda y filtros */}
-      {viewMode === "operation" && (
+      {calendarView === "day" && viewMode === "operation" && (
         <div className="agenda-search-card card">
           <input
             className="agenda-search-input"
@@ -1561,7 +1675,7 @@ export default function AgendaPage() {
       )}
 
       {/* Nota del día (collapsible) */}
-      {viewMode === "operation" && (
+      {calendarView === "day" && viewMode === "operation" && (
         <DayNoteCard
           title="Nota del día"
           subtitle="Observaciones operativas del día (equipo, pagos, ausencias, etc.)."
@@ -1577,7 +1691,8 @@ export default function AgendaPage() {
         />
       )}
 
-      {viewMode === "operation" ? (
+      {calendarView === "day" &&
+        (viewMode === "operation" ? (
         <>
           <div className="agenda-day card">
             <div className="agenda-day__header">
@@ -2001,6 +2116,39 @@ export default function AgendaPage() {
             meta={reminderMeta}
           />
         </>
+      ))}
+
+      {calendarView === "week" && (
+        <AgendaWeekView
+          weekStart={weekStart}
+          items={weekRange.items}
+          loading={weekRange.loading}
+          error={weekRange.error}
+          todayIso={todayIso}
+          onSelectTurno={(turno) => {
+            setSelectedTurno(turno);
+            setIsEditing(false);
+          }}
+          onCreateAt={(dateStr) => openCreate(dateStr)}
+          onGoToDay={(dateStr) => {
+            setSelectedDate(dateStr);
+            setCalendarView("day");
+          }}
+        />
+      )}
+
+      {calendarView === "month" && (
+        <AgendaMonthView
+          monthDate={selectedDate}
+          countsByDate={monthCounts.countsByDate}
+          loading={monthCounts.loading}
+          error={monthCounts.error}
+          todayIso={todayIso}
+          onSelectDay={(dateStr) => {
+            setSelectedDate(dateStr);
+            setCalendarView("day");
+          }}
+        />
       )}
 
       <Modal
@@ -2891,7 +3039,7 @@ export default function AgendaPage() {
       </Modal>
 
       {/* FAB nuevo turno */}
-      {viewMode === "operation" && (
+      {calendarView === "day" && viewMode === "operation" && (
         <button
           type="button"
           className="agenda-fab-new"
