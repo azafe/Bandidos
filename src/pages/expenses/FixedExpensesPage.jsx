@@ -92,6 +92,14 @@ export default function FixedExpensesPage() {
       .sort((a, b) => b.total - a.total);
   }, [items]);
 
+  // Mismo color que las barras "Por categoría", para que la card y el desglose
+  // se lean como una sola cosa.
+  const colorPorCategoria = useMemo(() => {
+    const mapa = new Map();
+    byCategory.forEach((cat, idx) => mapa.set(cat.name, CATEGORY_COLORS[idx % CATEGORY_COLORS.length]));
+    return mapa;
+  }, [byCategory]);
+
   const topItem = useMemo(
     () => items.reduce((top, i) => (Number(i.amount) > Number(top?.amount || 0) ? i : top), null),
     [items]
@@ -406,6 +414,58 @@ export default function FixedExpensesPage() {
             {items.length === 0 && (
               <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
                 Este mes quedó sin ítems. Agregá uno o copiá desde otro mes.
+              </div>
+            )}
+
+            {/* Móvil: cards. La tabla obliga a scroll horizontal con seis
+                columnas, y en un teléfono eso es inusable. */}
+            {items.length > 0 && (
+              <div className="fe-card-list">
+                {items.map((item) => {
+                  const color = colorPorCategoria.get(item.category_name || "Sin categoría") || "#8b94a9";
+                  return (
+                    <div
+                      key={item.id}
+                      className={`fe-card${item.paid_at ? " fe-card--paid" : ""}`}
+                      style={{ "--fe-accent": color }}
+                      onClick={() => openEdit(item)}
+                    >
+                      <div className="fe-card__accent" />
+                      <div className="fe-card__body">
+                        <div className="fe-card__top">
+                          <span className="fe-card__name">{item.name}</span>
+                          <span className="fe-card__date-badge">Vence {(item.due_date || "").slice(8, 10)}</span>
+                        </div>
+                        <div className="fe-card__meta">
+                          <span className="fe-card__badge">{item.category_name || "Sin categoría"}</span>
+                          {item.supplier_name && (
+                            <span className="fe-card__meta-item">{item.supplier_name}</span>
+                          )}
+                          {item.edited && <span className="fe-table__badge">editado</span>}
+                        </div>
+                        <div className="fe-card__foot">
+                          <span className="fe-card__amount">{formatCurrency(item.amount)}</span>
+                          {/* stopPropagation: tocar "pagado" no debe abrir la edición. */}
+                          <button
+                            type="button"
+                            className={`fe-pay-toggle${item.paid_at ? " fe-pay-toggle--paid" : ""}`}
+                            disabled={busy}
+                            onClick={(e) => { e.stopPropagation(); togglePaid(item); }}
+                          >
+                            {item.paid_at
+                              ? `Pagado ${item.paid_at.slice(8, 10)}/${item.paid_at.slice(5, 7)}`
+                              : "Marcar pagado"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Se pierde el pie de la tabla, y el total es lo que más se busca. */}
+                <div className="fe-card-list__total">
+                  <span>Total {periodLabel(period)}</span>
+                  <strong>{formatCurrency(month.total)}</strong>
+                </div>
               </div>
             )}
 

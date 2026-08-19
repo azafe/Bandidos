@@ -942,11 +942,33 @@
 }
 
 /* Cards de gastos (Gastos Fijos) */
-.fe-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+/* Listado de un mes en móvil. Una sola columna: son ítems de una lista que se
+   recorre de arriba abajo, no una galería. */
+.fe-card-list {
+  flex-direction: column;
+  gap: 10px;
+  /* Oculta por defecto: en desktop manda la tabla. El media query de abajo la
+     enciende. Definir el display en un solo lugar evita depender del orden. */
+  display: none;
 }
+.fe-card-list__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 16px 4px;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  margin-top: 4px;
+}
+.fe-card-list__total span {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+.fe-card-list__total strong { font-size: 1.15rem; }
+
+/* Un gasto ya pagado se atenúa, igual que la fila de la tabla. */
+.fe-card--paid { opacity: 0.62; }
 
 .fe-card {
   border-radius: var(--radius-md);
@@ -958,7 +980,6 @@
   transition: box-shadow 0.15s, transform 0.15s;
 }
 .fe-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.10); transform: translateY(-1px); }
-.fe-card--inactive { opacity: 0.55; }
 
 .fe-card__accent {
   width: 5px;
@@ -987,22 +1008,6 @@
   line-height: 1.3;
 }
 
-.fe-card__status {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 99px;
-  background: var(--color-surface-alt, #f0f0f5);
-  color: var(--color-text-muted);
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.fe-card__status--active {
-  background: #dcfce7;
-  color: #15803d;
-}
-
 .fe-card__date-badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -1018,7 +1023,10 @@
 .fe-card__amount {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--fe-accent, var(--color-text));
+  /* Color neutro a propósito: si el monto tomara el color de la categoría,
+     un gasto impago de categoría "Servicios" saldría en verde y se leería
+     como pagado. La categoría ya la comunican la barra lateral y el badge. */
+  color: var(--color-text);
 }
 .fe-card__amount small {
   font-size: 0.75rem;
@@ -1879,11 +1887,13 @@
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.14));
-  background: transparent;
+  border: 1px solid var(--color-border, #d4d7e0);
+  background: var(--color-surface-alt, #f0f0f5);
   color: var(--color-text-muted, #8b94a9);
 }
+.fe-pay-toggle:hover:not(:disabled) { border-color: #22c55e; color: #16a34a; }
 .fe-pay-toggle--paid {
   border-color: rgba(34, 197, 94, 0.4);
   background: rgba(34, 197, 94, 0.12);
@@ -1891,9 +1901,28 @@
 }
 .fe-pay-toggle:disabled { opacity: 0.5; cursor: default; }
 
+/* La tabla manda en desktop: la columna de montos alineada y el total al pie
+   permiten leer "cuánto sumo este mes" de un vistazo. En móvil esa misma tabla
+   son seis columnas con scroll horizontal, así que ahí van cards. */
 @media (max-width: 720px) {
+  .fe-card-list { display: flex; }
+  .fe-table-wrap { display: none; }
+
   .fe-month-nav { width: 100%; justify-content: space-between; }
   .fe-table-header { flex-direction: column; align-items: stretch; }
+
+  .fe-card__body { gap: 4px; padding: 12px 14px; }
+  .fe-card__amount { font-size: 1.25rem; }
+  /* El monto y el botón en la misma fila: ahorra una línea por card, y con
+     siete gastos eso es una pantalla entera de scroll menos. */
+  .fe-card__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 2px;
+  }
+  .fe-card .fe-pay-toggle { padding: 7px 14px; }
 }
 
 /* Aviso en meses cuyos montos los completó la migración, no el usuario. */
