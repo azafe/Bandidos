@@ -375,12 +375,26 @@ export default function FixedExpensesPage() {
           </div>
 
           <div className="card" style={{ marginTop: 16 }}>
+            {/* Meses que la migración completó con los montos actuales: son
+                estimaciones, no lo que se pagó. Decirlo es la diferencia entre
+                un dato y un número inventado. */}
+            {month.source === "backfill" && (
+              <div className="fe-backfill-warning">
+                <strong>Montos estimados</strong>
+                Al migrar, este mes se completó con los montos <em>actuales</em> de
+                cada gasto, porque el sistema anterior no guardaba el histórico.
+                Si sabés lo que se pagó realmente en {periodLabel(period)},
+                corregilo acá: los demás meses no se tocan.
+              </div>
+            )}
+
             <div className="fe-table-header">
               <div>
                 <h2 className="card-title">Lista de {periodLabel(period)}</h2>
                 <p className="card-subtitle">
                   {month.source === "copy" && "Copiada del mes anterior. "}
                   {month.source === "seed" && "Sembrada desde los gastos vigentes. "}
+                  {month.source === "backfill" && "Completada al migrar. "}
                   Tocá un ítem para editarlo.
                 </p>
               </div>

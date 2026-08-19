@@ -1895,3 +1895,20 @@
   .fe-month-nav { width: 100%; justify-content: space-between; }
   .fe-table-header { flex-direction: column; align-items: stretch; }
 }
+
+/* Aviso en meses cuyos montos los completó la migración, no el usuario. */
+.fe-backfill-warning {
+  display: block;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  background: rgba(249, 115, 22, 0.1);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.fe-backfill-warning strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #fb923c;
+}
