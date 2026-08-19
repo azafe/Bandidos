@@ -90,6 +90,8 @@ function normalizeService(service) {
     id: service.id,
     date: service.date || service.created_at || service.createdAt,
     amount,
+    status: service.status || "",
+    groomerId: service.groomer_id || service.groomerId || service.groomer?.id || null,
     petName: service.dogName || service.pet_name || service.pet?.name || "",
     customerName:
       service.owner_name || service.ownerName || service.customer?.name || "",
@@ -134,21 +136,13 @@ function isActiveFixed(expense) {
   return expense.status === "active" || expense.status === "Activo";
 }
 
-function fixedExpenseOccurrences(fixedExpenses, rangeDays) {
-  const totalsByDate = new Map();
-  fixedExpenses.forEach((expense) => {
-    if (!isActiveFixed(expense) || !expense.dueDay) return;
-    rangeDays.forEach((day) => {
-      if (day.getDate() === expense.dueDay) {
-        const key = formatDateKey(day);
-        totalsByDate.set(key, (totalsByDate.get(key) || 0) + expense.amount);
-      }
-    });
-  });
-  return totalsByDate;
+function monthLabel(periodKey) {
+  const parsed = parseDateValue(periodKey);
+  if (!parsed) return periodKey;
+  return parsed.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 }
 
-function buildAlerts({ profit, income, expenses }, fixedExpenses, rangeEnd) {
+function buildAlerts({ profit, income, expenses }, accrual, rangeEnd) {
   const alerts = [];
   if (profit < 0) {
     alerts.push({
@@ -166,28 +160,74 @@ function buildAlerts({ profit, income, expenses }, fixedExpenses, rangeEnd) {
   }
   const endDate = parseDateValue(rangeEnd);
   if (endDate) {
-    const upcoming = fixedExpenses.filter((expense) => {
-      if (!isActiveFixed(expense) || !expense.dueDay) return false;
-      const dueDate = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        expense.dueDay
-      );
+    // Vencimientos reales tomados de los cargos: ya vienen con el día ajustado
+    // al último día del mes cuando corresponde, y sabemos cuáles están impagos.
+    const upcoming = (accrual?.charges || []).filter((charge) => {
+      if (charge.paid_at) return false;
+      const dueDate = parseDateValue(charge.due_date);
+      if (!dueDate) return false;
       const diff = (dueDate - endDate) / (1000 * 60 * 60 * 24);
       return diff >= 0 && diff <= 7;
     });
     if (upcoming.length > 0) {
+      const total = upcoming.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
       alerts.push({
         tone: "warning",
         title: "Gastos fijos próximos",
-        description: `${upcoming.length} gasto(s) fijo(s) vencen en la próxima semana.`,
+        description: `${upcoming.length} gasto(s) fijo(s) vencen en la próxima semana por $${Math.round(total).toLocaleString("es-AR")}.`,
       });
     }
+  }
+
+  // Un mes sin armar no tiene gastos fijos cargados, y eso NO es lo mismo que
+  // no tener costos: el profit y el margen del rango salen inflados. Hay que
+  // decirlo, porque el cero se lee como un dato y en realidad es un faltante.
+  const unarmed = accrual?.unarmed_periods || [];
+  if (unarmed.length > 0) {
+    const nombres = unarmed.map(monthLabel).join(", ");
+    alerts.push({
+      tone: "danger",
+      title:
+        unarmed.length === 1
+          ? "Un mes sin gastos fijos cargados"
+          : `${unarmed.length} meses sin gastos fijos cargados`,
+      description: `${nombres}: falta armar la lista. Hasta que la cargues, el profit y el margen de este período están incompletos.`,
+    });
   }
   return alerts;
 }
 
-const GROOMER_COMMISSION_RATE = 0.40;
+// Tasa por defecto cuando el empleado no tiene una cargada. Es el 0.40 que
+// antes estaba hardcodeado y se aplicaba por igual a todos, así que sin datos
+// nuevos el número no cambia.
+const DEFAULT_COMMISSION_RATE = 0.40;
+
+// Solo los turnos finalizados son ingreso realizado. Antes no se miraba el
+// status, así que los cancelados y las reservas futuras se contaban como
+// facturación — e inflaban de paso la comisión, el ticket promedio y el margen.
+function isRealizedService(service) {
+  return service.status === "finished";
+}
+
+function buildCommissionRates(employees) {
+  const rates = new Map();
+  (employees || []).forEach((employee) => {
+    const rate = Number(
+      employee.commission_rate ?? employee.commissionRate ?? DEFAULT_COMMISSION_RATE
+    );
+    rates.set(String(employee.id), Number.isFinite(rate) ? rate : DEFAULT_COMMISSION_RATE);
+  });
+  return rates;
+}
+
+// Comisión real: la tasa de cada peluquero sobre lo que facturó cada uno, en
+// vez de un porcentaje plano sobre el total.
+function commissionFor(services, rates) {
+  return services.reduce((total, service) => {
+    const rate = rates.get(String(service.groomerId));
+    return total + service.amount * (rate === undefined ? DEFAULT_COMMISSION_RATE : rate);
+  }, 0);
+}
 
 function normalizePetshopSale(sale) {
   return {
@@ -218,9 +258,11 @@ export function buildDashboardMetrics({
   categories,
 }) {
   const rangeDays = buildDateRange(range.from, range.to);
+  const commissionRates = buildCommissionRates(current.employees);
   const services = current.services
     .map(normalizeService)
-    .filter((service) => inRange(service.date, range));
+    .filter((service) => inRange(service.date, range))
+    .filter(isRealizedService);
   const dailyExpenses = current.dailyExpenses
     .map(normalizeExpense)
     .filter((expense) => inRange(expense.date, range));
@@ -229,15 +271,26 @@ export function buildDashboardMetrics({
     .map(normalizePetshopSale)
     .filter((sale) => inRange(sale.date, range));
 
-  const fixedByDate = fixedExpenseOccurrences(fixedExpenses, rangeDays);
+  // Devengado del período, calculado por el backend a partir de los cargos
+  // mensuales. Antes acá se imputaba el total mensual COMPLETO a cualquier
+  // rango: un día cargaba un mes entero de alquiler y un trimestre cargaba uno
+  // solo. `fixedByDate` viene del mismo devengado, así que la serie diaria y el
+  // KPI ya no pueden discrepar.
+  const accrual = current.fixedAccrual || null;
+  const fixedByDate = new Map(
+    (accrual?.by_day || []).map((entry) => [entry.date, Number(entry.amount) || 0])
+  );
   const servicesIncome = sumBy(services, (service) => service.amount);
   const petshopIncome = sumBy(petshopSales, (sale) => sale.amount);
   const income = servicesIncome + petshopIncome;
   const dailyExpenseTotal = sumBy(dailyExpenses, (expense) => expense.amount);
-  // Usamos el total mensual completo de gastos fijos activos (no solo los que vencieron en el rango)
-  // para que coincida con lo que muestra la página de Gastos Fijos.
-  const fixedExpenseTotal = sumBy(fixedExpenses.filter(isActiveFixed), (e) => e.amount);
-  const groomerCommissions = servicesIncome * GROOMER_COMMISSION_RATE;
+  const fixedExpenseTotal = Number(accrual?.accrued_total ?? 0);
+  // Run-rate: lo que cuesta un mes completo. Es otro número que el devengado
+  // del período y hay que mostrarlo como tal.
+  const fixedMonthlyRunRate = Number(
+    accrual?.monthly_total ?? sumBy(fixedExpenses.filter(isActiveFixed), (e) => e.amount)
+  );
+  const groomerCommissions = commissionFor(services, commissionRates);
   const expenses = dailyExpenseTotal + fixedExpenseTotal;
   const totalCosts = expenses + groomerCommissions;
   const profit = income - totalCosts;
@@ -263,7 +316,10 @@ export function buildDashboardMetrics({
       (expense) => expense.amount
     );
     const fixedExpense = fixedByDate.get(key) || 0;
-    const dailyCommissions = dailyServicesIncome * GROOMER_COMMISSION_RATE;
+    const dailyCommissions = commissionFor(
+      services.filter((service) => formatDateKey(parseDateValue(service.date)) === key),
+      commissionRates
+    );
     const expenseTotal = dailyExpense + fixedExpense + dailyCommissions;
     return {
       date: key,
@@ -383,11 +439,7 @@ export function buildDashboardMetrics({
     })
     .slice(0, 10);
 
-  const alerts = buildAlerts(
-    { profit, income, expenses },
-    fixedExpenses,
-    range.to
-  );
+  const alerts = buildAlerts({ profit, income, expenses }, accrual, range.to);
 
   return {
     range: { ...range, label: range.label },
@@ -398,6 +450,9 @@ export function buildDashboardMetrics({
       expenses,
       dailyExpenseTotal,
       fixedExpenseTotal,
+      fixedMonthlyRunRate,
+      fixedUnpaid: accrual?.unpaid || { count: 0, total: 0 },
+      fixedUnarmedPeriods: accrual?.unarmed_periods || [],
       totalCosts,
       groomerCommissions,
       profit,
