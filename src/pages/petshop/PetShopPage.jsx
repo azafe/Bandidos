@@ -38,6 +38,10 @@ function formatDateLabel(dateKey) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+// Clave del grupo "ventas sin vendedor cargado". Necesita un valor propio:
+// con "" el filtro no se distinguiria de "todos los vendedores".
+const NO_STYLIST = "__none__";
+
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   if (Number.isNaN(num)) return fallback;
@@ -46,6 +50,8 @@ function toNumber(value, fallback = 0) {
 
 export default function PetShopPage() {
   const [activeTab, setActiveTab] = useState("sales");
+  // "" = todos los vendedores; NO_STYLIST = solo las ventas sin vendedor cargado.
+  const [stylistFilter, setStylistFilter] = useState("");
   const [productSearch, setProductSearch] = useState("");
   const [productSort, setProductSort] = useState({ col: "name", dir: "asc" });
   const [showOnlyCritical, setShowOnlyCritical] = useState(false);
@@ -156,8 +162,14 @@ export default function PetShopPage() {
   const saleSubmitDisabled =
     saleSubmitting || !saleForm.payment_method_id || !saleForm.stylist_id || saleHasInvalidItems;
 
+  const visibleSales = useMemo(() => {
+    if (!stylistFilter) return sales;
+    if (stylistFilter === NO_STYLIST) return sales.filter((sale) => !sale.stylist_id);
+    return sales.filter((sale) => String(sale.stylist_id || "") === stylistFilter);
+  }, [sales, stylistFilter]);
+
   const salesByDay = useMemo(() => {
-    const sorted = [...sales].sort((a, b) =>
+    const sorted = [...visibleSales].sort((a, b) =>
       String(b.date || "").localeCompare(String(a.date || ""))
     );
     const map = new Map();
@@ -172,7 +184,7 @@ export default function PetShopPage() {
       total: items.reduce((sum, sale) => sum + toNumber(sale.total), 0),
       items,
     }));
-  }, [sales]);
+  }, [visibleSales]);
 
   const salesCount = sales.length;
   const salesRevenue = sales.reduce((sum, sale) => sum + toNumber(sale.total), 0);
@@ -224,6 +236,28 @@ export default function PetShopPage() {
     });
     return Array.from(map.values()).sort((a, b) => b.total - a.total);
   }, [sales, paymentMethods]);
+
+  const salesByStylist = useMemo(() => {
+    const map = new Map();
+    sales.forEach((sale) => {
+      const key = sale.stylist_id ? String(sale.stylist_id) : NO_STYLIST;
+      if (!map.has(key)) {
+        const employee = allEmployees.find((e) => String(e.id) === key);
+        map.set(key, {
+          id: key,
+          label:
+            employee?.name ||
+            (key === NO_STYLIST ? "Sin vendedor" : "Vendedor eliminado"),
+          total: 0,
+          count: 0,
+        });
+      }
+      const entry = map.get(key);
+      entry.total += toNumber(sale.total);
+      entry.count += 1;
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }, [sales, allEmployees]);
 
   function toggleSort(col) {
     setProductSort((prev) =>
@@ -1165,11 +1199,82 @@ export default function PetShopPage() {
           </div>
 
           <div className="card">
+            <h2 className="card-title">Por vendedor</h2>
+            <p className="card-subtitle">
+              {formatDateLabel(salesFilters.from)} → {formatDateLabel(salesFilters.to)}
+              {" · "}Tocá una fila para ver solo sus ventas.
+            </p>
+            {salesLoading ? (
+              <div className="card-subtitle">Cargando...</div>
+            ) : salesByStylist.length === 0 ? (
+              <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
+                Sin ventas en este período.
+              </div>
+            ) : (
+              <div className="petshop-cierre-methods">
+                {salesByStylist.map((entry) => {
+                  const isActive = stylistFilter === entry.id;
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className={`petshop-cierre-method-row petshop-cierre-method-row--button${
+                        isActive ? " is-active" : ""
+                      }`}
+                      onClick={() =>
+                        setStylistFilter((prev) => (prev === entry.id ? "" : entry.id))
+                      }
+                    >
+                      <span className="petshop-cierre-method-row__label">{entry.label}</span>
+                      <span className="petshop-cierre-method-row__count">
+                        {entry.count} {entry.count === 1 ? "venta" : "ventas"}
+                      </span>
+                      <span className="petshop-cierre-method-row__divider" />
+                      <span className="petshop-cierre-method-row__total petshop-amount">
+                        {formatCurrency(entry.total)}
+                      </span>
+                    </button>
+                  );
+                })}
+                {salesByStylist.length > 1 && (
+                  <div className="petshop-cierre-method-row petshop-cierre-method-row--total">
+                    <span className="petshop-cierre-method-row__label">Total</span>
+                    <span className="petshop-cierre-method-row__count">{salesCount} ventas</span>
+                    <span className="petshop-cierre-method-row__divider" />
+                    <span className="petshop-cierre-method-row__total petshop-amount">
+                      {formatCurrency(salesRevenue)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="card">
             <h2 className="card-title">Ventas del período</h2>
             <p className="card-subtitle">
               {formatDateLabel(salesFilters.from)} → {formatDateLabel(salesFilters.to)}
               {" · "}{salesCount} {salesCount === 1 ? "venta" : "ventas"}
             </p>
+            {stylistFilter && (
+              <div className="petshop-active-filter">
+                <span>
+                  Mostrando solo las ventas de{" "}
+                  <strong>
+                    {stylistFilter === NO_STYLIST
+                      ? "ventas sin vendedor cargado"
+                      : formatStylist(stylistFilter)}
+                  </strong>
+                </span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setStylistFilter("")}
+                >
+                  Ver todas
+                </button>
+              </div>
+            )}
             {salesError && <div className="petshop-error">{salesError}</div>}
             {salesLoading ? (
               <div className="card-subtitle">Cargando ventas...</div>
@@ -1234,6 +1339,9 @@ export default function PetShopPage() {
                                 {isTestSale && (
                                   <span className="service-badge service-badge--muted" style={{ marginLeft: 6 }}>prueba</span>
                                 )}
+                              </td>
+                              <td className="petshop-sales-table__stylist">
+                                {formatStylist(sale.stylist_id)}
                               </td>
                               <td className="petshop-sales-table__method">
                                 {formatPaymentMethod(sale.payment_method_id)}

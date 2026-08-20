@@ -27,7 +27,8 @@ function petInitial(name) {
 }
 
 export default function PetsPage() {
-  const [filters, setFilters] = useState({ q: "" });
+  const [filters, setFilters] = useState({ q: "", archived: "" });
+  const showingArchived = filters.archived === "only";
   const [page, setPage] = useState(1);
   const {
     items: pets,
@@ -47,7 +48,12 @@ export default function PetsPage() {
   );
 
   function handleFilterChange(q) {
-    setFilters({ q });
+    setFilters((prev) => ({ ...prev, q }));
+    setPage(1);
+  }
+
+  function toggleArchivedView() {
+    setFilters((prev) => ({ ...prev, archived: prev.archived === "only" ? "" : "only" }));
     setPage(1);
   }
 
@@ -134,12 +140,45 @@ export default function PetsPage() {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("¿Eliminar esta mascota?")) return false;
+    if (
+      !window.confirm(
+        "¿Eliminar esta mascota para siempre?\n\nSi tiene servicios registrados no se va a poder: en ese caso archivala."
+      )
+    )
+      return false;
     try {
       await deleteItem(id);
       return true;
     } catch (err) {
       alert(err.message || "No se pudo eliminar la mascota.");
+      return false;
+    }
+  }
+
+  async function handleArchive(id) {
+    if (
+      !window.confirm(
+        "¿Archivar esta mascota?\n\nDeja de aparecer en las listas y búsquedas, pero se conserva su ficha y todo el historial de servicios."
+      )
+    )
+      return false;
+    try {
+      await apiRequest(`/v2/pets/${id}/archive`, { method: "POST" });
+      await refresh();
+      return true;
+    } catch (err) {
+      alert(err.message || "No se pudo archivar la mascota.");
+      return false;
+    }
+  }
+
+  async function handleUnarchive(id) {
+    try {
+      await apiRequest(`/v2/pets/${id}/unarchive`, { method: "POST" });
+      await refresh();
+      return true;
+    } catch (err) {
+      alert(err.message || "No se pudo restaurar la mascota.");
       return false;
     }
   }
@@ -199,7 +238,11 @@ export default function PetsPage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Mascotas</h1>
-          <p className="page-subtitle">Registro de perros y datos básicos.</p>
+          <p className="page-subtitle">
+            {showingArchived
+              ? "Mascotas archivadas. Conservan su ficha y su historial."
+              : "Registro de perros y datos básicos."}
+          </p>
         </div>
         <div className="fixed-expenses-header-actions">
           <input
@@ -209,6 +252,13 @@ export default function PetsPage() {
             onChange={(e) => handleFilterChange(e.target.value)}
             className="pets-search-input"
           />
+          <button
+            type="button"
+            className={`btn-secondary${showingArchived ? " is-active" : ""}`}
+            onClick={toggleArchivedView}
+          >
+            {showingArchived ? "Ver activas" : "Ver archivadas"}
+          </button>
           <button
             type="button"
             className="btn-primary"
@@ -560,19 +610,44 @@ export default function PetsPage() {
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="btn-danger"
-                    disabled={!isAdmin}
-                    title={isAdmin ? "Eliminar mascota" : "Solo administradores pueden eliminar"}
-                    onClick={async () => {
-                      if (!isAdmin) return;
-                      const removed = await handleDelete(selectedPet.id);
-                      if (removed) closeModal();
-                    }}
-                  >
-                    Eliminar
-                  </button>
+                  {selectedPet.archived_at ? (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      title="Volver a mostrar la mascota en las listas"
+                      onClick={async () => {
+                        const restored = await handleUnarchive(selectedPet.id);
+                        if (restored) closeModal();
+                      }}
+                    >
+                      Restaurar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      title="Sacarla de las listas conservando su historial"
+                      onClick={async () => {
+                        const archived = await handleArchive(selectedPet.id);
+                        if (archived) closeModal();
+                      }}
+                    >
+                      Archivar
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      className="btn-danger"
+                      title="Eliminar definitivamente (solo si no tiene servicios registrados)"
+                      onClick={async () => {
+                        const removed = await handleDelete(selectedPet.id);
+                        if (removed) closeModal();
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  )}
                   <Link to={`/pets/${selectedPet.id}`} className="btn-secondary" onClick={closeModal}>
                     Ver ficha
                   </Link>
