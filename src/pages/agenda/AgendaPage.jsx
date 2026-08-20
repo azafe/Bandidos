@@ -47,7 +47,10 @@ const CALENDAR_VIEWS = [
 ];
 const CALENDAR_VIEW_KEY = "bandidos_agenda_calendar_view";
 
-const DEFAULT_GROOMER_COMMISSION = 40;
+// La comision se guarda como FRACCION en la base (commission_rate numeric(5,4),
+// CHECK entre 0 y 1). 0.40 = 40%. Antes esta constante era 40 y se dividia por
+// 100 al liquidar, asi que el 0.40 que devuelve la base se pagaba como 0,4%.
+const DEFAULT_GROOMER_COMMISSION = 0.40;
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 150];
 const DURATION_LABELS = { 15: "15 min", 30: "30 min", 45: "45 min", 60: "1 h", 90: "1 h 30", 120: "2 h", 150: "2 h 30" };
 const CUSTOM_DURATION_OPTION = "other";
@@ -337,7 +340,17 @@ function getEmployeeCommissionRate(employee) {
     DEFAULT_GROOMER_COMMISSION;
   const rate = Number(raw);
   if (!Number.isFinite(rate)) return DEFAULT_GROOMER_COMMISSION;
-  return Math.max(0, Math.min(100, rate));
+  // Un valor > 1 solo puede venir cargado como porcentaje (40 en vez de 0.40):
+  // lo pasamos a fraccion en vez de liquidar 40 veces la facturacion.
+  const asFraction = rate > 1 ? rate / 100 : rate;
+  return Math.max(0, Math.min(1, asFraction));
+}
+
+// La tasa viaja como fraccion; para mostrarla hay que llevarla a porcentaje.
+function formatCommissionRate(rate) {
+  const pct = Number(rate || 0) * 100;
+  const rounded = Math.round(pct * 10) / 10;
+  return `${rounded.toLocaleString("es-AR")}%`;
 }
 
 function getServiceName(turno, serviceTypes) {
@@ -680,7 +693,7 @@ export default function AgendaPage() {
         completionRate: row.scheduledCount
           ? Math.round((row.finishedCount / row.scheduledCount) * 100)
           : 0,
-        payout: row.finishedIncome * (row.commissionRate / 100),
+        payout: row.finishedIncome * row.commissionRate,
       }))
       .sort((a, b) => b.payout - a.payout || b.finishedIncome - a.finishedIncome);
   }, [closeFilteredTurnos, employeesById, getServicePrice]);
@@ -1907,6 +1920,17 @@ export default function AgendaPage() {
                   {formatCurrency(closeLiquidationTotals.payout)}
                 </strong>
               </article>
+              <article className="agenda-close-kpi agenda-close-kpi--net">
+                <span className="agenda-close-kpi__label">Neto tras comisión</span>
+                <strong className="agenda-close-kpi__value">
+                  {formatCurrency(
+                    closeSummary.finishedIncome - closeLiquidationTotals.payout
+                  )}
+                </strong>
+                <span className="agenda-close-kpi__hint">
+                  Todavía sin descontar gastos del día.
+                </span>
+              </article>
             </div>
 
             {closeSummary.byPaymentMethod.length > 0 && (
@@ -1957,7 +1981,8 @@ export default function AgendaPage() {
                 <h2 className="card-title">Liquidación por groomer</h2>
                 <p className="card-subtitle">
                   {formatDateDisplay(selectedDate)} · Comisión por defecto{" "}
-                  {DEFAULT_GROOMER_COMMISSION}% si no hay valor definido en empleados.
+                  {formatCommissionRate(DEFAULT_GROOMER_COMMISSION)} si no hay valor definido en
+                  empleados.
                 </p>
               </div>
               <div className="agenda-close-toolbar">
@@ -2052,7 +2077,7 @@ export default function AgendaPage() {
                         <td>{row.finishedCount}</td>
                         <td>{row.completionRate}%</td>
                         <td>{formatCurrency(row.finishedIncome)}</td>
-                        <td>{row.commissionRate}%</td>
+                        <td>{formatCommissionRate(row.commissionRate)}</td>
                         <td className="agenda-close-table__amount">
                           {formatCurrency(row.payout)}
                         </td>
@@ -2093,7 +2118,7 @@ export default function AgendaPage() {
                 <strong>{selectedCloseRow.groomerName}</strong>
                 <span>
                   {formatCurrency(selectedCloseRow.finishedIncome)} ×{" "}
-                  {selectedCloseRow.commissionRate}% ={" "}
+                  {formatCommissionRate(selectedCloseRow.commissionRate)} ={" "}
                   {formatCurrency(selectedCloseRow.payout)}
                 </span>
               </div>

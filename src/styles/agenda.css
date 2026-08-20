@@ -286,6 +286,17 @@
   background: rgba(79, 70, 229, 0.08);
 }
 
+.agenda-close-kpi--net {
+  border-color: rgba(22, 163, 74, 0.32);
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.agenda-close-kpi__hint {
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.25;
+}
+
 .agenda-close-kpi--pending {
   border-color: rgba(217, 119, 6, 0.25);
   background: rgba(245, 158, 11, 0.12);

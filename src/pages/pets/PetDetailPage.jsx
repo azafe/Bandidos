@@ -1,6 +1,6 @@
 // src/pages/pets/PetDetailPage.jsx
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
@@ -144,6 +144,34 @@ export default function PetDetailPage() {
     return () => { active = false; };
   }, [id]);
 
+  const navigate = useNavigate();
+  const [archiving, setArchiving] = useState(false);
+
+  async function handleArchiveToggle() {
+    if (!pet) return;
+    const isArchived = Boolean(pet.archived_at);
+    if (
+      !isArchived &&
+      !window.confirm(
+        "¿Archivar esta mascota?\n\nDeja de aparecer en las listas y búsquedas, pero se conserva su ficha y todo el historial de servicios."
+      )
+    )
+      return;
+    try {
+      setArchiving(true);
+      const updated = await apiRequest(
+        `/v2/pets/${pet.id}/${isArchived ? "unarchive" : "archive"}`,
+        { method: "POST" }
+      );
+      setPet((prev) => (prev ? { ...prev, ...updated } : prev));
+      if (!isArchived) navigate("/pets");
+    } catch (err) {
+      alert(err.message || "No se pudo actualizar la mascota.");
+    } finally {
+      setArchiving(false);
+    }
+  }
+
   function resolveGroomer(s) {
     return s.groomer?.name || employeesById.get(String(s.groomer_id))?.name || null;
   }
@@ -167,9 +195,30 @@ export default function PetDetailPage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Ficha de mascota</h1>
-          <p className="page-subtitle">Información general e historial de servicios.</p>
+          <p className="page-subtitle">
+            {pet?.archived_at
+              ? "Mascota archivada · no aparece en las listas, pero conserva su historial."
+              : "Información general e historial de servicios."}
+          </p>
         </div>
-        <Link to="/pets" className="btn-secondary">← Volver</Link>
+        <div className="fixed-expenses-header-actions">
+          {pet && (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={archiving}
+              onClick={handleArchiveToggle}
+              title={
+                pet.archived_at
+                  ? "Volver a mostrarla en las listas"
+                  : "Sacarla de las listas conservando su historial"
+              }
+            >
+              {pet.archived_at ? "Restaurar" : "Archivar"}
+            </button>
+          )}
+          <Link to="/pets" className="btn-secondary">← Volver</Link>
+        </div>
       </header>
 
       {error && <div className="card" style={{ color: "#f37b7b" }}>{error}</div>}

@@ -209,13 +209,23 @@ function isRealizedService(service) {
   return service.status === "finished";
 }
 
+function normalizeCommissionRate(value) {
+  const rate = Number(value);
+  if (!Number.isFinite(rate)) return DEFAULT_COMMISSION_RATE;
+  // Un valor > 1 solo puede venir cargado como porcentaje (40 en vez de 0.40).
+  const asFraction = rate > 1 ? rate / 100 : rate;
+  return Math.max(0, Math.min(1, asFraction));
+}
+
 function buildCommissionRates(employees) {
   const rates = new Map();
   (employees || []).forEach((employee) => {
-    const rate = Number(
-      employee.commission_rate ?? employee.commissionRate ?? DEFAULT_COMMISSION_RATE
+    rates.set(
+      String(employee.id),
+      normalizeCommissionRate(
+        employee.commission_rate ?? employee.commissionRate ?? DEFAULT_COMMISSION_RATE
+      )
     );
-    rates.set(String(employee.id), Number.isFinite(rate) ? rate : DEFAULT_COMMISSION_RATE);
   });
   return rates;
 }
@@ -291,8 +301,12 @@ export function buildDashboardMetrics({
     accrual?.monthly_total ?? sumBy(fixedExpenses.filter(isActiveFixed), (e) => e.amount)
   );
   const groomerCommissions = commissionFor(services, commissionRates);
-  const expenses = dailyExpenseTotal + fixedExpenseTotal;
-  const totalCosts = expenses + groomerCommissions;
+  // La comision del groomer es un costo real del periodo: va adentro de
+  // "gastos". Antes quedaba afuera de este total (solo entraba en totalCosts),
+  // asi que el KPI de gastos mostraba un numero mas chico que el real.
+  const registeredExpenses = dailyExpenseTotal + fixedExpenseTotal;
+  const expenses = registeredExpenses + groomerCommissions;
+  const totalCosts = expenses;
   const profit = income - totalCosts;
   const margin = income > 0 ? profit / income : 0;
   const servicesCount = services.length;

@@ -988,6 +988,48 @@
   white-space: nowrap;
 }
 
+/* Las filas del corte por vendedor son botones: filtran el listado de abajo. */
+.petshop-cierre-method-row--button {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border-soft);
+  border-radius: 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.petshop-cierre-method-row--button:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
+
+.petshop-cierre-method-row--button.is-active {
+  background: rgba(79, 70, 229, 0.1);
+  border-bottom-color: rgba(79, 70, 229, 0.3);
+}
+
+.petshop-active-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(79, 70, 229, 0.08);
+  font-size: 0.82rem;
+}
+
+.petshop-sales-table__stylist {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-text-soft);
+}
+
 .petshop-cierre-method-row--total {
   margin-top: 4px;
   padding-top: 10px;
