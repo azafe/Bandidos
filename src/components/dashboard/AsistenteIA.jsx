@@ -257,28 +257,10 @@ ${productLines}
 === FIN DE DATOS ===`;
 }
 
-// --- Contador de consultas con reset mensual ---
+// El límite de consultas mensuales lo aplica el backend (POST
+// /v2/assistant/messages), que es quien de verdad llama a Anthropic. Acá solo
+// mostramos el `queriesLeft` que devuelve cada respuesta.
 const QUERY_LIMIT = 20;
-
-function getQueryStorageKey() {
-  const now = new Date();
-  return `bandidos_ai_queries_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getQueriesUsed() {
-  return Number(localStorage.getItem(getQueryStorageKey()) || 0);
-}
-
-function incrementQueriesUsed() {
-  const key = getQueryStorageKey();
-  const current = Number(localStorage.getItem(key) || 0);
-  localStorage.setItem(key, String(current + 1));
-  return current + 1;
-}
-
-function getQueriesLeft() {
-  return Math.max(0, QUERY_LIMIT - getQueriesUsed());
-}
 
 // --- Sugerencias rápidas ---
 const QUICK_SUGGESTIONS = [
@@ -319,7 +301,9 @@ export default function AsistenteIA() {
   const [isLoadingContext, setIsLoadingContext] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(null);
   const [contextError, setContextError] = useState(null);
-  const [queriesLeft, setQueriesLeft] = useState(() => getQueriesLeft());
+  // Optimista hasta la primera respuesta del backend, que es quien sabe el
+  // valor real (ver /v2/assistant/messages).
+  const [queriesLeft, setQueriesLeft] = useState(QUERY_LIMIT);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -385,7 +369,7 @@ export default function AsistenteIA() {
             normalize(futureAgendaRaw)
           )
         );
-      } catch (err) {
+      } catch {
         const fallback =
           "Sos el asistente de Bandidos Peluquería Canina. Los datos del negocio no pudieron cargarse. Respondé en español argentino e informá al usuario que los datos no están disponibles en este momento.";
         setSystemPrompt(fallback);
@@ -409,44 +393,25 @@ export default function AsistenteIA() {
     setIsLoading(true);
 
     try {
-      // Nota: VITE_ANTHROPIC_API_KEY queda expuesta en el bundle del cliente.
-      // Para producción, considerar mover la llamada a un proxy en el backend.
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-      if (!apiKey) {
-        throw new Error("La variable VITE_ANTHROPIC_API_KEY no está configurada.");
-      }
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const data = await apiRequest("/v2/assistant/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1024,
-          system: systemPrompt,
-          messages: updatedMessages,
-        }),
+        body: { system: systemPrompt, messages: updatedMessages },
       });
-
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody?.error?.message || `Error HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
-      const reply = data.content?.[0]?.text || "No pude generar una respuesta.";
-      const newLeft = QUERY_LIMIT - incrementQueriesUsed();
-      setQueriesLeft(Math.max(0, newLeft));
-      setMessages([...updatedMessages, { role: "assistant", content: reply }]);
-    } catch (err) {
+      setQueriesLeft(data?.queriesLeft ?? 0);
       setMessages([
         ...updatedMessages,
-        { role: "assistant", content: `Hubo un error: ${err.message}` },
+        { role: "assistant", content: data?.reply || "No pude generar una respuesta." },
       ]);
+    } catch (err) {
+      if (err?.status === 429) {
+        setQueriesLeft(err.payload?.queriesLeft ?? 0);
+        setMessages(updatedMessages);
+      } else {
+        setMessages([
+          ...updatedMessages,
+          { role: "assistant", content: `Hubo un error: ${err.message}` },
+        ]);
+      }
     } finally {
       setIsLoading(false);
     }

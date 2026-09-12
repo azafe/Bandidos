@@ -1,14 +1,28 @@
 // src/pages/auth/ResetPasswordPage.jsx
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { publicRequest } from "../../services/apiClient";
+import "./login.css";
+
+function IconLock() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="login-input__icon">
+      <path
+        d="M8.75 8V6.75a3.25 3.25 0 0 1 6.5 0V8h1.5A1.75 1.75 0 0 1 18.5 9.75v7.5A1.75 1.75 0 0 1 16.75 19h-9.5A1.75 1.75 0 0 1 5.5 17.25v-7.5A1.75 1.75 0 0 1 7.25 8h1.5zm1.5 0h3.5V6.75a1.75 1.75 0 0 0-3.5 0V8z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 export default function ResetPasswordPage() {
   const [form, setForm] = useState({ password: "", confirm: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const email = params.get("email");
+  const token = new URLSearchParams(location.search).get("token");
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -18,110 +32,121 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.password || !form.confirm) {
-      alert("Completá ambos campos.");
+      setError("Completá ambos campos.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
     if (form.password !== form.confirm) {
-      alert("Las contraseñas no coinciden.");
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
+    setError(null);
     try {
       setSubmitting(true);
-      // TODO: reemplazar por llamada real al backend de reseteo.
-      alert("Contraseña actualizada.");
-      navigate("/login");
+      await publicRequest("/auth/reset-password", {
+        method: "POST",
+        body: { token, newPassword: form.password },
+      });
+      setDone(true);
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
+      if (err?.message === "Invalid or expired token") {
+        setError('Este link venció o ya fue usado. Pedí uno nuevo desde "Olvidé mi contraseña".');
+      } else if (err?.message === "Password does not meet requirements") {
+        setError("La contraseña debe tener al menos 8 caracteres.");
+      } else {
+        setError(err.message || "No pudimos actualizar la contraseña.");
+      }
     } finally {
       setSubmitting(false);
     }
   }
 
+  if (!token) {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-logo">
+            <div className="login-logo-default">🐾</div>
+          </div>
+          <h1 className="login-title">Link inválido</h1>
+          <p className="login-subtitle">
+            Este enlace de recuperación no es válido o está incompleto.
+          </p>
+          <div className="login-footer">
+            <Link to="/forgot-password">Pedir un nuevo link</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "radial-gradient(circle at top left, #262938, #111217 55%)",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          background: "#ffffff",
-          padding: "24px 28px",
-          borderRadius: "16px",
-          boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-          maxWidth: "380px",
-          width: "100%",
-        }}
-      >
-        <h1
-          style={{
-            fontFamily: "Fredoka, system-ui, sans-serif",
-            fontSize: "1.4rem",
-            marginBottom: "8px",
-          }}
-        >
-          Nueva contraseña
-        </h1>
-        <p style={{ fontSize: "0.9rem", marginBottom: "18px" }}>
-          {email ? `Restableciendo para ${email}` : "Elegí tu nueva contraseña."}
-        </p>
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-default">🐾</div>
+        </div>
+        <h1 className="login-title">Nueva contraseña</h1>
+        <p className="login-subtitle">{done ? "¡Listo!" : "Elegí tu nueva contraseña."}</p>
 
-        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
-            Nueva contraseña
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-              required
-            />
-          </label>
+        {error && <div className="login-error">{error}</div>}
 
-          <label style={{ fontSize: "0.85rem", color: "#333" }}>
-            Confirmar contraseña
-            <input
-              name="confirm"
-              type="password"
-              value={form.confirm}
-              onChange={handleChange}
-              placeholder="••••••••"
-              style={{
-                width: "100%",
-                marginTop: 6,
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-              }}
-              required
-            />
-          </label>
+        {done ? (
+          <div className="login-success">
+            Contraseña actualizada. Te llevamos al inicio de sesión...
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-field">
+              <label className="login-label" htmlFor="password">Nueva contraseña</label>
+              <div className="login-input">
+                <IconLock />
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={submitting}
-          >
-            {submitting ? "Guardando..." : "Actualizar contraseña"}
-          </button>
-        </form>
+            <div className="login-field">
+              <label className="login-label" htmlFor="confirm">Confirmar contraseña</label>
+              <div className="login-input">
+                <IconLock />
+                <input
+                  id="confirm"
+                  name="confirm"
+                  type="password"
+                  value={form.confirm}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+              </div>
+            </div>
 
-        <div style={{ marginTop: 12 }}>
-          <Link to="/login" style={{ fontSize: "0.85rem", color: "#4a4a4a" }}>
-            Volver al inicio de sesión
-          </Link>
+            <button type="submit" className="login-button" disabled={submitting}>
+              {submitting && <span className="login-spinner" aria-hidden="true" />}
+              {submitting ? "Guardando..." : "Actualizar contraseña"}
+            </button>
+          </form>
+        )}
+
+        <div className="login-footer">
+          <Link to="/login">Volver al inicio de sesión</Link>
         </div>
       </div>
     </div>
