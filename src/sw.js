@@ -1,8 +1,16 @@
+import { clientsClaim } from "workbox-core";
 import { precacheAndRoute } from "workbox-precaching";
 import { registerRoute } from "workbox-routing";
 import { CacheFirst } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
+
+// Sin esto, un service worker nuevo instalado queda "esperando" hasta que se
+// cierren TODAS las pestañas de la app — un simple refresh no alcanza, así
+// que un deploy (incluido este mismo) puede no llegarle a alguien que ya
+// tenía la app abierta.
+self.skipWaiting();
+clientsClaim();
 
 precacheAndRoute(self.__WB_MANIFEST);
 
