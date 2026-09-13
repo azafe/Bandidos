@@ -202,7 +202,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </NavLink>
             )}
 
-            {isEnabled("suppliers") && (
+            {isEnabled("suppliers") && user?.role !== "staff" && (
               <NavLink
                 to="/suppliers"
                 className={({ isActive }) => makeClassName(isActive)}
@@ -242,7 +242,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </>
             )}
 
-            {isEnabled("employees") && (
+            {isEnabled("employees") && user?.role !== "staff" && (
               <NavLink
                 to="/employees"
                 className={({ isActive }) => makeClassName(isActive)}

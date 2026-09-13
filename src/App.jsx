@@ -77,10 +77,10 @@ function App() {
                   <Route path="/expenses/daily-incomes" element={<DailyIncomesPage />} />
                   <Route path="/expenses/daily" element={<DailyExpensesPage />} />
                   <Route path="/expenses/fixed" element={<StaffGuard><FixedExpensesPage /></StaffGuard>} />
-                  <Route path="/employees" element={<EmployeesPage />} />
-                  <Route path="/employees/:id" element={<EmployeeDetailPage />} />
-                  <Route path="/suppliers" element={<SuppliersPage />} />
-                  <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
+                  <Route path="/employees" element={<StaffGuard><EmployeesPage /></StaffGuard>} />
+                  <Route path="/employees/:id" element={<StaffGuard><EmployeeDetailPage /></StaffGuard>} />
+                  <Route path="/suppliers" element={<StaffGuard><SuppliersPage /></StaffGuard>} />
+                  <Route path="/suppliers/:id" element={<StaffGuard><SupplierDetailPage /></StaffGuard>} />
                   <Route
                     path="/catalog/service-types"
                     element={<ServiceTypesPage />}
