@@ -5,6 +5,7 @@ import SkeletonDashboard from "../components/dashboard/SkeletonDashboard";
 import DecisionCenter from "../components/dashboard/DecisionCenter";
 import { fetchDashboardData } from "../lib/dashboardApi";
 import { buildDashboardMetrics } from "../lib/dashboardMetrics";
+import { addMonthsISO, monthBoundsISO } from "../utils/dates";
 import "../styles/dashboard.css";
 
 function formatDate(date) {
@@ -27,12 +28,13 @@ function getMonthRange(offset = 0) {
 }
 
 function getPreviousRange(range) {
-  const from = new Date(range.from);
-  const prevMonthEnd = new Date(from.getFullYear(), from.getMonth(), 0);
-  const prevMonthStart = new Date(from.getFullYear(), from.getMonth() - 1, 1);
+  // range.from es "YYYY-MM-DD": nunca new Date(string) acá, interpreta UTC y
+  // en husos horarios negativos (Argentina) puede correr el mes un día para
+  // atrás, saltándose un mes entero cuando from cae el día 1.
+  const { first, last } = monthBoundsISO(addMonthsISO(range.from, -1));
   return {
-    from: formatDate(prevMonthStart),
-    to: formatDate(prevMonthEnd),
+    from: first,
+    to: last,
     label: "Mes anterior",
   };
 }
