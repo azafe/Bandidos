@@ -87,11 +87,11 @@ function App() {
                   />
                   <Route
                     path="/catalog/payment-methods"
-                    element={<PaymentMethodsPage />}
+                    element={<StaffGuard><PaymentMethodsPage /></StaffGuard>}
                   />
                   <Route
                     path="/catalog/expense-categories"
-                    element={<ExpenseCategoriesPage />}
+                    element={<StaffGuard><ExpenseCategoriesPage /></StaffGuard>}
                   />
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/admin/super" element={<SuperAdminPage />} />
