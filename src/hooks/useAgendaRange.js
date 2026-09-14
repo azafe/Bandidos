@@ -9,7 +9,6 @@ export function useAgendaRange(from, to, enabled) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [warning, setWarning] = useState(null);
 
   const fetchRange = useCallback(
     async (force = false) => {
@@ -24,11 +23,9 @@ export function useAgendaRange(from, to, enabled) {
       try {
         setLoading(true);
         setError(null);
-        setWarning(null);
-        const { items: rangeItems, fallback } = await listAgendaRange({ from, to });
+        const { items: rangeItems } = await listAgendaRange({ from, to });
         cacheRef.current.set(key, rangeItems);
         setItems(rangeItems);
-        setWarning(fallback ? "Endpoint de agenda no encontrado. Usando datos locales." : null);
       } catch (err) {
         setError(err.message || "No se pudo cargar la agenda.");
       } finally {
@@ -47,5 +44,5 @@ export function useAgendaRange(from, to, enabled) {
     if (enabled) fetchRange(true);
   }, [enabled, fetchRange]);
 
-  return { items, loading, error, warning, invalidate };
+  return { items, loading, error, invalidate };
 }

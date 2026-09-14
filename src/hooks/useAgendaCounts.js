@@ -10,7 +10,6 @@ export function useAgendaCounts(from, to, enabled) {
   const [countsByDate, setCountsByDate] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [warning, setWarning] = useState(null);
 
   const fetchCounts = useCallback(
     async (force = false) => {
@@ -25,8 +24,7 @@ export function useAgendaCounts(from, to, enabled) {
       try {
         setLoading(true);
         setError(null);
-        setWarning(null);
-        const { rows, fallback } = await listAgendaCounts({ from, to });
+        const { rows } = await listAgendaCounts({ from, to });
         const byDate = {};
         rows.forEach((row) => {
           byDate[row.date] = {
@@ -38,7 +36,6 @@ export function useAgendaCounts(from, to, enabled) {
         });
         cacheRef.current.set(key, byDate);
         setCountsByDate(byDate);
-        setWarning(fallback ? "Endpoint de conteos no encontrado. Calculando localmente." : null);
       } catch (err) {
         setError(err.message || "No se pudieron cargar los conteos.");
       } finally {
@@ -57,5 +54,5 @@ export function useAgendaCounts(from, to, enabled) {
     if (enabled) fetchCounts(true);
   }, [enabled, fetchCounts]);
 
-  return { countsByDate, loading, error, warning, invalidate };
+  return { countsByDate, loading, error, invalidate };
 }

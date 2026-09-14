@@ -441,7 +441,6 @@ export default function AgendaPage() {
     items,
     loading,
     error,
-    warning,
     refetch,
   } = useAgendaDay(selectedDate);
 
@@ -816,13 +815,6 @@ export default function AgendaPage() {
       : calendarView === "month"
       ? selectedDate.slice(0, 7) === todayIso.slice(0, 7)
       : selectedDate === todayIso;
-  const activeWarning =
-    calendarView === "week"
-      ? weekRange.warning
-      : calendarView === "month"
-      ? monthCounts.warning
-      : warning;
-
   // dateOverride: string ISO opcional; se usa como onClick={openCreate} directo,
   // por eso el guard de typeof (recibiría el click event).
   function openCreate(dateOverride) {
@@ -1618,8 +1610,6 @@ export default function AgendaPage() {
             </button>
           </div>
         )}
-
-        {activeWarning ? <div className="agenda-warning">{activeWarning}</div> : null}
 
         {calendarView === "day" && viewMode === "operation" && (
           <div className="agenda-date-nav__kpis">
