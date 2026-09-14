@@ -37,6 +37,10 @@ export default function UsersPage() {
       alert("Ingresá una contraseña.");
       return;
     }
+    if (form.password && form.password.length < 8) {
+      alert("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
     try {
       const payload = {
         email: form.email.trim(),
@@ -86,6 +90,10 @@ export default function UsersPage() {
     if (!selectedUser) return;
     if (!modalForm.email.trim()) {
       alert("Ingresá email.");
+      return;
+    }
+    if (modalForm.password && modalForm.password.length < 8) {
+      alert("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
     try {
@@ -164,6 +172,7 @@ export default function UsersPage() {
               type="password"
               value={form.password}
               onChange={handleChange}
+              minLength={8}
               required
             />
           </div>
@@ -263,6 +272,8 @@ export default function UsersPage() {
                         password: e.target.value,
                       }))
                     }
+                    minLength={8}
+                    placeholder="Dejar vacío para no cambiarla"
                   />
                 </label>
                 <label className="form-field">
