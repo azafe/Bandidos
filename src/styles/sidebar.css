@@ -95,7 +95,7 @@ nav.sidebar__nav::-webkit-scrollbar {
 
 .sidebar__nav-link {
   padding: 10px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.9rem;
   color: rgba(232, 236, 248, 0.86);
   display: flex;

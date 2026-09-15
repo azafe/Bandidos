@@ -124,13 +124,13 @@
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(17, 24, 39, 0.08);
 }
 
 .agenda-mode-switch button {
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 7px 12px;
   background: transparent;
   color: #475569;
@@ -197,7 +197,7 @@
 .agenda-chip {
   font-size: 0.76rem;
   padding: 5px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(17, 24, 39, 0.08);
   color: #1f2937;
 }
@@ -393,7 +393,7 @@
 }
 
 .agenda-search input {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 8px 14px;
   background: #12131a;
@@ -447,7 +447,7 @@
 }
 
 .agenda-close-overview__badge {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 5px 10px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -681,7 +681,7 @@
   color: #1f2937;
   background: rgba(17, 24, 39, 0.08);
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   width: fit-content;
 }
 
@@ -724,7 +724,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(17, 24, 39, 0.07);
   color: var(--text-strong);
   border: 1px solid rgba(17, 24, 39, 0.1);
@@ -855,7 +855,7 @@
   border: none;
   background: #111827;
   color: #fff;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 12px;
   font-size: 0.75rem;
   cursor: pointer;
@@ -1189,7 +1189,7 @@
   border: 1px solid rgba(17, 24, 39, 0.12);
   background: rgba(17, 24, 39, 0.04);
   color: #334155;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 12px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -1411,7 +1411,7 @@
   border: 1.5px solid var(--color-border-soft);
   background: #f9f9fc;
   color: var(--color-text);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 14px;
   font-size: 0.82rem;
   cursor: pointer;
@@ -1438,7 +1438,7 @@
   background: rgba(217, 72, 239, 0.08);
   border: 1px solid rgba(217, 72, 239, 0.2);
   color: var(--color-primary-dark);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 3px 10px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -1874,7 +1874,7 @@
 .agenda-note-card__dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-primary, #a855f7);
   flex-shrink: 0;
 }
@@ -1979,7 +1979,7 @@
   background: var(--grad-brand);
   color: #fff;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 14px 22px;
   font-size: 0.95rem;
   font-weight: 700;
@@ -2157,7 +2157,7 @@
   display: inline-block;
   width: 8px;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   vertical-align: middle;
 }
 

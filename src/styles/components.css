@@ -95,7 +95,7 @@
 
 .filter-chip {
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(217, 72, 239, 0.12);
   color: #561b6d;
   padding: 6px 10px;
@@ -127,7 +127,7 @@
   border: 1px solid rgba(17, 24, 39, 0.12);
   background: rgba(255, 255, 255, 0.75);
   color: #334155;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 5px 10px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -275,7 +275,7 @@
 .services-tabs {
   display: inline-flex;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(16, 19, 31, 0.08);
   gap: 4px;
 }
@@ -284,7 +284,7 @@
   border: none;
   background: transparent;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.8rem;
   cursor: pointer;
   color: var(--color-text-soft);
@@ -302,7 +302,7 @@
   background: #111522;
   color: #fff;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -388,7 +388,7 @@
   background: rgba(17, 24, 39, 0.08);
   color: #1f2937;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -486,7 +486,7 @@
     var(--bg-subtle) 75%
   );
   background-size: 200% 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
 }
 
@@ -732,7 +732,7 @@
   border: none;
   background: #f1f2f6;
   color: #1b1f2f;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   width: 32px;
   height: 32px;
   font-size: 1.25rem;
@@ -832,12 +832,12 @@
 .fe-category-bar__track {
   height: 8px;
   background: var(--color-surface-alt, #f0f0f5);
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 .fe-category-bar__fill {
   height: 100%;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   transition: width 0.4s ease;
 }
 
@@ -927,7 +927,7 @@
   font-size: 0.7rem;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
 
@@ -935,7 +935,7 @@
   font-size: 0.7rem;
   color: var(--color-text-muted);
   padding: 2px 7px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   background: var(--color-surface-alt, #f0f0f5);
   white-space: nowrap;
 }
@@ -1019,7 +1019,7 @@
   font-size: 0.7rem;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   background: var(--color-surface-alt, #f0f0f5);
   color: var(--color-text-muted);
   flex-shrink: 0;
@@ -1053,7 +1053,7 @@
   font-size: 0.72rem;
   background: var(--color-surface-alt, #f0f0f5);
   color: var(--color-text-muted);
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   padding: 2px 9px;
   font-weight: 500;
 }
@@ -1095,7 +1095,7 @@
 
 /* ── Pet cards ────────────────────────────────────────────────────────────── */
 .pets-search-input {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--color-border, rgba(255,255,255,0.12));
   padding: 8px 14px;
   background: var(--color-surface);
@@ -1129,7 +1129,7 @@
   border: 1px solid var(--color-border, rgba(17,24,39,0.12));
   background: var(--color-surface);
   color: var(--color-text);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 7px 14px;
   font-size: 0.82rem;
   cursor: pointer;
@@ -1253,7 +1253,7 @@
   font-size: 0.7rem;
   font-weight: 500;
   padding: 2px 9px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   background: var(--color-surface-alt, #f0f0f5);
   color: var(--color-text-muted);
 }
@@ -1464,7 +1464,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   font-size: 0.7rem;
   font-weight: 600;
   align-self: flex-start;
@@ -1563,7 +1563,7 @@
   font-size: 0.72rem;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   background: var(--color-surface-alt, #f0f0f5);
   color: var(--color-text-muted);
   align-self: flex-start;
@@ -1592,7 +1592,7 @@
 
 .emp-detail-range__btn {
   padding: 6px 14px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--color-border, #e5e7eb);
   background: transparent;
   color: var(--color-text-muted);
@@ -1743,7 +1743,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   padding: 2px 10px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
 }
 
 /* ===== Photo upload ===== */
@@ -1785,7 +1785,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   padding: 2px 10px;
-  border-radius: 99px;
+  border-radius: var(--radius-pill);
 }
 
 /* Texto de ayuda debajo de un campo (ej: vigencia de un gasto fijo). */
@@ -1874,7 +1874,7 @@
 .fe-table__badge {
   margin-left: 6px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.65rem;
   background: rgba(168, 85, 247, 0.16);
   color: #c084fc;
@@ -1892,7 +1892,7 @@
 
 .fe-pay-toggle {
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;

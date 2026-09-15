@@ -629,7 +629,7 @@
   background: rgba(15, 118, 110, 0.1);
   color: #0f766e;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.75rem;
   font-weight: 500;
 }
@@ -843,7 +843,7 @@
   color: var(--color-text-muted);
   background: rgba(17, 24, 39, 0.06);
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   white-space: nowrap;
 }
 
