@@ -245,6 +245,12 @@
   border-radius: var(--radius-md);
   background: #f9f9fc;
   overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.petshop-price-field:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(217, 72, 239, 0.12);
 }
 
 .petshop-price-field__prefix {

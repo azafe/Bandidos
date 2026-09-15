@@ -303,6 +303,13 @@
   color: #fff;
   padding: 6px 12px;
   border-radius: 999px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.services-search:focus-within {
+  border-color: var(--brand-magenta);
+  box-shadow: 0 0 0 3px rgba(217, 72, 239, 0.25);
 }
 
 .services-search input {

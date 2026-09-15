@@ -2,18 +2,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
-
-const SUPPLIER_COLORS = [
-  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
-  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
-];
-
-function supplierColor(name) {
-  if (!name) return SUPPLIER_COLORS[0];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return SUPPLIER_COLORS[Math.abs(hash) % SUPPLIER_COLORS.length];
-}
+import { colorForName as supplierColor } from "../../utils/colorPalette";
 
 function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";

@@ -56,6 +56,7 @@
 
 .incomes-date-input {
   border: none;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-strong);
   font-family: inherit;
@@ -63,6 +64,10 @@
   font-size: 0.95rem;
   outline: none;
   cursor: pointer;
+}
+
+.incomes-date-input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(217, 72, 239, 0.25);
 }
 
 .incomes-main-grid {

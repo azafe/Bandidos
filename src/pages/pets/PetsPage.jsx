@@ -7,21 +7,9 @@ import { useAuth } from "../../context/AuthContext";
 import { calcularEdad } from "../../utils/cumpleanos";
 import { apiRequest } from "../../services/apiClient";
 import { todayISO } from "../../utils/dates";
+import { colorForName as petColor } from "../../utils/colorPalette";
 
 const PAGE_SIZE = 24;
-
-const PET_COLORS = [
-  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
-  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
-  "#6366f1", "#ec4899",
-];
-
-function petColor(name) {
-  if (!name) return PET_COLORS[0];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return PET_COLORS[Math.abs(hash) % PET_COLORS.length];
-}
 
 function petInitial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";

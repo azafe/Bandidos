@@ -3,11 +3,7 @@ import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { todayISO } from "../../utils/dates";
-
-const CATEGORY_COLORS = [
-  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
-  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
-];
+import { COLOR_PALETTE as CATEGORY_COLORS } from "../../utils/colorPalette";
 
 export default function DailyExpensesPage() {
   const today = todayISO();

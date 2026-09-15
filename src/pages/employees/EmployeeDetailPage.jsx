@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import { toISO } from "../../utils/dates";
+import { colorForName as employeeColor } from "../../utils/colorPalette";
 
 const ROLE_COLORS = {
   "Groomer":        "#ff4fa8",
@@ -11,18 +12,6 @@ const ROLE_COLORS = {
   "Administración": "#a855f7",
   "Otro":           "#8b94a9",
 };
-
-const EMPLOYEE_COLORS = [
-  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
-  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
-];
-
-function employeeColor(name) {
-  if (!name) return EMPLOYEE_COLORS[0];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return EMPLOYEE_COLORS[Math.abs(hash) % EMPLOYEE_COLORS.length];
-}
 
 function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";

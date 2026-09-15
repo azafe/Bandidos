@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
-
-const TYPE_COLORS = [
-  "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
-  "#a855f7", "#eab308", "#ef4444", "#14b8a6",
-  "#6366f1", "#ec4899",
-];
+import { COLOR_PALETTE as TYPE_COLORS } from "../../utils/colorPalette";
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "-";
