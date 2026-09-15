@@ -8,6 +8,7 @@ import {
   unsubscribeFromPush,
   getSubscriptionStatus,
 } from "../../services/pushNotifications.js";
+import { todayISO } from "../../utils/dates";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
@@ -111,7 +112,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               >
                 Comunicaciones
                 {(() => {
-                  const today = new Date().toISOString().split("T")[0];
+                  const today = todayISO();
                   const count = Number(localStorage.getItem("bandidos_comunicaciones_count") || 0);
                   const seen = localStorage.getItem("bandidos_comunicaciones_seen");
                   return count > 0 && seen !== today ? (

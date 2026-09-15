@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "../../services/apiClient";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import { todayISO } from "../../utils/dates";
 
 const CATEGORY_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -212,7 +213,7 @@ export default function FixedExpensesPage() {
     await run(
       () => apiRequest(`/v2/fixed-expenses/charges/${item.id}`, {
         method: "PUT",
-        body: { paid_at: item.paid_at ? null : new Date().toISOString().slice(0, 10) },
+        body: { paid_at: item.paid_at ? null : todayISO() },
       }),
       "No se pudo actualizar el pago."
     );

@@ -8,6 +8,7 @@ import {
   buildMensajeTurno,
   buildMensajeCumpleanos,
 } from "../../utils/whatsapp";
+import { todayISO } from "../../utils/dates";
 import {
   calcularEdad,
   esCumpleanosHoy,
@@ -178,7 +179,7 @@ export default function ComunicacionesPage() {
     return true;
   }
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = todayISO();
   const pendientes = recordatorios.filter((r) => !estaEnviado(r.pet_id ?? r.pet?.id, "turno"));
   const enviadosHoy = mensajesEnviados.filter(
     (m) => String(m.sentAt).startsWith(todayStr)
@@ -231,7 +232,7 @@ export default function ComunicacionesPage() {
       todayBirthdays.length +
       weekBirthdays.length +
       recordatorios.filter((r) => r.dias >= 30).length;
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayISO();
     localStorage.setItem("bandidos_comunicaciones_count", String(count));
     localStorage.setItem("bandidos_comunicaciones_seen", today);
   }, [loading, pets, todayBirthdays, weekBirthdays, recordatorios]);
@@ -275,7 +276,7 @@ export default function ComunicacionesPage() {
   }
 
   async function marcarEnviado(petId, type, petName, ownerName) {
-    const record = { petId, type, petName, ownerName, sentAt: new Date().toISOString().split("T")[0] };
+    const record = { petId, type, petName, ownerName, sentAt: todayISO() };
     // Actualizar estado local inmediatamente para respuesta visual instantánea
     setMensajesEnviados((prev) => {
       const filtered = prev.filter((m) => !(String(m.petId) === String(petId) && m.type === type));

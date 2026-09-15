@@ -10,10 +10,14 @@ export function useAgendaCounts(from, to, enabled) {
   const [countsByDate, setCountsByDate] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Cambiar de mes rápido puede dejar dos fetches en vuelo; sin esto el que
+  // responde último gana aunque sea de un rango viejo.
+  const requestIdRef = useRef(0);
 
   const fetchCounts = useCallback(
     async (force = false) => {
       if (!enabled || !from || !to) return;
+      const requestId = ++requestIdRef.current;
       const key = `${from}_${to}`;
       if (!force && cacheRef.current.has(key)) {
         setCountsByDate(cacheRef.current.get(key));
@@ -25,6 +29,7 @@ export function useAgendaCounts(from, to, enabled) {
         setLoading(true);
         setError(null);
         const { rows } = await listAgendaCounts({ from, to });
+        if (requestIdRef.current !== requestId) return;
         const byDate = {};
         rows.forEach((row) => {
           byDate[row.date] = {
@@ -37,9 +42,10 @@ export function useAgendaCounts(from, to, enabled) {
         cacheRef.current.set(key, byDate);
         setCountsByDate(byDate);
       } catch (err) {
+        if (requestIdRef.current !== requestId) return;
         setError(err.message || "No se pudieron cargar los conteos.");
       } finally {
-        setLoading(false);
+        if (requestIdRef.current === requestId) setLoading(false);
       }
     },
     [from, to, enabled]

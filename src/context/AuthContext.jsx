@@ -28,8 +28,13 @@ export function AuthProvider({ children }) {
 
   // Ref para que el suspendedHandler siempre use la versión más reciente de loadMe
   const loadMeRef = useRef(null);
+  // El token puede cambiar (login/logout) mientras un loadMe anterior sigue
+  // en vuelo; sin esto, la respuesta vieja puede pisar el user/loading del
+  // token nuevo si llega después.
+  const requestIdRef = useRef(0);
 
   const loadMe = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     if (!token) {
       setLoading(false);
       return;
@@ -46,14 +51,16 @@ export function AuthProvider({ children }) {
           throw err;
         }
       }
+      if (requestIdRef.current !== requestId) return;
       setUser(me?.user || me);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       console.error("[AuthContext] Error cargando /me:", err);
       if (err?.status === 401) {
         logout();
       }
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token, logout]);
 

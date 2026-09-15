@@ -6,6 +6,7 @@ import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import GroomerChart from "../../components/dashboard/GroomerChart";
 import ServiceTypeChart from "../../components/dashboard/ServiceTypeChart";
+import { toISO } from "../../utils/dates";
 
 const COMMISSION_RATE = 0.40;
 
@@ -100,7 +101,7 @@ export default function ServicesListPage() {
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     return {
       from: `${yyyy}-${mm}-01`,
-      to: now.toISOString().slice(0, 10),
+      to: toISO(now),
       customer_id: "",
       pet_id: "",
       service_type_id: "",

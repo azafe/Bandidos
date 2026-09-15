@@ -6,6 +6,7 @@ import PhotoUpload from "../../components/ui/PhotoUpload";
 import { useAuth } from "../../context/AuthContext";
 import { calcularEdad } from "../../utils/cumpleanos";
 import { apiRequest } from "../../services/apiClient";
+import { todayISO } from "../../utils/dates";
 
 const PAGE_SIZE = 24;
 
@@ -327,7 +328,7 @@ export default function PetsPage() {
             <div className="form-field">
               <label htmlFor="birth_date">Fecha de nacimiento <span style={{ color: "var(--color-text-soft)" }}>(opcional)</span></label>
               <input type="date" id="birth_date" name="birth_date" value={form.birth_date} onChange={handleChange}
-                max={new Date().toISOString().split("T")[0]} />
+                max={todayISO()} />
               <small style={{ color: "var(--color-text-soft)", fontSize: "0.74rem" }}>
                 Si no la sabés, podés dejarlo vacío
               </small>
@@ -545,7 +546,7 @@ export default function PetsPage() {
                 <label className="form-field">
                   <span>Fecha de nacimiento <span style={{ color: "var(--color-text-soft)", fontWeight: 400 }}>(opcional)</span></span>
                   <input type="date" value={modalForm.birth_date}
-                    max={new Date().toISOString().split("T")[0]}
+                    max={todayISO()}
                     onChange={(e) => setModalForm((p) => ({ ...p, birth_date: e.target.value }))} />
                   <small style={{ color: "var(--color-text-soft)", fontSize: "0.74rem" }}>
                     Si no la sabés, podés dejarlo vacío

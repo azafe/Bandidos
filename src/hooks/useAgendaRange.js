@@ -9,10 +9,14 @@ export function useAgendaRange(from, to, enabled) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Cambiar de semana rápido puede dejar dos fetches en vuelo; sin esto el
+  // que responde último gana aunque sea de un rango viejo.
+  const requestIdRef = useRef(0);
 
   const fetchRange = useCallback(
     async (force = false) => {
       if (!enabled || !from || !to) return;
+      const requestId = ++requestIdRef.current;
       const key = `${from}_${to}`;
       if (!force && cacheRef.current.has(key)) {
         setItems(cacheRef.current.get(key));
@@ -24,12 +28,14 @@ export function useAgendaRange(from, to, enabled) {
         setLoading(true);
         setError(null);
         const { items: rangeItems } = await listAgendaRange({ from, to });
+        if (requestIdRef.current !== requestId) return;
         cacheRef.current.set(key, rangeItems);
         setItems(rangeItems);
       } catch (err) {
+        if (requestIdRef.current !== requestId) return;
         setError(err.message || "No se pudo cargar la agenda.");
       } finally {
-        setLoading(false);
+        if (requestIdRef.current === requestId) setLoading(false);
       }
     },
     [from, to, enabled]

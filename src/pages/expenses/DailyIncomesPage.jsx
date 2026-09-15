@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import { apiRequest } from "../../services/apiClient";
+import { todayISO } from "../../utils/dates";
 
 const CONCEPTS = [
   { key: "servicios", label: "Servicios", icon: "✂️", desc: "Ingresos por prestaciones directas" },
@@ -18,7 +19,7 @@ function formatCurrency(value) {
 }
 
 export default function DailyIncomesPage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const [selectedDate, setSelectedDate] = useState(today);
   const [loading, setLoading] = useState(true);
   const [totalsMap, setTotalsMap] = useState({});

@@ -3,13 +3,10 @@ import { useState, useRef, useEffect } from "react";
 import { fetchDashboardData } from "../../lib/dashboardApi";
 import { buildDashboardMetrics } from "../../lib/dashboardMetrics";
 import { apiRequest } from "../../services/apiClient";
+import { toISO, addMonthsISO, monthBoundsISO } from "../../utils/dates";
 import "../../styles/asistente-ia.css";
 
 // --- Helpers de fecha ---
-function formatDate(date) {
-  return date.toISOString().slice(0, 10);
-}
-
 function getMonthRange(offset = 0) {
   const now = new Date();
   const year = now.getFullYear();
@@ -19,28 +16,25 @@ function getMonthRange(offset = 0) {
   const today = new Date();
   const effectiveTo = to > today ? today : to;
   return {
-    from: formatDate(from),
-    to: formatDate(effectiveTo),
+    from: toISO(from),
+    to: toISO(effectiveTo),
     label: from.toLocaleDateString("es-AR", { month: "long", year: "numeric" }),
   };
 }
 
 function getPreviousRange(range) {
-  const from = new Date(range.from);
-  const prevMonthEnd = new Date(from.getFullYear(), from.getMonth(), 0);
-  const prevMonthStart = new Date(from.getFullYear(), from.getMonth() - 1, 1);
-  return {
-    from: formatDate(prevMonthStart),
-    to: formatDate(prevMonthEnd),
-    label: "Mes anterior",
-  };
+  // range.from es "YYYY-MM-DD": nunca new Date(string) acá, interpreta UTC y
+  // en husos horarios negativos (Argentina) puede correr el mes un día para
+  // atrás, saltándose un mes entero cuando from cae el día 1.
+  const { first, last } = monthBoundsISO(addMonthsISO(range.from, -1));
+  return { from: first, to: last, label: "Mes anterior" };
 }
 
 function getFutureRange(today) {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  return { from: formatDate(tomorrow), to: formatDate(endOfMonth) };
+  return { from: toISO(tomorrow), to: toISO(endOfMonth) };
 }
 
 // --- Formatters ---
@@ -60,7 +54,7 @@ function buildSystemPrompt(
   futureAgenda
 ) {
   const { kpis, series, range } = metrics;
-  const todayStr = formatDate(today);
+  const todayStr = toISO(today);
   const services = currentData.services || [];
 
   // Maps de ID → nombre
@@ -340,7 +334,10 @@ export default function AsistenteIA() {
           futureAgendaRaw,
         ] = await Promise.all([
           fetchDashboardData(range),
-          fetchDashboardData(previousRange),
+          // Solo alimenta las comparaciones interanuales del prompt, no es
+          // indispensable: si falla, el asistente sigue con los datos del
+          // mes actual en vez de caer al fallback genérico sin datos.
+          fetchDashboardData(previousRange).catch(() => null),
           apiRequest("/v2/employees").catch(() => []),
           apiRequest("/v2/service-types").catch(() => []),
           apiRequest("/v2/customers").catch(() => []),
@@ -353,7 +350,7 @@ export default function AsistenteIA() {
         const metrics = buildDashboardMetrics({
           range,
           current: currentData,
-          previous: { range: previousRange, current: previousData },
+          previous: previousData ? { range: previousRange, current: previousData } : null,
           categories: currentData.categories,
         });
 

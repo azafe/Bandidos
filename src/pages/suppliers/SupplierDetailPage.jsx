@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
+import { todayISO } from "../../utils/dates";
 
 const SUPPLIER_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -18,10 +19,6 @@ function supplierColor(name) {
 
 function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
-}
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function formatDate(value) {

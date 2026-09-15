@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
+import { todayISO } from "../../utils/dates";
 
 const PET_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -115,7 +116,7 @@ export default function PetDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayISO();
         const [petData, agendaData, employeesData, paymentData, serviceTypesData] = await Promise.all([
           apiRequest(`/v2/pets/${id}`),
           apiRequest("/agenda", { params: { from: "2020-01-01", to: today } }),

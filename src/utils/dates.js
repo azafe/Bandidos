@@ -1,5 +1,5 @@
 // src/utils/dates.js
-// Helpers de fecha para las vistas Semana/Mes de la agenda.
+// Helpers de fecha compartidos por toda la app.
 // Trabajan sobre strings ISO "YYYY-MM-DD" construyendo Date locales
 // (new Date(y, m-1, d)) — nunca new Date(str), que interpreta UTC.
 
@@ -9,11 +9,21 @@ function parseISO(dateStr) {
   return new Date(yyyy, mm - 1, dd);
 }
 
-function toISO(d) {
+// Fecha calendario local de un Date, como string "YYYY-MM-DD".
+// Nunca usar date.toISOString().slice(0, 10): convierte a UTC, y en un huso
+// horario negativo (Argentina, UTC-3) un Date que representa "ahora" cae del
+// otro lado de la medianoche UTC entre las 21:00 y las 23:59 hora local,
+// devolviendo el día de mañana en vez de hoy.
+export function toISO(d) {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
+}
+
+// "Hoy" como "YYYY-MM-DD" en huso horario local.
+export function todayISO() {
+  return toISO(new Date());
 }
 
 export function addDaysISO(dateStr, delta) {

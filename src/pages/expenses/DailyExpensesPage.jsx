@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import { todayISO } from "../../utils/dates";
 
 const CATEGORY_COLORS = [
   "#ff4fa8", "#f97316", "#22c55e", "#38bdf8",
@@ -9,7 +10,7 @@ const CATEGORY_COLORS = [
 ];
 
 export default function DailyExpensesPage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const [filters, setFilters] = useState({ from: "", to: "", category_id: "" });
   const {
     items: expenses,

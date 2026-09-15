@@ -7,21 +7,28 @@ export function useApiResource(path, params) {
   const [error, setError] = useState(null);
   const paramsKey = useMemo(() => JSON.stringify(params || {}), [params]);
   const paramsRef = useRef(params);
+  // Si dos fetches quedan en vuelo (params cambia rápido, o un refresh se
+  // dispara mientras otro sigue pendiente), sin esto el que responde último
+  // gana aunque sea el más viejo y pise el resultado bueno con uno stale.
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     paramsRef.current = params;
   }, [params]);
 
   const fetchItems = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     try {
       setLoading(true);
       setError(null);
       const data = await apiRequest(path, { params: paramsRef.current });
+      if (requestIdRef.current !== requestId) return;
       setItems(Array.isArray(data) ? data : data?.items || []);
     } catch (err) {
+      if (requestIdRef.current !== requestId) return;
       setError(err.message || "Error al cargar datos.");
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [path]);
 

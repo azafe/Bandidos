@@ -5,12 +5,8 @@ import SkeletonDashboard from "../components/dashboard/SkeletonDashboard";
 import DecisionCenter from "../components/dashboard/DecisionCenter";
 import { fetchDashboardData } from "../lib/dashboardApi";
 import { buildDashboardMetrics } from "../lib/dashboardMetrics";
-import { addMonthsISO, monthBoundsISO } from "../utils/dates";
+import { addMonthsISO, monthBoundsISO, toISO } from "../utils/dates";
 import "../styles/dashboard.css";
-
-function formatDate(date) {
-  return date.toISOString().slice(0, 10);
-}
 
 function getMonthRange(offset = 0) {
   const now = new Date();
@@ -21,8 +17,8 @@ function getMonthRange(offset = 0) {
   const today = new Date();
   const effectiveTo = to > today ? today : to;
   return {
-    from: formatDate(from),
-    to: formatDate(effectiveTo),
+    from: toISO(from),
+    to: toISO(effectiveTo),
     label: from.toLocaleDateString("es-AR", { month: "long", year: "numeric" }),
   };
 }
@@ -55,15 +51,18 @@ export default function DashboardHome() {
       try {
         setLoading(true);
         setError(null);
+        // Los datos del mes anterior solo alimentan las variaciones (%) del
+        // dashboard, no son indispensables: si esa llamada falla, mostramos
+        // igual el mes actual en vez de tirar toda la pantalla a error.
         const [currentData, previousData] = await Promise.all([
           fetchDashboardData(range),
-          fetchDashboardData(previousRange),
+          fetchDashboardData(previousRange).catch(() => null),
         ]);
         if (!active) return;
         const computed = buildDashboardMetrics({
           range,
           current: currentData,
-          previous: { range: previousRange, current: previousData },
+          previous: previousData ? { range: previousRange, current: previousData } : null,
           categories: currentData.categories,
         });
         setMetrics(computed);

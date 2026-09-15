@@ -3,15 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
+import { todayISO, toISO } from "../../utils/dates";
 import "../../styles/petshop.css";
-
-function todayISO() {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
 
 function formatCurrency(value) {
   if (value === null || value === undefined || value === "") return "-";
@@ -99,7 +92,7 @@ export default function PetShopPage() {
     const mm = String(now.getMonth() + 1).padStart(2, "0");
     return {
       from: `${yyyy}-${mm}-01`,
-      to: now.toISOString().slice(0, 10),
+      to: toISO(now),
     };
   });
   const {
@@ -1111,17 +1104,17 @@ export default function PetShopPage() {
                   const now = new Date();
                   const day = now.getDay() === 0 ? 6 : now.getDay() - 1;
                   const mon = new Date(now); mon.setDate(now.getDate() - day);
-                  return { from: mon.toISOString().slice(0, 10), to: now.toISOString().slice(0, 10) };
+                  return { from: toISO(mon), to: toISO(now) };
                 }},
                 { label: "Este mes", range: () => {
                   const now = new Date();
-                  return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, to: now.toISOString().slice(0, 10) };
+                  return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, to: toISO(now) };
                 }},
                 { label: "Mes anterior", range: () => {
                   const now = new Date();
                   const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
                   const last = new Date(now.getFullYear(), now.getMonth(), 0);
-                  return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
+                  return { from: toISO(first), to: toISO(last) };
                 }},
               ].map(({ label, range }) => {
                 const r = range();

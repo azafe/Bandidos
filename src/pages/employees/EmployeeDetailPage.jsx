@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
+import { toISO } from "../../utils/dates";
 
 const ROLE_COLORS = {
   "Groomer":        "#ff4fa8",
@@ -25,10 +26,6 @@ function employeeColor(name) {
 
 function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
-}
-
-function toISO(date) {
-  return date.toISOString().slice(0, 10);
 }
 
 function getMonthRange() {
