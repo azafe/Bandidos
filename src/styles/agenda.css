@@ -1275,6 +1275,14 @@
   flex-direction: column;
   gap: 6px;
 }
+.agenda-price-card__deposit-method {
+  font-size: 0.8rem;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid rgba(17, 24, 39, 0.15);
+  background: #fff;
+  color: var(--color-text-soft);
+}
 .agenda-price-card__remaining {
   padding: 12px 14px;
   background: rgba(217, 72, 239, 0.04);

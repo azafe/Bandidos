@@ -416,6 +416,7 @@ export default function AgendaPage() {
     service_type_id: "",
     payment_method_id: "",
     deposit_amount: "",
+    deposit_payment_method_id: "",
     notes: "",
     groomer_id: "",
     status: "reserved",
@@ -884,6 +885,10 @@ export default function AgendaPage() {
         turno.deposit_amount !== null && turno.deposit_amount !== undefined
           ? String(turno.deposit_amount)
           : "",
+      deposit_payment_method_id:
+        turno.deposit_payment_method_id ||
+        turno.deposit_payment_method?.id ||
+        "",
       notes: turno.notes || "",
       groomer_id: turno.groomer_id || "",
       status: normalizeStatus(turno.status),
@@ -1237,6 +1242,7 @@ export default function AgendaPage() {
       const petId = normalizeId(form.pet_id);
       const serviceTypeId = normalizeId(form.service_type_id);
       const paymentMethodId = normalizeId(form.payment_method_id);
+      const depositPaymentMethodId = normalizeId(form.deposit_payment_method_id);
       const groomerId = normalizeId(form.groomer_id);
       const payload = {
         date: normalizedDate,
@@ -1249,6 +1255,7 @@ export default function AgendaPage() {
         service_type_id: serviceTypeId ?? undefined,
         payment_method_id: paymentMethodId ?? undefined,
         deposit_amount: Number(form.deposit_amount || 0),
+        deposit_payment_method_id: depositPaymentMethodId ?? undefined,
         notes: form.notes.trim(),
         groomer_id: groomerId ?? undefined,
         status: normalizeStatus(form.status),
@@ -1277,6 +1284,7 @@ export default function AgendaPage() {
             service_type_id: normalizeId(form.service_type_id) ?? undefined,
             payment_method_id: normalizeId(form.payment_method_id) ?? undefined,
             deposit_amount: Number(form.deposit_amount || 0),
+            deposit_payment_method_id: normalizeId(form.deposit_payment_method_id) ?? undefined,
             notes: form.notes.trim(),
             groomer_id: normalizeId(form.groomer_id) ?? undefined,
             status: normalizeStatus(form.status),
@@ -2230,7 +2238,7 @@ export default function AgendaPage() {
                       <strong>{selectedTurno.breed || "-"}</strong>
                     </div>
                     <div className="agenda-turno-modal__pair">
-                      <span>Método de pago</span>
+                      <span>Método de pago del saldo</span>
                       <strong>
                         {paymentMethods.find(
                           (m) => m.id === selectedTurno.payment_method_id
@@ -2239,6 +2247,18 @@ export default function AgendaPage() {
                           "-"}
                       </strong>
                     </div>
+                    {Number(selectedTurno.deposit_amount || 0) > 0 && (
+                      <div className="agenda-turno-modal__pair">
+                        <span>Método de pago de la seña</span>
+                        <strong>
+                          {paymentMethods.find(
+                            (m) => m.id === selectedTurno.deposit_payment_method_id
+                          )?.name ||
+                            selectedTurno.deposit_payment_method?.name ||
+                            "-"}
+                        </strong>
+                      </div>
+                    )}
                   </div>
                 </article>
 
@@ -2933,6 +2953,22 @@ export default function AgendaPage() {
                   {fieldErrors.deposit_amount && (
                     <small className="agenda-field-error">{fieldErrors.deposit_amount}</small>
                   )}
+                  {Number(form.deposit_amount || 0) > 0 && (
+                    <select
+                      className="agenda-price-card__deposit-method"
+                      name="deposit_payment_method_id"
+                      value={form.deposit_payment_method_id}
+                      onChange={handleFormChange}
+                      aria-label="Método de pago de la seña"
+                    >
+                      <option value="">Método de pago de la seña</option>
+                      {paymentMethods.map((method) => (
+                        <option key={method.id} value={method.id}>
+                          {method.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div className="agenda-price-card__remaining">
                   <span className="agenda-price-card__label">Saldo a cobrar</span>
@@ -2942,7 +2978,7 @@ export default function AgendaPage() {
                 </div>
               </div>
               <label className="form-field">
-                <span>Método de pago</span>
+                <span>Método de pago del saldo</span>
                 <select
                   name="payment_method_id"
                   value={form.payment_method_id}
