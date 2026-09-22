@@ -28,6 +28,7 @@ import {
   todayISO,
 } from "../../utils/dates";
 import "../../styles/agenda.css";
+import { showApiError } from "../../utils/errorDialog";
 
 const STATUS_OPTIONS = [
   { value: "reserved", label: "Reservado" },
@@ -1343,8 +1344,7 @@ export default function AgendaPage() {
       await refreshAgendaData();
       setSelectedTurno((prev) => (prev ? { ...prev, ...(extra || {}), status } : prev));
     } catch (err) {
-      const details = err?.status ? ` (${err.status})` : "";
-      alert(`${err.message || "No se pudo actualizar el estado."}${details}`);
+      showApiError(err, "No se pudo actualizar el estado.");
     }
   }
 
@@ -1386,8 +1386,7 @@ export default function AgendaPage() {
       await refreshAgendaData();
       setSelectedTurno(null);
     } catch (err) {
-      const details = err?.status ? ` (${err.status})` : "";
-      alert(`${err.message || "No se pudo eliminar el turno."}${details}`);
+      showApiError(err, "No se pudo eliminar el turno.");
     }
   }
 

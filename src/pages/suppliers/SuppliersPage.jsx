@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import { colorForName as supplierColor } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
@@ -71,7 +72,7 @@ export default function SuppliersPage() {
       resetForm();
       setFormOpen(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el proveedor.");
+      showApiError(err, "No se pudo guardar el proveedor.");
     }
   }
 

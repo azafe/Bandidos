@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { apiRequest } from "../../services/apiClient";
+import { showApiError } from "../../utils/errorDialog";
 
 const PAYMENT_METHOD_USAGE_SOURCES = [
   { key: "services", label: "Servicios", path: "/v2/services" },
@@ -69,7 +70,7 @@ export default function PaymentMethodsPage() {
         await createItem({ name: name.trim() });
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el método.");
+      showApiError(err, "No se pudo guardar el método.");
       return;
     }
     setName("");
@@ -140,8 +141,7 @@ export default function PaymentMethodsPage() {
         }
       }
 
-      const details = status ? ` (${status})` : "";
-      alert(`${err.message || "No se pudo eliminar el método."}${details}`);
+      showApiError(err, "No se pudo eliminar el método.");
       return false;
     } finally {
       setDeleteLoading(false);
@@ -171,7 +171,7 @@ export default function PaymentMethodsPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el método.");
+      showApiError(err, "No se pudo guardar el método.");
     }
   }
 

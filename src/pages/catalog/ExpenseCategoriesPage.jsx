@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import { showApiError } from "../../utils/errorDialog";
 
 export default function ExpenseCategoriesPage() {
   const { items, loading, error, createItem, updateItem, deleteItem } =
@@ -24,7 +25,7 @@ export default function ExpenseCategoriesPage() {
         await createItem({ name: name.trim() });
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar la categoría.");
+      showApiError(err, "No se pudo guardar la categoría.");
       return;
     }
     setName("");
@@ -38,7 +39,7 @@ export default function ExpenseCategoriesPage() {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar la categoría.");
+      showApiError(err, "No se pudo eliminar la categoría.");
       return false;
     }
   }
@@ -66,7 +67,7 @@ export default function ExpenseCategoriesPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar la categoría.");
+      showApiError(err, "No se pudo guardar la categoría.");
     }
   }
 

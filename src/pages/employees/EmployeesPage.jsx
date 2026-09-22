@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { colorForName as employeeColor } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 const ROLE_COLORS = {
   "Groomer":        "#ff4fa8",
@@ -68,14 +69,14 @@ export default function EmployeesPage() {
       resetForm();
       setFormOpen(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el empleado.");
+      showApiError(err, "No se pudo guardar el empleado.");
     }
   }
 
   async function handleDelete(id) {
     if (!window.confirm("¿Eliminar este empleado?")) return false;
     try { await deleteItem(id); return true; }
-    catch (err) { alert(err.message || "No se pudo eliminar el empleado."); return false; }
+    catch (err) { showApiError(err, "No se pudo eliminar el empleado."); return false; }
   }
 
   function openModalEdit(emp) {
@@ -92,7 +93,7 @@ export default function EmployeesPage() {
       setSelectedEmployee((prev) => prev ? { ...prev, ...payload } : prev);
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el empleado.");
+      showApiError(err, "No se pudo guardar el empleado.");
     }
   }
 

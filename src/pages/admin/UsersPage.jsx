@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
+import { showApiError } from "../../utils/errorDialog";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -53,7 +54,7 @@ export default function UsersPage() {
         await createItem(payload);
       }
     } catch (err) {
-      alert(err.message || "No se pudo crear el usuario.");
+      showApiError(err, "No se pudo crear el usuario.");
       return;
     }
     setForm({ email: "", password: "", role: "staff" });
@@ -67,7 +68,7 @@ export default function UsersPage() {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el usuario.");
+      showApiError(err, "No se pudo eliminar el usuario.");
       return false;
     }
   }
@@ -114,7 +115,7 @@ export default function UsersPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el usuario.");
+      showApiError(err, "No se pudo guardar el usuario.");
     }
   }
 

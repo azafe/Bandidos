@@ -4,6 +4,7 @@ import { useApiResource } from "../../hooks/useApiResource";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
 import { todayISO, toISO } from "../../utils/dates";
+import { showApiError } from "../../utils/errorDialog";
 import "../../styles/petshop.css";
 
 function formatCurrency(value) {
@@ -331,7 +332,7 @@ export default function PetShopPage() {
       resetProductForm();
       await refreshProducts();
     } catch (err) {
-      alert(err.message || "No se pudo guardar el producto.");
+      showApiError(err, "No se pudo guardar el producto.");
     }
   }
 
@@ -342,7 +343,7 @@ export default function PetShopPage() {
       await deleteProduct(productId);
       await refreshProducts();
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el producto.");
+      showApiError(err, "No se pudo eliminar el producto.");
     }
   }
 
@@ -370,7 +371,7 @@ export default function PetShopPage() {
       setSelectedProduct((prev) => (prev ? { ...prev, ...payload } : prev));
       setIsEditingProductModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo actualizar el producto.");
+      showApiError(err, "No se pudo actualizar el producto.");
     }
   }
 
@@ -481,7 +482,7 @@ export default function PetShopPage() {
       await refreshSales();
       await refreshProducts();
     } catch (err) {
-      alert(err.message || "No se pudo eliminar la venta.");
+      showApiError(err, "No se pudo eliminar la venta.");
     }
   }
 
@@ -520,7 +521,7 @@ export default function PetShopPage() {
       setSelectedSale((prev) => (prev ? { ...prev, ...payload } : prev));
       setIsEditingSaleModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo actualizar la venta.");
+      showApiError(err, "No se pudo actualizar la venta.");
     }
   }
 

@@ -10,6 +10,7 @@ import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { todayISO } from "../../utils/dates";
 import { COLOR_PALETTE as CATEGORY_COLORS } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 const EMPTY_ITEM = {
   name: "", amount: "", dueDay: 1,
@@ -109,7 +110,7 @@ export default function FixedExpensesPage() {
       await loadMonth();
       return true;
     } catch (err) {
-      alert(err.message || fallbackMessage);
+      showApiError(err, fallbackMessage);
       return false;
     } finally {
       setBusy(false);

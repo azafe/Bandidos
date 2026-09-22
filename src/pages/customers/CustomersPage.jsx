@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
+import { showApiError } from "../../utils/errorDialog";
 
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
@@ -63,7 +64,7 @@ export default function CustomersPage() {
         });
       }
     } catch (err) {
-      alert(err.message || "No se pudo guardar el cliente.");
+      showApiError(err, "No se pudo guardar el cliente.");
       return;
     }
 
@@ -83,7 +84,7 @@ export default function CustomersPage() {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el cliente.");
+      showApiError(err, "No se pudo eliminar el cliente.");
       return false;
     }
   }
@@ -134,7 +135,7 @@ export default function CustomersPage() {
       );
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el cliente.");
+      showApiError(err, "No se pudo guardar el cliente.");
     }
   }
 
