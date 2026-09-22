@@ -5,6 +5,7 @@ import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
 import { todayISO } from "../../utils/dates";
 import { colorForName as supplierColor } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 function initial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
@@ -155,7 +156,7 @@ export default function SupplierDetailPage() {
       resetForm();
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo guardar el movimiento.");
+      showApiError(err, "No se pudo guardar el movimiento.");
     } finally {
       setSaving(false);
     }
@@ -167,7 +168,7 @@ export default function SupplierDetailPage() {
       await apiRequest(`/v2/supplier-movements/${movId}`, { method: "DELETE" });
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el movimiento.");
+      showApiError(err, "No se pudo eliminar el movimiento.");
     }
   }
 

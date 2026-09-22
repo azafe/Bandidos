@@ -8,6 +8,7 @@ import { calcularEdad } from "../../utils/cumpleanos";
 import { apiRequest } from "../../services/apiClient";
 import { todayISO } from "../../utils/dates";
 import { colorForName as petColor } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 const PAGE_SIZE = 24;
 
@@ -122,7 +123,7 @@ export default function PetsPage() {
       resetForm();
       setFormOpen(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar la mascota.");
+      showApiError(err, "No se pudo guardar la mascota.");
     } finally {
       setSaving(false);
     }
@@ -139,7 +140,7 @@ export default function PetsPage() {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar la mascota.");
+      showApiError(err, "No se pudo eliminar la mascota.");
       return false;
     }
   }
@@ -156,7 +157,7 @@ export default function PetsPage() {
       await refresh();
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo archivar la mascota.");
+      showApiError(err, "No se pudo archivar la mascota.");
       return false;
     }
   }
@@ -167,7 +168,7 @@ export default function PetsPage() {
       await refresh();
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo restaurar la mascota.");
+      showApiError(err, "No se pudo restaurar la mascota.");
       return false;
     }
   }
@@ -211,7 +212,7 @@ export default function PetsPage() {
       setSelectedPet((prev) => prev ? { ...prev, ...payload } : prev);
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar la mascota.");
+      showApiError(err, "No se pudo guardar la mascota.");
     }
   }
 

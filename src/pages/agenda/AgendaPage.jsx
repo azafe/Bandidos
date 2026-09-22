@@ -28,6 +28,7 @@ import {
   todayISO,
 } from "../../utils/dates";
 import "../../styles/agenda.css";
+import { showApiError } from "../../utils/errorDialog";
 
 const STATUS_OPTIONS = [
   { value: "reserved", label: "Reservado" },
@@ -935,8 +936,13 @@ export default function AgendaPage() {
     });
   }
 
+  const MONEY_FIELDS = ["deposit_amount", "traslado_amount", "final_price"];
+
   function handleFormChange(e) {
-    const { name, value } = e.target;
+    const { name } = e.target;
+    const value = MONEY_FIELDS.includes(name)
+      ? e.target.value.replace(/\D/g, "")
+      : e.target.value;
     if (formError) setFormError("");
     clearFieldError(name);
     if (name === "service_type_id") {
@@ -1338,8 +1344,7 @@ export default function AgendaPage() {
       await refreshAgendaData();
       setSelectedTurno((prev) => (prev ? { ...prev, ...(extra || {}), status } : prev));
     } catch (err) {
-      const details = err?.status ? ` (${err.status})` : "";
-      alert(`${err.message || "No se pudo actualizar el estado."}${details}`);
+      showApiError(err, "No se pudo actualizar el estado.");
     }
   }
 
@@ -1381,8 +1386,7 @@ export default function AgendaPage() {
       await refreshAgendaData();
       setSelectedTurno(null);
     } catch (err) {
-      const details = err?.status ? ` (${err.status})` : "";
-      alert(`${err.message || "No se pudo eliminar el turno."}${details}`);
+      showApiError(err, "No se pudo eliminar el turno.");
     }
   }
 
@@ -2373,12 +2377,14 @@ export default function AgendaPage() {
                         <div className="agenda-input-currency">
                           <span>$</span>
                           <input
-                            type="number"
-                            min="0"
-                            step="1"
+                            type="text"
+                            inputMode="numeric"
                             value={finishForm.price}
                             onChange={(e) =>
-                              setFinishForm((prev) => ({ ...prev, price: e.target.value }))
+                              setFinishForm((prev) => ({
+                                ...prev,
+                                price: e.target.value.replace(/\D/g, ""),
+                              }))
                             }
                             placeholder="0"
                           />
@@ -2410,12 +2416,14 @@ export default function AgendaPage() {
                         <div className="agenda-input-currency">
                           <span>$</span>
                           <input
-                            type="number"
-                            min="0"
-                            step="1"
+                            type="text"
+                            inputMode="numeric"
                             value={finishForm.traslado_amount}
                             onChange={(e) =>
-                              setFinishForm((prev) => ({ ...prev, traslado_amount: e.target.value }))
+                              setFinishForm((prev) => ({
+                                ...prev,
+                                traslado_amount: e.target.value.replace(/\D/g, ""),
+                              }))
                             }
                             placeholder="0"
                           />
@@ -2727,11 +2735,10 @@ export default function AgendaPage() {
                     <div className="agenda-input-currency">
                       <span>$</span>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         name="deposit_amount"
                         placeholder="0"
-                        min="0"
-                        step="1"
                         value={form.deposit_amount}
                         onChange={handleFormChange}
                       />
@@ -2876,10 +2883,9 @@ export default function AgendaPage() {
                     <div className="agenda-input-currency">
                       <span>$</span>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         name="traslado_amount"
-                        min="0"
-                        step="1"
                         value={form.traslado_amount}
                         onChange={handleFormChange}
                         placeholder="0"
@@ -2918,10 +2924,9 @@ export default function AgendaPage() {
                 <div className="agenda-input-currency">
                   <span>$</span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     name="final_price"
-                    min="0"
-                    step="1"
                     value={form.final_price}
                     onChange={handleFormChange}
                     placeholder="0"
@@ -2940,10 +2945,9 @@ export default function AgendaPage() {
                     <span>$</span>
                     <input
                       id="agenda-deposit"
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       name="deposit_amount"
-                      min="0"
-                      step="1"
                       value={form.deposit_amount}
                       onChange={handleFormChange}
                       placeholder="0"

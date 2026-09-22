@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import Modal from "../../components/ui/Modal";
+import { showApiError } from "../../utils/errorDialog";
 import {
   getTenants,
   createTenant,
@@ -119,7 +120,7 @@ export default function SuperAdminPage() {
       setTenantForm(EMPTY_TENANT_FORM);
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo crear el tenant.");
+      showApiError(err, "No se pudo crear el tenant.");
     } finally {
       setSavingTenant(false);
     }
@@ -151,7 +152,7 @@ export default function SuperAdminPage() {
       setEditTarget(null);
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo guardar.");
+      showApiError(err, "No se pudo guardar.");
     } finally {
       setSavingEdit(false);
     }
@@ -173,7 +174,7 @@ export default function SuperAdminPage() {
       setSuspendTarget(null);
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo suspender.");
+      showApiError(err, "No se pudo suspender.");
     } finally {
       setSavingSuspend(false);
     }
@@ -185,7 +186,7 @@ export default function SuperAdminPage() {
       await updateTenant(tenant.id, { status: "active", suspended_reason: null });
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo reactivar.");
+      showApiError(err, "No se pudo reactivar.");
     }
   }
 
@@ -207,7 +208,7 @@ export default function SuperAdminPage() {
       setAdminForm(EMPTY_ADMIN_FORM);
       await load();
     } catch (err) {
-      alert(err.message || "No se pudo crear el admin.");
+      showApiError(err, "No se pudo crear el admin.");
     } finally {
       setSavingAdmin(false);
     }

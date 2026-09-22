@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { COLOR_PALETTE as TYPE_COLORS } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "-";
@@ -63,7 +64,7 @@ export default function ServiceTypesPage() {
       resetForm();
       setFormOpen(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el tipo de servicio.");
+      showApiError(err, "No se pudo guardar el tipo de servicio.");
     }
   }
 
@@ -73,7 +74,7 @@ export default function ServiceTypesPage() {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el tipo.");
+      showApiError(err, "No se pudo eliminar el tipo.");
       return false;
     }
   }
@@ -101,7 +102,7 @@ export default function ServiceTypesPage() {
       setSelectedType((prev) => prev ? { ...prev, ...payload } : prev);
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el tipo de servicio.");
+      showApiError(err, "No se pudo guardar el tipo de servicio.");
     }
   }
 

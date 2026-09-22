@@ -4,6 +4,7 @@ import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { todayISO } from "../../utils/dates";
 import { COLOR_PALETTE as CATEGORY_COLORS } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 export default function DailyExpensesPage() {
   const today = todayISO();
@@ -131,7 +132,7 @@ export default function DailyExpensesPage() {
       resetForm();
       setFormOpen(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el gasto.");
+      showApiError(err, "No se pudo guardar el gasto.");
     }
   }
 
@@ -141,7 +142,7 @@ export default function DailyExpensesPage() {
       await deleteItem(id);
       return true;
     } catch (err) {
-      alert(err.message || "No se pudo eliminar el gasto.");
+      showApiError(err, "No se pudo eliminar el gasto.");
       return false;
     }
   }
@@ -178,7 +179,7 @@ export default function DailyExpensesPage() {
       setSelectedExpense((prev) => prev ? { ...prev, ...payload } : prev);
       setIsEditingModal(false);
     } catch (err) {
-      alert(err.message || "No se pudo guardar el gasto.");
+      showApiError(err, "No se pudo guardar el gasto.");
     }
   }
 

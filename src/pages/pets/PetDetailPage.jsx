@@ -6,6 +6,7 @@ import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
 import { todayISO } from "../../utils/dates";
 import { colorForName as petColor } from "../../utils/colorPalette";
+import { showApiError } from "../../utils/errorDialog";
 
 function petInitial(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
@@ -155,7 +156,7 @@ export default function PetDetailPage() {
       setPet((prev) => (prev ? { ...prev, ...updated } : prev));
       if (!isArchived) navigate("/pets");
     } catch (err) {
-      alert(err.message || "No se pudo actualizar la mascota.");
+      showApiError(err, "No se pudo actualizar la mascota.");
     } finally {
       setArchiving(false);
     }

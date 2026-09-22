@@ -9,6 +9,7 @@ import {
   getSubscriptionStatus,
 } from "../../services/pushNotifications.js";
 import { todayISO } from "../../utils/dates";
+import { showApiError } from "../../utils/errorDialog";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
@@ -33,7 +34,7 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
         setPushEnabled(true);
       }
     } catch (err) {
-      alert(err.message || "Error al configurar notificaciones.");
+      showApiError(err, "Error al configurar notificaciones.");
     } finally {
       setPushLoading(false);
     }

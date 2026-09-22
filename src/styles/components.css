@@ -760,6 +760,44 @@
   color: #11151f;
 }
 
+/* ===== Cartel de error de la API (ErrorDialog) ===== */
+.error-dialog .modal-header h3 {
+  color: var(--bad);
+}
+
+.error-dialog__icon {
+  font-size: 1.8rem;
+  text-align: center;
+}
+
+.error-dialog__message {
+  background: var(--bad-bg);
+  color: var(--bad);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.error-dialog__hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.error-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.error-dialog__support {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
