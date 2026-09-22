@@ -232,4 +232,14 @@
   .app-main-content {
     padding: 24px 32px;
   }
+
+  /* El sidebar queda pegado al viewport para que el fondo oscuro
+     siempre llene la pantalla, aunque el contenido principal sea
+     más alto que 100vh (si no, quedaba "cortado" al hacer scroll) */
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+  }
 }
