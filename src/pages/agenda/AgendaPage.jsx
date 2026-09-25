@@ -1,6 +1,6 @@
 // src/pages/agenda/AgendaPage.jsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAgendaDay } from "../../hooks/useAgendaDay";
 import { useAgendaRange } from "../../hooks/useAgendaRange";
 import { useAgendaCounts } from "../../hooks/useAgendaCounts";
@@ -438,6 +438,52 @@ export default function AgendaPage() {
     error,
     refetch,
   } = useAgendaDay(selectedDate);
+
+  // Enlaces desde la ficha de mascota:
+  // - /agenda?nuevoTurno=1&petId=… abre el alta de turno con la mascota elegida.
+  // - /agenda?date=YYYY-MM-DD&turno=… abre ese turno en su día.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkRef = useRef(null);
+  if (deepLinkRef.current === null) {
+    deepLinkRef.current = {
+      petId: searchParams.get("nuevoTurno") ? searchParams.get("petId") : null,
+      turnoId: searchParams.get("turno"),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get("date") || "") ? searchParams.get("date") : null,
+    };
+  }
+
+  useEffect(() => {
+    const link = deepLinkRef.current;
+    if (!link.petId && !link.turnoId && !link.date) return;
+    if (link.date) {
+      setSelectedDate(link.date);
+      setCalendarView("day");
+    }
+    setSearchParams({}, { replace: true });
+    // Solo al montar: los parámetros se consumen una vez.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const link = deepLinkRef.current;
+    if (!link.petId || pets.length === 0) return;
+    const petId = link.petId;
+    link.petId = null;
+    openCreate();
+    if (pets.some((p) => String(p.id) === String(petId))) handlePetSelect(petId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pets]);
+
+  useEffect(() => {
+    const link = deepLinkRef.current;
+    if (!link.turnoId || loading || selectedDate !== (link.date || selectedDate)) return;
+    // Mientras llega el día pedido los items pueden ser del día anterior: se
+    // espera a encontrarlo en vez de descartar el enlace.
+    const turno = items.find((t) => String(t.id) === String(link.turnoId));
+    if (!turno) return;
+    link.turnoId = null;
+    setSelectedTurno(turno);
+  }, [items, loading, selectedDate]);
 
   const weekStart = useMemo(() => startOfWeekISO(selectedDate), [selectedDate]);
   const weekEnd = useMemo(() => addDaysISO(weekStart, 6), [weekStart]);
