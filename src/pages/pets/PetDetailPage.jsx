@@ -1,431 +1,636 @@
 // src/pages/pets/PetDetailPage.jsx
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+// Ficha de mascota: perfil, KPIs, próximo turno e historial de servicios.
+// Las estadísticas vienen del backend (misma consulta que la lista) y el
+// historial de GET /v2/pets/:id/turnos.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
-import Modal from "../../components/ui/Modal";
+import { useAuth } from "../../context/AuthContext";
 import PhotoUpload from "../../components/ui/PhotoUpload";
 import { todayISO } from "../../utils/dates";
-import { colorForName as petColor } from "../../utils/colorPalette";
-import { showApiError } from "../../utils/errorDialog";
+import PetForm from "./components/PetForm";
+import ServiceDetail from "./components/ServiceDetail";
+import { Icon, Pill, PetAvatar, StatusPill, Toast } from "./components/PetBits";
+import { usePetActions } from "./components/usePetActions";
+import {
+  completionRatio,
+  daysBetween,
+  displayName,
+  displayText,
+  formatDate,
+  formatDaysAgo,
+  formatDuration,
+  formatMoney,
+  formatShortDate,
+  formatTime,
+  getPetStats,
+  isIncomplete,
+  isLoyalClient,
+  missingFields,
+  petColor,
+  petSummaryLine,
+  PETS_LIST_SEARCH_KEY,
+  weekdayName,
+  whatsappUrl,
+} from "../../utils/pets";
+import "../../styles/pets.css";
 
-function petInitial(name) {
-  return name ? name.charAt(0).toUpperCase() : "?";
+const HISTORY_PAGE = 10;
+const HISTORY_FILTERS = [
+  { value: "all", label: "Todos" },
+  { value: "finished", label: "Finalizados" },
+  { value: "cancelled", label: "Cancelados" },
+];
+
+function asList(data) {
+  return Array.isArray(data) ? data : data?.items || [];
 }
 
-function parseSheetDate(dateStr) {
-  if (!dateStr) return null;
-  const raw = String(dateStr).trim();
-  if (raw.includes("-")) {
-    const datePart = raw.split("T")[0];
-    const parts = datePart.split("-");
-    if (parts.length === 3 && parts[0].length === 4) {
-      const [y, m, d] = parts.map(Number);
-      return new Date(y, m - 1, d);
-    }
-    const d = new Date(raw);
-    return isNaN(d.getTime()) ? null : d;
+function dateKey(value) {
+  return String(value || "").split("T")[0];
+}
+
+function listBackPath(state) {
+  if (state?.from) return state.from;
+  try {
+    const saved = window.sessionStorage.getItem(PETS_LIST_SEARCH_KEY);
+    return saved ? `/pets?${saved}` : "/pets";
+  } catch {
+    return "/pets";
   }
-  const parts = raw.split("/");
-  if (parts.length !== 3) return null;
-  let [p1, p2, p3] = parts.map((v) => Number(v));
-  if (!p1 || !p2 || !p3) return null;
-  let day, month;
-  if (p1 > 12) { day = p1; month = p2; }
-  else if (p2 > 12) { month = p1; day = p2; }
-  else { day = p1; month = p2; }
-  const year = p3 < 100 ? 2000 + p3 : p3;
-  const d = new Date(year, month - 1, day);
-  return isNaN(d.getTime()) ? null : d;
 }
 
-function formatDateDisplay(value) {
-  if (!value) return "-";
-  const parsed = parseSheetDate(value);
-  if (!parsed || Number.isNaN(parsed.getTime())) return value;
-  return `${String(parsed.getDate()).padStart(2, "0")}/${String(parsed.getMonth() + 1).padStart(2, "0")}/${parsed.getFullYear()}`;
-}
-
-function formatPrice(value) {
-  if (value === null || value === undefined || value === "") return "-";
-  return `$${Number(value).toLocaleString("es-AR")}`;
-}
-
-function formatTime(value) {
-  if (!value) return null;
-  return String(value).slice(0, 5);
-}
-
-function formatDuration(minutes) {
-  const m = Number(minutes);
-  if (!m || !Number.isFinite(m)) return null;
-  if (m < 60) return `${m} min`;
-  const h = Math.floor(m / 60);
-  const rem = m % 60;
-  return rem > 0 ? `${h} h ${rem} min` : `${h} h`;
-}
-
-const STATUS_LABELS = {
-  reserved:  "Reservado",
-  finished:  "Finalizado",
-  cancelled: "Cancelado",
-};
-
-const STATUS_COLORS = {
-  reserved:  { bg: "rgba(59,130,246,0.12)", color: "#1d4ed8" },
-  finished:  { bg: "rgba(34,197,94,0.15)",  color: "#15803d" },
-  cancelled: { bg: "rgba(248,113,113,0.15)", color: "#b91c1c" },
-};
-
-// Ordena servicios del más reciente al más antiguo
-function sortByDate(services) {
-  return [...services].sort((a, b) => {
-    const da = parseSheetDate(a.date);
-    const db = parseSheetDate(b.date);
-    if (!da && !db) return 0;
-    if (!da) return 1;
-    if (!db) return -1;
-    return db - da;
-  });
+function joinParts(parts) {
+  return parts.filter(Boolean).join(" · ");
 }
 
 export default function PetDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const backPath = listBackPath(location.state);
+
   const [pet, setPet] = useState(null);
-  const [services, setServices] = useState([]);
-  const [employeesById, setEmployeesById] = useState(new Map());
-  const [paymentMethodsById, setPaymentMethodsById] = useState(new Map());
-  const [serviceTypesById, setServiceTypesById] = useState(new Map());
+  const [turnos, setTurnos] = useState([]);
+  const [lookups, setLookups] = useState({ employees: new Map(), payments: new Map(), types: new Map() });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedService, setSelectedService] = useState(null);
+  const [selectedTurno, setSelectedTurno] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState("all");
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [toast, setToast] = useState("");
+  const clearToast = useCallback(() => setToast(""), []);
+  const photoPickerRef = useRef(null);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const today = todayISO();
-        const [petData, agendaData, employeesData, paymentData, serviceTypesData] = await Promise.all([
-          apiRequest(`/v2/pets/${id}`),
-          apiRequest("/agenda", { params: { from: "2020-01-01", to: today } }),
-          apiRequest("/v2/employees"),
-          apiRequest("/v2/payment-methods"),
-          apiRequest("/v2/service-types"),
-        ]);
-        if (!active) return;
-        setPet(petData);
-        const all = Array.isArray(agendaData) ? agendaData : agendaData?.items || [];
-        setServices(all.filter((s) => String(s.pet_id) === String(id)));
-        const emps = Array.isArray(employeesData) ? employeesData : employeesData?.items || [];
-        setEmployeesById(new Map(emps.map((e) => [String(e.id), e])));
-        const methods = Array.isArray(paymentData) ? paymentData : paymentData?.items || [];
-        setPaymentMethodsById(new Map(methods.map((m) => [String(m.id), m])));
-        const types = Array.isArray(serviceTypesData) ? serviceTypesData : serviceTypesData?.items || [];
-        setServiceTypesById(new Map(types.map((t) => [String(t.id), t])));
-      } catch (err) {
-        if (!active) return;
-        setError(err.message || "No se pudo cargar la ficha de la mascota.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    load();
-    return () => { active = false; };
+  const loadPet = useCallback(async () => {
+    const [petData, turnosData] = await Promise.all([
+      apiRequest(`/v2/pets/${id}`),
+      apiRequest(`/v2/pets/${id}/turnos`),
+    ]);
+    setPet(petData);
+    setTurnos(asList(turnosData));
   }, [id]);
 
-  const navigate = useNavigate();
-  const [archiving, setArchiving] = useState(false);
-
-  async function handleArchiveToggle() {
-    if (!pet) return;
-    const isArchived = Boolean(pet.archived_at);
-    if (
-      !isArchived &&
-      !window.confirm(
-        "¿Archivar esta mascota?\n\nDeja de aparecer en las listas y búsquedas, pero se conserva su ficha y todo el historial de servicios."
-      )
-    )
-      return;
+  const load = useCallback(async () => {
     try {
-      setArchiving(true);
-      const updated = await apiRequest(
-        `/v2/pets/${pet.id}/${isArchived ? "unarchive" : "archive"}`,
-        { method: "POST" }
-      );
-      setPet((prev) => (prev ? { ...prev, ...updated } : prev));
-      if (!isArchived) navigate("/pets");
+      setLoading(true);
+      setError(null);
+      const [, employees, payments, types] = await Promise.all([
+        loadPet(),
+        apiRequest("/v2/employees").catch(() => []),
+        apiRequest("/v2/payment-methods").catch(() => []),
+        apiRequest("/v2/service-types").catch(() => []),
+      ]);
+      const toMap = (rows) => new Map(asList(rows).map((r) => [String(r.id), r]));
+      setLookups({ employees: toMap(employees), payments: toMap(payments), types: toMap(types) });
     } catch (err) {
-      showApiError(err, "No se pudo actualizar la mascota.");
+      setError(err.status === 404 ? "No encontramos esta mascota." : err.message || "No se pudo cargar la ficha.");
     } finally {
-      setArchiving(false);
+      setLoading(false);
+    }
+  }, [loadPet]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const resolve = useMemo(
+    () => ({
+      groomer: (t) => t.groomer?.name || lookups.employees.get(String(t.groomer_id))?.name || "",
+      payment: (t) => t.payment_method?.name || lookups.payments.get(String(t.payment_method_id))?.name || "",
+      serviceType: (t) => t.service_type?.name || lookups.types.get(String(t.service_type_id))?.name || "",
+    }),
+    [lookups]
+  );
+
+  const actions = usePetActions({
+    notify: setToast,
+    onChanged: async (changed, action) => {
+      if (action === "deleted") {
+        navigate(backPath, { replace: true });
+        return;
+      }
+      setPet((prev) => (prev ? { ...prev, ...changed } : prev));
+    },
+  });
+
+  if (loading && !pet) {
+    return (
+      <div className="page-content pv-page">
+        <div className="pv-profile pv-card--skeleton" aria-busy="true">
+          <div className="pv-skel pv-skel--row" />
+          <div className="pv-skel pv-skel--line" />
+          <div className="pv-skel pv-skel--block" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !pet) {
+    return (
+      <div className="page-content pv-page">
+        <Link to={backPath} className="pv-back">
+          <Icon name="back" size={16} /> Mascotas
+        </Link>
+        <div className="pv-state pv-state--error" role="alert">
+          <strong>{error || "No se pudo cargar la ficha."}</strong>
+          <div className="pv-state__actions">
+            <button type="button" className="pv-btn pv-btn--ghost" onClick={load}>
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const name = displayName(pet.name);
+  const stats = getPetStats(pet);
+  const color = petColor(pet.name);
+  const archived = Boolean(pet.archived_at);
+  const waUrl = whatsappUrl(pet.owner_phone);
+  const missing = missingFields(pet);
+  const incomplete = isIncomplete(pet);
+
+  const lastVisitTurno = turnos.find((t) => t.status === "finished" && dateKey(t.date) === stats.ultimaVisita);
+  const nextTurno = stats.proximoTurno
+    ? [...turnos]
+        .filter((t) => t.status === "reserved" && dateKey(t.date) === stats.proximoTurno)
+        .sort((a, b) => String(a.time).localeCompare(String(b.time)))[0]
+    : null;
+
+  const filteredHistory =
+    historyFilter === "all" ? turnos : turnos.filter((t) => t.status === historyFilter);
+  const visibleHistory = historyExpanded ? filteredHistory : filteredHistory.slice(0, HISTORY_PAGE);
+  const hiddenCount = filteredHistory.length - visibleHistory.length;
+
+  const contactLine = [
+    pet.owner_name && { label: "Dueño", value: displayName(pet.owner_name) },
+    pet.owner_phone && { label: "Cel.", value: pet.owner_phone },
+    pet.address && { label: "Dir.", value: displayText(pet.address) },
+  ].filter(Boolean);
+
+  const servicesNote = joinParts([
+    stats.reservados > 0 && `+${stats.reservados} ${stats.reservados === 1 ? "reservado" : "reservados"}`,
+    stats.cancelados > 0 && `${stats.cancelados} ${stats.cancelados === 1 ? "cancelado" : "cancelados"}`,
+  ]);
+  const lastVisitNote = joinParts([
+    lastVisitTurno && resolve.serviceType(lastVisitTurno),
+    stats.ultimaVisita && formatDaysAgo(stats.ultimaVisita),
+    stats.frecuenciaDias && `viene cada ~${stats.frecuenciaDias} días`,
+  ]);
+
+  function schedule() {
+    navigate(`/agenda?nuevoTurno=1&petId=${encodeURIComponent(pet.id)}`);
+  }
+
+  function handlePhotoUploaded(updated) {
+    setPet((prev) => (prev ? { ...prev, ...updated } : prev));
+  }
+
+  async function handleSaved(saved, { keepOpen } = {}) {
+    if (saved) setPet((prev) => (prev ? { ...prev, ...saved } : prev));
+    if (keepOpen) return;
+    setFormOpen(false);
+    setToast("Cambios guardados");
+    try {
+      await loadPet();
+    } catch {
+      /* los datos editados ya están en pantalla */
     }
   }
 
-  function resolveGroomer(s) {
-    return s.groomer?.name || employeesById.get(String(s.groomer_id))?.name || null;
-  }
+  const menu = (
+    <MoreMenu
+      archived={archived}
+      isAdmin={isAdmin}
+      onChangePhoto={() => photoPickerRef.current?.open()}
+      onArchiveToggle={() => (archived ? actions.restore(pet) : actions.archive(pet))}
+      onDelete={() => actions.requestDelete(pet)}
+    />
+  );
 
-  function resolvePaymentMethod(s) {
-    return s.payment_method?.name || paymentMethodsById.get(String(s.payment_method_id))?.name || null;
-  }
-
-  function resolveServiceType(s) {
-    return s.service_type?.name || serviceTypesById.get(String(s.service_type_id))?.name || null;
-  }
-
-  const sorted = sortByDate(services);
-  const totalRevenue = services.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-  const avgRevenue = services.length > 0 ? totalRevenue / services.length : 0;
-  const lastService = sorted[0];
-  const color = petColor(pet?.name);
+  const actionButtons = (
+    <>
+      {waUrl ? (
+        <a className="pv-btn pv-btn--wa" href={waUrl} target="_blank" rel="noopener noreferrer">
+          <Icon name="whatsapp" /> WhatsApp
+        </a>
+      ) : (
+        <span className="pv-btn pv-btn--wa is-disabled" aria-disabled="true" title="Sin celular cargado">
+          <Icon name="whatsapp" /> WhatsApp
+        </span>
+      )}
+      <button type="button" className="pv-btn pv-btn--ghost" onClick={() => setFormOpen(true)}>
+        <Icon name="edit" /> Editar
+      </button>
+      <button
+        type="button"
+        className="pv-btn pv-btn--brand"
+        onClick={schedule}
+        disabled={archived}
+        title={archived ? "Restaurala para agendarle un turno" : undefined}
+      >
+        <Icon name="calendar" /> Agendar turno
+      </button>
+    </>
+  );
 
   return (
-    <div className="page-content">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Ficha de mascota</h1>
-          <p className="page-subtitle">
-            {pet?.archived_at
-              ? "Mascota archivada · no aparece en las listas, pero conserva su historial."
-              : "Información general e historial de servicios."}
+    <div className="page-content pv-page pv-detail">
+      {/* Mobile: barra superior */}
+      <div className="pv-topbar">
+        <Link to={backPath} className="pv-icon-btn" aria-label="Volver a Mascotas">
+          <Icon name="back" />
+        </Link>
+        <span className="pv-topbar__title">Ficha</span>
+        {menu}
+      </div>
+
+      {/* Desktop: breadcrumb */}
+      <nav className="pv-breadcrumb" aria-label="Ruta">
+        <Link to={backPath} className="pv-back">
+          <Icon name="back" size={16} /> Mascotas
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span className="pv-breadcrumb__current">{name}</span>
+      </nav>
+
+      {archived && (
+        <div className="pv-archived-bar" role="status">
+          <p>
+            <strong>ARCHIVADA</strong> · No aparece en listas ni búsquedas, pero conserva su ficha y su historial.
           </p>
+          <button type="button" className="pv-btn pv-btn--light" onClick={() => actions.restore(pet)}>
+            Restaurar
+          </button>
         </div>
-        <div className="fixed-expenses-header-actions">
-          {pet && (
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={archiving}
-              onClick={handleArchiveToggle}
-              title={
-                pet.archived_at
-                  ? "Volver a mostrarla en las listas"
-                  : "Sacarla de las listas conservando su historial"
-              }
-            >
-              {pet.archived_at ? "Restaurar" : "Archivar"}
-            </button>
-          )}
-          <Link to="/pets" className="btn-secondary">← Volver</Link>
-        </div>
-      </header>
+      )}
 
-      {error && <div className="card" style={{ color: "#f37b7b" }}>{error}</div>}
-
-      {loading ? (
-        <div className="card card-subtitle" style={{ padding: 32, textAlign: "center" }}>Cargando ficha...</div>
-      ) : pet && (
-        <>
-          {/* Perfil */}
-          <div className="pet-detail-profile">
-            <div className="pet-detail-profile__bar" style={{ background: color }} />
-            <div className="pet-detail-profile__body">
-              <div className="pet-detail-profile__left">
-                <PhotoUpload
-                  photoUrl={pet.photo_url}
-                  uploadPath={`/v2/pets/${pet.id}/photo`}
-                  label="Cambiar foto"
-                  onUploaded={(updated) => setPet((prev) => (prev ? { ...prev, ...updated } : prev))}
-                  fallback={
-                    <div className="pet-detail-profile__avatar" style={{ background: color }}>
-                      {petInitial(pet.name)}
-                    </div>
-                  }
-                />
-                <div>
-                  <h2 className="pet-detail-profile__name">{pet.name}</h2>
-                  {pet.breed && <p className="pet-detail-profile__breed">{pet.breed}</p>}
-                  <div className="pet-detail-profile__badges">
-                    <span className={`pet-card__tag${pet.neutered ? " pet-card__tag--yes" : ""}`}>
-                      {pet.neutered ? "Castrado" : "Sin castrar"}
-                    </span>
-                    {pet.behavior && <span className="pet-card__tag">{pet.behavior}</span>}
-                    {pet.age && <span className="pet-card__tag">{pet.age}</span>}
-                  </div>
-                </div>
-              </div>
-              <div className="pet-detail-profile__info">
-                {[
-                  { label: "Dueño", value: pet.owner_name },
-                  { label: "Celular", value: pet.owner_phone },
-                  { label: "Dirección", value: pet.address },
-                  { label: "Notas", value: pet.notes },
-                ].filter((r) => r.value).map(({ label, value }) => (
-                  <div key={label} className="pet-detail-profile__row">
-                    <span className="pet-detail-profile__row-label">{label}</span>
-                    <span className="pet-detail-profile__row-value">{value}</span>
-                  </div>
+      {/* Perfil */}
+      <section className="pv-profile" style={{ "--pet-color": color }}>
+        <div className="pv-profile__main">
+          <div className="pv-profile__photo">
+            <PhotoUpload
+              photoUrl={pet.photo_url}
+              uploadPath={`/v2/pets/${pet.id}/photo`}
+              onUploaded={handlePhotoUploaded}
+              size={96}
+              className="pv-photo-overlay"
+              triggerClassName="pv-camera-btn"
+              triggerContent={<Icon name="camera" size={16} />}
+              label="Cambiar foto"
+              pickerRef={photoPickerRef}
+              fallback={<PetAvatar pet={pet} size={96} />}
+            />
+          </div>
+          <div className="pv-profile__info">
+            <div className="pv-profile__name-row">
+              <h1 className="pv-profile__name">{name}</h1>
+              {isLoyalClient(pet) && (
+                <Pill tone="brand">Cliente fiel · {stats.servicios} visitas</Pill>
+              )}
+            </div>
+            <p className="pv-muted">{petSummaryLine(pet)}</p>
+            {contactLine.length > 0 && (
+              <p className="pv-profile__contact">
+                {contactLine.map((part) => (
+                  <span key={part.label}>
+                    <span className="pv-muted">{part.label}</span> {part.value}
+                  </span>
                 ))}
-              </div>
-            </div>
-          </div>
-
-          {/* KPIs */}
-          <div className="card fixed-expenses-summary" style={{ marginBottom: 16 }}>
-            <div className="fixed-expenses-summary__kpis">
-              <div className="fe-kpi fe-kpi--total">
-                <span>Ingresos acumulados</span>
-                <strong>{formatPrice(totalRevenue)}</strong>
-              </div>
-              <div className="fe-kpi">
-                <span>Servicios totales</span>
-                <strong>{services.length}</strong>
-              </div>
-              <div className="fe-kpi">
-                <span>Promedio por servicio</span>
-                <strong>{services.length > 0 ? formatPrice(Math.round(avgRevenue)) : "-"}</strong>
-              </div>
-              <div className="fe-kpi">
-                <span>Último servicio</span>
-                <strong>{lastService ? formatDateDisplay(lastService.date) : "-"}</strong>
-                {lastService && <small>{resolveServiceType(lastService) || "Servicio"}</small>}
-              </div>
-            </div>
-          </div>
-
-          {/* Historial */}
-          <div className="card">
-            <div style={{ marginBottom: 16 }}>
-              <h2 className="card-title">Historial de servicios</h2>
-              <p className="card-subtitle">
-                {services.length} {services.length === 1 ? "servicio registrado" : "servicios registrados"} · Del más reciente al más antiguo.
               </p>
-            </div>
+            )}
+          </div>
+          <div className="pv-profile__actions">
+            {actionButtons}
+            <span className="pv-profile__menu">{menu}</span>
+          </div>
+        </div>
 
-            {services.length === 0 ? (
-              <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
-                No hay servicios registrados para esta mascota.
+        {(pet.behavior || pet.notes) && (
+          <div className="pv-profile__notes">
+            {pet.behavior && (
+              <div className="pv-callout pv-callout--warn">
+                <span className="pv-callout__label">
+                  <Icon name="alert" size={14} /> Comportamiento · antes de atender
+                </span>
+                <p>{displayText(pet.behavior)}</p>
               </div>
-            ) : (
-              <div className="fe-cards-grid">
-                {sorted.map((service) => (
-                  <div
-                    key={service.id}
-                    className="fe-card"
-                    style={{ "--fe-accent": color, cursor: "pointer" }}
-                    onClick={() => setSelectedService(service)}
-                  >
-                    <div className="fe-card__accent" />
-                    <div className="fe-card__body">
-                      <div className="fe-card__top">
-                        <span className="fe-card__name">
-                          {resolveServiceType(service) || "Servicio"}
-                        </span>
-                        <span className="fe-card__date-badge">
-                          {formatDateDisplay(service.date)}
-                        </span>
-                      </div>
-                      <div className="fe-card__amount">{formatPrice(service.price)}</div>
-                      <div className="fe-card__meta">
-                        {resolveGroomer(service) && (
-                          <span className="fe-card__badge">{resolveGroomer(service)}</span>
-                        )}
-                        {resolvePaymentMethod(service) && (
-                          <span className="fe-card__meta-item">{resolvePaymentMethod(service)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            )}
+            {pet.notes && (
+              <div className="pv-callout">
+                <span className="pv-callout__label">Observaciones</span>
+                <p>{displayText(pet.notes)}</p>
               </div>
             )}
           </div>
-        </>
-      )}
+        )}
 
-      {/* Modal detalle de servicio */}
-      <Modal
-        isOpen={Boolean(selectedService)}
-        onClose={() => setSelectedService(null)}
-        title="Detalle del servicio"
-      >
-        {selectedService && (() => {
-          const s = selectedService;
-          const status = s.status || "reserved";
-          const statusStyle = STATUS_COLORS[status] || STATUS_COLORS.reserved;
-          const deposit = Number(s.deposit_amount) || 0;
-          const price = Number(s.price) || 0;
-          const remaining = Math.max(0, price - deposit);
-          const groomer = resolveGroomer(s);
-          const payment = resolvePaymentMethod(s);
-          const time = formatTime(s.time);
-          const duration = formatDuration(s.duration);
-          return (
-            <div className="agenda-turno-modal">
-              {/* Hero */}
-              <div className="agenda-turno-modal__hero">
-                <div>
-                  <p className="agenda-turno-modal__eyebrow">{formatDateDisplay(s.date)}{time ? ` · ${time}` : ""}{duration ? ` · ${duration}` : ""}</p>
-                  <h3 className="agenda-turno-modal__title">
-                    {s.pet_name || pet?.name || "Mascota"} — {resolveServiceType(s) || "Servicio"}
-                  </h3>
-                  <p className="agenda-turno-modal__subtitle">
-                    {s.owner_name || "-"}{s.breed ? ` · ${s.breed}` : ""}
-                    {groomer ? ` · Groomer: ${groomer}` : ""}
-                  </p>
-                </div>
-                <span
-                  style={{
-                    padding: "4px 12px",
-                    borderRadius: 999,
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    background: statusStyle.bg,
-                    color: statusStyle.color,
-                    whiteSpace: "nowrap",
-                    alignSelf: "flex-start",
-                  }}
-                >
-                  {STATUS_LABELS[status] || status}
-                </span>
-              </div>
-
-              {/* Métricas */}
-              <div className="agenda-turno-modal__metrics">
-                <article className="agenda-turno-modal__metric">
-                  <span>Precio del servicio</span>
-                  <strong>{formatPrice(price)}</strong>
-                </article>
-                <article className="agenda-turno-modal__metric">
-                  <span>Seña registrada</span>
-                  <strong>{deposit > 0 ? formatPrice(deposit) : "-"}</strong>
-                </article>
-                <article className="agenda-turno-modal__metric">
-                  <span>Saldo pendiente</span>
-                  <strong className={remaining > 0 ? "agenda-turno-modal__balance--pending" : "agenda-turno-modal__balance--clear"}>
-                    {formatPrice(remaining)}
-                  </strong>
-                </article>
-              </div>
-
-              {/* Paneles */}
-              <div className="agenda-turno-modal__grid">
-                <article className="agenda-turno-modal__panel">
-                  <h4>Detalle operativo</h4>
-                  <div className="agenda-turno-modal__pairs">
-                    <div className="agenda-turno-modal__pair"><span>Fecha</span><strong>{formatDateDisplay(s.date)}</strong></div>
-                    {time && <div className="agenda-turno-modal__pair"><span>Hora</span><strong>{time}</strong></div>}
-                    {duration && <div className="agenda-turno-modal__pair"><span>Duración</span><strong>{duration}</strong></div>}
-                    <div className="agenda-turno-modal__pair"><span>Mascota</span><strong>{s.pet_name || pet?.name || "-"}</strong></div>
-                    <div className="agenda-turno-modal__pair"><span>Dueño</span><strong>{s.owner_name || "-"}</strong></div>
-                    <div className="agenda-turno-modal__pair"><span>Raza</span><strong>{s.breed || "-"}</strong></div>
-                    <div className="agenda-turno-modal__pair"><span>Groomer</span><strong>{groomer || "-"}</strong></div>
-                    <div className="agenda-turno-modal__pair"><span>Método de pago</span><strong>{payment || "-"}</strong></div>
-                  </div>
-                </article>
-
-                <article className="agenda-turno-modal__panel">
-                  <h4>Notas</h4>
-                  <p className={`agenda-turno-modal__notes${s.notes ? "" : " is-empty"}`}>
-                    {s.notes || "Sin notas para este turno."}
-                  </p>
-                </article>
+        {incomplete && (
+          <div className="pv-incomplete">
+            <div>
+              <strong>Completá la ficha de {name}</strong>
+              <p className="pv-muted">Faltan: {missing.map((f) => f.label).join(", ")}.</p>
+              <div
+                className="pv-progress"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(completionRatio(pet) * 100)}
+                aria-label="Ficha completa"
+              >
+                <span style={{ width: `${Math.round(completionRatio(pet) * 100)}%` }} />
               </div>
             </div>
-          );
-        })()}
-      </Modal>
+            <button type="button" className="pv-link pv-link--btn" onClick={() => setFormOpen(true)}>
+              Completar ahora →
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* Mobile: acciones debajo del perfil */}
+      <div className="pv-mobile-actions">{actionButtons}</div>
+
+      {/* KPIs */}
+      <section className="pv-kpis" aria-label="Resumen">
+        <div className="pv-kpi">
+          <span>Ingresos acumulados</span>
+          <strong className="pv-kpi__brand">{formatMoney(stats.ingresos)}</strong>
+          <small>Solo servicios finalizados</small>
+        </div>
+        <div className="pv-kpi">
+          <span>Servicios realizados</span>
+          <strong>{stats.servicios}</strong>
+          {servicesNote && <small>{servicesNote}</small>}
+        </div>
+        <div className="pv-kpi pv-kpi--desktop">
+          <span>Promedio por servicio</span>
+          <strong>{stats.servicios > 0 ? formatMoney(stats.promedio) : "Sin servicios"}</strong>
+        </div>
+        <div className="pv-kpi">
+          <span>Última visita</span>
+          <strong>{stats.ultimaVisita ? formatDate(stats.ultimaVisita) : "Sin visitas"}</strong>
+          {lastVisitNote && <small>{lastVisitNote}</small>}
+        </div>
+        <div className="pv-kpi pv-kpi--mobile pv-kpi--info">
+          <span>Próximo</span>
+          <strong>{stats.proximoTurno ? formatShortDate(stats.proximoTurno) : "Sin turno"}</strong>
+          {nextTurno && <small>{joinParts([formatTime(nextTurno.time), resolve.serviceType(nextTurno)])}</small>}
+        </div>
+      </section>
+
+      {/* Próximo turno */}
+      {nextTurno && <NextTurno turno={nextTurno} resolve={resolve} onOpen={() => setSelectedTurno(nextTurno)} />}
+
+      {/* Historial */}
+      <section className="pv-history">
+        <div className="pv-history__head">
+          <div>
+            <h2 className="pv-section-title">Historial de servicios</h2>
+            <p className="pv-muted">Del más reciente al más antiguo.</p>
+          </div>
+          {turnos.length > 0 && (
+            <div className="pv-segmented pv-segmented--small" role="tablist" aria-label="Filtrar historial">
+              {HISTORY_FILTERS.map((f) => (
+                <button
+                  key={f.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={historyFilter === f.value}
+                  className={`pv-segmented__item${historyFilter === f.value ? " is-active" : ""}`}
+                  onClick={() => {
+                    setHistoryFilter(f.value);
+                    setHistoryExpanded(false);
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {turnos.length === 0 ? (
+          <div className="pv-state pv-state--inline">
+            <strong>No hay servicios registrados para esta mascota.</strong>
+            {!archived && (
+              <div className="pv-state__actions">
+                <button type="button" className="pv-btn pv-btn--brand" onClick={schedule}>
+                  Agendar turno
+                </button>
+              </div>
+            )}
+          </div>
+        ) : filteredHistory.length === 0 ? (
+          <p className="pv-muted pv-history__empty">
+            No hay servicios {historyFilter === "cancelled" ? "cancelados" : "finalizados"}.
+          </p>
+        ) : (
+          <>
+            <table className="pv-table">
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Servicio</th>
+                  <th scope="col">Groomer</th>
+                  <th scope="col">Pago</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col" className="pv-num">
+                    Precio
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleHistory.map((t) => {
+                  const groomer = resolve.groomer(t);
+                  const payment = resolve.payment(t);
+                  return (
+                    <tr
+                      key={t.id}
+                      className={t.status === "cancelled" ? "is-cancelled" : ""}
+                      onClick={() => setSelectedTurno(t)}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelectedTurno(t);
+                        }
+                      }}
+                    >
+                      <td>{formatDate(t.date)}</td>
+                      <td className="pv-strong">{resolve.serviceType(t) || "Servicio"}</td>
+                      <td>{groomer && <Pill tone="groomer">{groomer}</Pill>}</td>
+                      <td>{payment && <Pill tone="pay">{payment}</Pill>}</td>
+                      <td>
+                        <StatusPill status={t.status} />
+                      </td>
+                      <td className="pv-num pv-price">{formatMoney(t.price)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <ul className="pv-history-list">
+              {visibleHistory.map((t) => (
+                <li key={t.id} className={t.status === "cancelled" ? "is-cancelled" : ""}>
+                  <button type="button" onClick={() => setSelectedTurno(t)}>
+                    <span className="pv-history-list__main">
+                      <strong>{resolve.serviceType(t) || "Servicio"}</strong>
+                      <span className="pv-muted">{joinParts([formatDate(t.date), resolve.groomer(t)])}</span>
+                    </span>
+                    <span className="pv-history-list__side">
+                      <strong className="pv-price">{formatMoney(t.price)}</strong>
+                      <StatusPill status={t.status} />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            {hiddenCount > 0 && (
+              <button type="button" className="pv-btn pv-btn--ghost pv-history__more" onClick={() => setHistoryExpanded(true)}>
+                Ver {hiddenCount} más
+              </button>
+            )}
+            <p className="pv-hint pv-history__foot">
+              Los cancelados se muestran pero no suman en ingresos ni promedio.
+            </p>
+          </>
+        )}
+      </section>
+
+      {selectedTurno && (
+        <ServiceDetail turno={selectedTurno} pet={pet} resolve={resolve} onClose={() => setSelectedTurno(null)} />
+      )}
+
+      <PetForm open={formOpen} pet={pet} onClose={() => setFormOpen(false)} onSaved={handleSaved} />
+
+      {actions.dialogs}
+      <Toast message={toast} onDone={clearToast} />
     </div>
+  );
+}
+
+// Menú ···: se monta dos veces (barra mobile y perfil desktop), así que cada
+// instancia lleva su propio estado.
+function MoreMenu({ archived, isAdmin, onChangePhoto, onArchiveToggle, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function onDown(event) {
+      if (!ref.current?.contains(event.target)) setOpen(false);
+    }
+    function onKey(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  function run(action) {
+    setOpen(false);
+    action();
+  }
+
+  return (
+    <div className="pv-menu" ref={ref}>
+      <button
+        type="button"
+        className="pv-icon-btn pv-icon-btn--bordered"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Más acciones"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Icon name="more" />
+      </button>
+      {open && (
+        <div className="pv-menu__list" role="menu">
+          <button type="button" role="menuitem" onClick={() => run(onChangePhoto)}>
+            Cambiar foto
+          </button>
+          <button type="button" role="menuitem" onClick={() => run(onArchiveToggle)}>
+            {archived ? "Restaurar mascota" : "Archivar mascota"}
+          </button>
+          {isAdmin && (
+            <>
+              <hr />
+              <button type="button" role="menuitem" className="is-danger" onClick={() => run(onDelete)}>
+                Eliminar definitivamente…
+                <small>Solo administradores</small>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NextTurno({ turno, resolve, onOpen }) {
+  const date = dateKey(turno.date);
+  const [, month, day] = date.split("-");
+  const price = Number(turno.price) || 0;
+  const deposit = Number(turno.deposit_amount) || 0;
+  const balance = Math.max(0, price - deposit);
+  const groomer = resolve.groomer(turno);
+  const inDays = daysBetween(todayISO(), date);
+
+  return (
+    <button type="button" className="pv-next" onClick={onOpen}>
+      <span className="pv-next__date" aria-hidden="true">
+        <small>{weekdayName(date).slice(0, 3)}</small>
+        <strong>{Number(day)}</strong>
+        <small>/{month}</small>
+      </span>
+      <span className="pv-next__body">
+        <span className="pv-eyebrow">
+          Próximo turno{inDays === 0 ? " · hoy" : inDays === 1 ? " · mañana" : ""}
+        </span>
+        <strong>{joinParts([resolve.serviceType(turno) || "Servicio", formatTime(turno.time), formatDuration(turno.duration)])}</strong>
+        <span className="pv-next__meta">
+          {groomer && <Pill tone="groomer">{groomer}</Pill>}
+          {deposit > 0 && <span className="pv-muted">Seña {formatMoney(deposit)}</span>}
+          {price > 0 && (
+            <span className={balance > 0 ? "pv-warn-text" : "pv-ok-text"}>
+              {balance > 0 ? `Saldo ${formatMoney(balance)}` : "Saldado"}
+            </span>
+          )}
+        </span>
+      </span>
+      <StatusPill status="reserved" />
+    </button>
   );
 }
