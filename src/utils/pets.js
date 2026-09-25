@@ -12,6 +12,9 @@ export const petColor = colorForName;
 // Desde cuántos servicios una mascota se muestra como "Cliente fiel".
 export const LOYAL_CLIENT_THRESHOLD = 10;
 
+// Dónde guarda la lista sus filtros para que la ficha vuelva a la misma vista.
+export const PETS_LIST_SEARCH_KEY = "pets:listSearch";
+
 export const PET_SIZES = ["Mini", "Chico", "Mediano", "Grande", "Gigante"];
 
 // ── Texto ────────────────────────────────────────────────────────────────

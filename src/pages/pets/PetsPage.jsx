@@ -1,671 +1,481 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+// src/pages/pets/PetsPage.jsx
+// Lista de mascotas: búsqueda, activas/archivadas, orden, fichas incompletas,
+// grilla de tarjetas, vista rápida y formulario único de alta/edición.
+// Los filtros viven en la URL, así "← Mascotas" desde la ficha vuelve igual.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
-import Modal from "../../components/ui/Modal";
-import PhotoUpload from "../../components/ui/PhotoUpload";
-import { useAuth } from "../../context/AuthContext";
-import { calcularEdad } from "../../utils/cumpleanos";
-import { apiRequest } from "../../services/apiClient";
-import { todayISO } from "../../utils/dates";
-import { colorForName as petColor } from "../../utils/colorPalette";
-import { showApiError } from "../../utils/errorDialog";
+import PetForm from "./components/PetForm";
+import PetQuickView from "./components/PetQuickView";
+import { Icon, Pill, PetAvatar, Toast } from "./components/PetBits";
+import { usePetActions } from "./components/usePetActions";
+import {
+  displayName,
+  displayText,
+  formatShortDate,
+  getPetStats,
+  isIncomplete,
+  matchesPetSearch,
+  petAgeLabel,
+  petColor,
+  PETS_LIST_SEARCH_KEY,
+  sizeLabel,
+} from "../../utils/pets";
+import "../../styles/pets.css";
 
 const PAGE_SIZE = 24;
+const ALL_PETS = { archived: "all" };
 
-function petInitial(name) {
-  return name ? name.charAt(0).toUpperCase() : "?";
+const SORTS = [
+  { value: "fieles", label: "Más fieles" },
+  { value: "recientes", label: "Más recientes" },
+  { value: "az", label: "A–Z" },
+];
+
+function byCreatedDesc(a, b) {
+  return String(b.created_at || "").localeCompare(String(a.created_at || ""));
 }
 
-export default function PetsPage() {
-  const [filters, setFilters] = useState({ q: "", archived: "" });
-  const showingArchived = filters.archived === "only";
-  const [page, setPage] = useState(1);
-  const {
-    items: pets,
-    loading,
-    error,
-    createItem,
-    updateItem,
-    deleteItem,
-    refresh,
-  } = useApiResource("/v2/pets", filters);
-  const { user } = useAuth();
+const SORTERS = {
+  fieles: (a, b) => getPetStats(b).servicios - getPetStats(a).servicios || byCreatedDesc(a, b),
+  recientes: byCreatedDesc,
+  az: (a, b) => displayName(a.name).localeCompare(displayName(b.name), "es", { sensitivity: "base" }),
+};
 
-  const totalPages = Math.ceil(pets.length / PAGE_SIZE);
-  const paginatedPets = useMemo(
-    () => pets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [pets, page]
-  );
-
-  function handleFilterChange(q) {
-    setFilters((prev) => ({ ...prev, q }));
-    setPage(1);
-  }
-
-  function toggleArchivedView() {
-    setFilters((prev) => ({ ...prev, archived: prev.archived === "only" ? "" : "only" }));
-    setPage(1);
-  }
-
-  function pageNumbers(current, total) {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-    const pages = new Set([1, total, current]);
-    if (current > 1) pages.add(current - 1);
-    if (current < total) pages.add(current + 1);
-    return [...pages].sort((a, b) => a - b).reduce((acc, n, i, arr) => {
+function pageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current]);
+  if (current > 1) pages.add(current - 1);
+  if (current < total) pages.add(current + 1);
+  return [...pages]
+    .sort((a, b) => a - b)
+    .reduce((acc, n, i, arr) => {
       if (i > 0 && n - arr[i - 1] > 1) acc.push("…");
       acc.push(n);
       return acc;
     }, []);
-  }
+}
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [selectedPet, setSelectedPet] = useState(null);
-  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
-  const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalForm, setModalForm] = useState({
-    name: "", breed: "", owner_name: "", owner_phone: "",
-    notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "",
-  });
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+export default function PetsPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get("q") || "";
+  const view = searchParams.get("vista") === "archivadas" ? "archived" : "active";
+  const sort = SORTS.some((s) => s.value === searchParams.get("orden")) ? searchParams.get("orden") : "fieles";
+  const onlyIncomplete = searchParams.get("incompletas") === "1";
+  const requestedPage = Math.max(1, Number(searchParams.get("pagina")) || 1);
 
-  const [form, setForm] = useState({
-    name: "", breed: "", owner_name: "", owner_phone: "",
-    notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [stagedPhoto, setStagedPhoto] = useState(null);
+  const { items: pets, loading, error, refresh } = useApiResource("/v2/pets", ALL_PETS);
+  const [selectedId, setSelectedId] = useState(null);
+  const [formState, setFormState] = useState({ open: false, pet: null, initialName: "" });
+  const [toast, setToast] = useState("");
+  const searchRef = useRef(null);
+  const clearToast = useCallback(() => setToast(""), []);
 
-  function resetForm() {
-    setForm({ name: "", breed: "", owner_name: "", owner_phone: "", notes: "", neutered: false, behavior: "", age: "", address: "", birth_date: "" });
-    setEditingId(null);
-    setStagedPhoto(null);
-  }
-
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.name.trim() || !form.owner_name.trim()) {
-      alert("Ingresá el nombre de la mascota y el dueño.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload = {
-        name: form.name.trim(),
-        breed: form.breed.trim(),
-        owner_name: form.owner_name.trim(),
-        owner_phone: form.owner_phone.trim(),
-        notes: form.notes.trim(),
-        neutered: Boolean(form.neutered),
-        behavior: form.behavior.trim() || null,
-        age: form.age.trim() || null,
-        address: form.address.trim() || null,
-        birth_date: form.birth_date || null,
-      };
-      if (editingId) {
-        await updateItem(editingId, payload);
-      } else {
-        const created = await createItem(payload);
-        if (stagedPhoto && created?.id) {
-          await apiRequest(`/v2/pets/${created.id}/photo`, {
-            method: "POST",
-            body: { image: stagedPhoto },
+  const updateParams = useCallback(
+    (changes, { resetPage = true } = {}) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          Object.entries(changes).forEach(([key, value]) => {
+            if (value === null || value === undefined || value === "" || value === false) next.delete(key);
+            else next.set(key, String(value));
           });
-          await refresh();
-        }
-      }
-      resetForm();
-      setFormOpen(false);
-    } catch (err) {
-      showApiError(err, "No se pudo guardar la mascota.");
-    } finally {
-      setSaving(false);
+          if (resetPage) next.delete("pagina");
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
+
+  // Guardamos los filtros para que la ficha pueda volver a esta misma vista.
+  const listSearch = searchParams.toString();
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(PETS_LIST_SEARCH_KEY, listSearch);
+    } catch {
+      /* sessionStorage no disponible */
+    }
+  }, [listSearch]);
+
+  // Atajo "/" para ir al buscador.
+  useEffect(() => {
+    function onKey(event) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || document.activeElement?.isContentEditable) return;
+      if (document.querySelector(".pv-sheet-root")) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const activePets = useMemo(() => pets.filter((p) => !p.archived_at), [pets]);
+  const archivedPets = useMemo(() => pets.filter((p) => p.archived_at), [pets]);
+  const inView = view === "archived" ? archivedPets : activePets;
+  const searched = useMemo(() => inView.filter((p) => matchesPetSearch(p, q)), [inView, q]);
+  const incompleteCount = useMemo(() => searched.filter(isIncomplete).length, [searched]);
+  const results = useMemo(() => {
+    const list = onlyIncomplete ? searched.filter(isIncomplete) : [...searched];
+    return list.sort(SORTERS[sort]);
+  }, [searched, onlyIncomplete, sort]);
+
+  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const pageItems = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const selectedPet = selectedId ? pets.find((p) => String(p.id) === String(selectedId)) || null : null;
+
+  function goToPage(n) {
+    updateParams({ pagina: n > 1 ? n : null }, { resetPage: false });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openCreate(initialName = "") {
+    setFormState({ open: true, pet: null, initialName });
+  }
+
+  function openEdit(pet) {
+    setFormState({ open: true, pet, initialName: "" });
+  }
+
+  async function handleSaved(saved, { keepOpen } = {}) {
+    await refresh();
+    if (keepOpen) return;
+    const wasEdit = Boolean(formState.pet);
+    setFormState({ open: false, pet: null, initialName: "" });
+    if (!wasEdit && saved?.id) {
+      setToast(`${displayName(saved.name)} quedó registrada`);
+      setSelectedId(saved.id);
+    } else {
+      setToast("Cambios guardados");
     }
   }
 
-  async function handleDelete(id) {
-    if (
-      !window.confirm(
-        "¿Eliminar esta mascota para siempre?\n\nSi tiene servicios registrados no se va a poder: en ese caso archivala."
-      )
-    )
-      return false;
-    try {
-      await deleteItem(id);
-      return true;
-    } catch (err) {
-      showApiError(err, "No se pudo eliminar la mascota.");
-      return false;
-    }
-  }
-
-  async function handleArchive(id) {
-    if (
-      !window.confirm(
-        "¿Archivar esta mascota?\n\nDeja de aparecer en las listas y búsquedas, pero se conserva su ficha y todo el historial de servicios."
-      )
-    )
-      return false;
-    try {
-      await apiRequest(`/v2/pets/${id}/archive`, { method: "POST" });
+  const actions = usePetActions({
+    notify: setToast,
+    onChanged: async (_pet, action) => {
+      if (action !== "restored" || view === "archived") setSelectedId(null);
       await refresh();
-      return true;
-    } catch (err) {
-      showApiError(err, "No se pudo archivar la mascota.");
-      return false;
-    }
+    },
+  });
+
+  function schedule(pet) {
+    navigate(`/agenda?nuevoTurno=1&petId=${encodeURIComponent(pet.id)}`);
   }
 
-  async function handleUnarchive(id) {
-    try {
-      await apiRequest(`/v2/pets/${id}/unarchive`, { method: "POST" });
-      await refresh();
-      return true;
-    } catch (err) {
-      showApiError(err, "No se pudo restaurar la mascota.");
-      return false;
-    }
-  }
-
-  function openModalEdit(pet) {
-    setModalForm({
-      name: pet.name || "",
-      breed: pet.breed || "",
-      owner_name: pet.owner_name || "",
-      owner_phone: pet.owner_phone || "",
-      notes: pet.notes || "",
-      neutered: Boolean(pet.neutered),
-      behavior: pet.behavior || "",
-      age: pet.age || "",
-      address: pet.address || "",
-      birth_date: pet.birth_date || "",
-    });
-    setIsEditingModal(true);
-  }
-
-  async function handleModalSave() {
-    if (!selectedPet) return;
-    if (!modalForm.name.trim() || !modalForm.owner_name.trim()) {
-      alert("Ingresá el nombre de la mascota y el dueño.");
-      return;
-    }
-    try {
-      const payload = {
-        name: modalForm.name.trim(),
-        breed: modalForm.breed.trim(),
-        owner_name: modalForm.owner_name.trim(),
-        owner_phone: modalForm.owner_phone.trim(),
-        notes: modalForm.notes.trim(),
-        neutered: Boolean(modalForm.neutered),
-        behavior: modalForm.behavior.trim() || null,
-        age: modalForm.age.trim() || null,
-        address: modalForm.address.trim() || null,
-        birth_date: modalForm.birth_date || null,
-      };
-      await updateItem(selectedPet.id, payload);
-      setSelectedPet((prev) => prev ? { ...prev, ...payload } : prev);
-      setIsEditingModal(false);
-    } catch (err) {
-      showApiError(err, "No se pudo guardar la mascota.");
-    }
-  }
-
-  function closeModal() {
-    setSelectedPet(null);
-    setIsEditingModal(false);
-  }
+  const showingFrom = results.length ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const showingTo = Math.min(page * PAGE_SIZE, results.length);
+  const fmt = (n) => n.toLocaleString("es-AR");
 
   return (
-    <div className="page-content">
-
-      {/* Encabezado */}
-      <header className="page-header">
+    <div className="page-content pv-page">
+      <header className="pv-header">
         <div>
           <h1 className="page-title">Mascotas</h1>
           <p className="page-subtitle">
-            {showingArchived
+            {view === "archived"
               ? "Mascotas archivadas. Conservan su ficha y su historial."
               : "Registro de perros y datos básicos."}
           </p>
         </div>
-        <div className="fixed-expenses-header-actions">
-          <input
-            type="text"
-            placeholder="Buscar por mascota, dueño o celular…"
-            value={filters.q}
-            onChange={(e) => handleFilterChange(e.target.value)}
-            className="pets-search-input"
-          />
-          <button
-            type="button"
-            className={`btn-secondary${showingArchived ? " is-active" : ""}`}
-            onClick={toggleArchivedView}
-          >
-            {showingArchived ? "Ver activas" : "Ver archivadas"}
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => { resetForm(); setFormOpen((v) => !v); }}
-          >
-            {formOpen ? "Cancelar" : "+ Nueva mascota"}
-          </button>
-        </div>
+        <button type="button" className="pv-btn pv-btn--brand pv-header__cta" onClick={() => openCreate()}>
+          + Nueva mascota
+        </button>
       </header>
 
-      {error && <div className="card" style={{ color: "#f37b7b" }}>{error}</div>}
+      <div className="pv-toolbar">
+        <label className="pv-search">
+          <Icon name="search" />
+          <span className="pv-visually-hidden">Buscar</span>
+          <input
+            ref={searchRef}
+            type="search"
+            placeholder="Buscar por mascota, dueño o celular…"
+            value={q}
+            onChange={(e) => updateParams({ q: e.target.value })}
+          />
+          {!q && <kbd className="pv-kbd" aria-hidden="true">/</kbd>}
+        </label>
 
-      {/* Formulario colapsable */}
-      {formOpen && (
-        <form className="form-card" onSubmit={handleSubmit}>
-          <h2 className="card-title">{editingId ? "Editar mascota" : "Nueva mascota"}</h2>
-          <p className="card-subtitle">Registrá los datos básicos para identificar a la mascota y su dueño.</p>
-          {!editingId && (
-            <PhotoUpload
-              photoUrl={null}
-              onFileStaged={setStagedPhoto}
-              size={48}
-              fallback={
-                <div className="pet-modal-avatar" style={{ background: petColor(form.name) }}>
-                  {petInitial(form.name)}
-                </div>
-              }
-            />
-          )}
-          <div className="form-grid">
-            <div className="form-field">
-              <label htmlFor="name">Nombre mascota</label>
-              <input id="name" name="name" type="text" value={form.name} onChange={handleChange} required />
-            </div>
-            <div className="form-field">
-              <label htmlFor="breed">Raza</label>
-              <input id="breed" name="breed" type="text" value={form.breed} onChange={handleChange} />
-            </div>
-            <div className="form-field">
-              <label htmlFor="owner_name">Dueño</label>
-              <input id="owner_name" name="owner_name" type="text" value={form.owner_name} onChange={handleChange} required />
-            </div>
-            <div className="form-field">
-              <label htmlFor="owner_phone">Celular</label>
-              <input id="owner_phone" name="owner_phone" type="text" value={form.owner_phone} onChange={handleChange} />
-            </div>
-            <div className="form-field">
-              <label htmlFor="neutered">Castrado</label>
-              <select
-                id="neutered" name="neutered"
-                value={String(form.neutered)}
-                onChange={(e) => setForm((prev) => ({ ...prev, neutered: e.target.value === "true" }))}
-              >
-                <option value="false">No</option>
-                <option value="true">Sí</option>
-              </select>
-            </div>
-            <div className="form-field">
-              <label htmlFor="behavior">Comportamiento</label>
-              <input id="behavior" name="behavior" type="text" value={form.behavior} onChange={handleChange} />
-            </div>
-            <div className="form-field">
-              <label htmlFor="age">Edad</label>
-              <input id="age" name="age" type="text" placeholder="Ej: 3 años" value={form.age} onChange={handleChange} />
-            </div>
-            <div className="form-field">
-              <label htmlFor="birth_date">Fecha de nacimiento <span style={{ color: "var(--color-text-soft)" }}>(opcional)</span></label>
-              <input type="date" id="birth_date" name="birth_date" value={form.birth_date} onChange={handleChange}
-                max={todayISO()} />
-              <small style={{ color: "var(--color-text-soft)", fontSize: "0.74rem" }}>
-                Si no la sabés, podés dejarlo vacío
-              </small>
-            </div>
-            <div className="form-field form-field--full">
-              <label htmlFor="address">Dirección</label>
-              <input id="address" name="address" type="text" placeholder="Ej: Av. Corrientes 1234" value={form.address} onChange={handleChange} />
-            </div>
-            <div className="form-field form-field--full">
-              <label htmlFor="notes">Observaciones</label>
-              <textarea id="notes" name="notes" rows={3} value={form.notes} onChange={handleChange} />
-            </div>
-          </div>
-          <div className="form-actions">
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? "Guardando…" : editingId ? "Guardar cambios" : "Guardar mascota"}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => { resetForm(); setFormOpen(false); }}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Grid de cards */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
-          <div>
-            <h2 className="card-title">Mascotas registradas</h2>
-            <p className="card-subtitle">{pets.length} registros · Mostrando {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, pets.length)} · Hacé clic para ver detalle.</p>
-          </div>
+        <div className="pv-segmented" role="tablist" aria-label="Estado">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "active"}
+            className={`pv-segmented__item${view === "active" ? " is-active" : ""}`}
+            onClick={() => updateParams({ vista: null })}
+          >
+            Activas <span className="pv-count">{fmt(activePets.length)}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "archived"}
+            className={`pv-segmented__item${view === "archived" ? " is-active" : ""}`}
+            onClick={() => updateParams({ vista: "archivadas" })}
+          >
+            Archivadas <span className="pv-count">{fmt(archivedPets.length)}</span>
+          </button>
         </div>
 
-        {loading && <div className="card-subtitle">Cargando...</div>}
+        <label className="pv-select">
+          <span className="pv-visually-hidden">Ordenar</span>
+          <select value={sort} onChange={(e) => updateParams({ orden: e.target.value === "fieles" ? null : e.target.value })}>
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-        {!loading && pets.length === 0 && (
-          <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
-            Sin mascotas cargadas. Usá el botón "+ Nueva mascota".
-          </div>
-        )}
-
-        <div className="pet-cards-grid">
-          {paginatedPets.map((pet) => {
-            const color = petColor(pet.name);
-            return (
-              <div
-                key={pet.id}
-                className="pet-card"
-                style={{ "--pet-color": color }}
-                onClick={() => setSelectedPet(pet)}
-              >
-                <div className="pet-card__avatar" style={{ background: color }} />
-                <div className="pet-card__body">
-                  <div className="pet-card__name">
-                    {pet.photo_url ? (
-                      <img src={pet.photo_url} alt="" className="pet-card__avatar-circle" />
-                    ) : (
-                      <span className="pet-card__avatar-circle" style={{ background: color }}>
-                        {petInitial(pet.name)}
-                      </span>
-                    )}
-                    {pet.name}
-                  </div>
-                  {pet.breed && <div className="pet-card__breed">{pet.breed}</div>}
-                  <div className="pet-card__owner">
-                    <span className="pet-card__owner-name">
-                      <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style={{ flexShrink: 0 }}>
-                        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" fill="currentColor"/>
-                      </svg>
-                      {pet.owner_name || "-"}
-                    </span>
-                    {pet.owner_phone && (
-                      <span className="pet-card__owner-phone">
-                        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style={{ flexShrink: 0 }}>
-                          <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" fill="currentColor"/>
-                        </svg>
-                        {pet.owner_phone}
-                      </span>
-                    )}
-                  </div>
-                  <div className="pet-card__tags">
-                    {pet.pet_service_count > 0 && (
-                      <span className="pet-card__tag pet-card__tag--loyalty" title="Servicios que tuvo esta mascota">
-                        ★ {pet.pet_service_count} {pet.pet_service_count === 1 ? "servicio" : "servicios"}
-                      </span>
-                    )}
-                    <span className={`pet-card__tag${pet.neutered ? " pet-card__tag--yes" : ""}`}>
-                      {pet.neutered ? "Castrado" : "Sin castrar"}
-                    </span>
-                    {pet.behavior && (
-                      <span className="pet-card__tag">{pet.behavior}</span>
-                    )}
-                    {pet.birth_date ? (
-                      <span className="pet-card__tag">
-                        {calcularEdad(pet.birth_date) !== null
-                          ? `${calcularEdad(pet.birth_date)} años`
-                          : pet.age || null}
-                      </span>
-                    ) : pet.age ? (
-                      <span className="pet-card__tag">{pet.age}</span>
-                    ) : null}
-                  </div>
-                </div>
-                <Link
-                  to={`/pets/${pet.id}`}
-                  className="pet-card__ficha-btn"
-                  onClick={(e) => e.stopPropagation()}
-                  title="Ver ficha completa"
-                >
-                  Ver ficha →
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-
-        {totalPages > 1 && (
-          <div className="pets-pagination">
-            <button
-              type="button"
-              className="pets-pagination__btn"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-            >
-              ← Anterior
-            </button>
-
-            <div className="pets-pagination__pages">
-              {pageNumbers(page, totalPages).map((n, i) =>
-                n === "…" ? (
-                  <span key={`ellipsis-${i}`} className="pets-pagination__ellipsis">…</span>
-                ) : (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`pets-pagination__btn pets-pagination__btn--page${page === n ? " is-active" : ""}`}
-                    onClick={() => setPage(n)}
-                  >
-                    {n}
-                  </button>
-                )
-              )}
-            </div>
-
-            <button
-              type="button"
-              className="pets-pagination__btn"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-            >
-              Siguiente →
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          className={`pv-chip${onlyIncomplete ? " is-active" : ""}`}
+          aria-pressed={onlyIncomplete}
+          onClick={() => updateParams({ incompletas: onlyIncomplete ? null : "1" })}
+        >
+          Fichas incompletas <span className="pv-count">{fmt(incompleteCount)}</span>
+        </button>
       </div>
 
-      {/* Modal detalle / edición */}
-      <Modal isOpen={Boolean(selectedPet)} onClose={closeModal} title="Detalle de la mascota">
-        {selectedPet && (
-          <>
-            {isEditingModal ? (
-              <>
-                <PhotoUpload
-                  photoUrl={selectedPet.photo_url}
-                  uploadPath={`/v2/pets/${selectedPet.id}/photo`}
-                  size={48}
-                  onUploaded={(updated) => {
-                    setSelectedPet((prev) => (prev ? { ...prev, ...updated } : prev));
-                    refresh();
-                  }}
-                  fallback={
-                    <div className="pet-modal-avatar" style={{ background: petColor(selectedPet.name) }}>
-                      {petInitial(selectedPet.name)}
-                    </div>
-                  }
-                />
-                <label className="form-field">
-                  <span>Nombre</span>
-                  <input type="text" value={modalForm.name}
-                    onChange={(e) => setModalForm((p) => ({ ...p, name: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Raza</span>
-                  <input type="text" value={modalForm.breed}
-                    onChange={(e) => setModalForm((p) => ({ ...p, breed: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Dueño</span>
-                  <input type="text" value={modalForm.owner_name}
-                    onChange={(e) => setModalForm((p) => ({ ...p, owner_name: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Celular</span>
-                  <input type="text" value={modalForm.owner_phone}
-                    onChange={(e) => setModalForm((p) => ({ ...p, owner_phone: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Castrado</span>
-                  <select value={String(modalForm.neutered)}
-                    onChange={(e) => setModalForm((p) => ({ ...p, neutered: e.target.value === "true" }))}>
-                    <option value="false">No</option>
-                    <option value="true">Sí</option>
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Comportamiento</span>
-                  <input type="text" value={modalForm.behavior}
-                    onChange={(e) => setModalForm((p) => ({ ...p, behavior: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Edad</span>
-                  <input type="text" value={modalForm.age}
-                    onChange={(e) => setModalForm((p) => ({ ...p, age: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Fecha de nacimiento <span style={{ color: "var(--color-text-soft)", fontWeight: 400 }}>(opcional)</span></span>
-                  <input type="date" value={modalForm.birth_date}
-                    max={todayISO()}
-                    onChange={(e) => setModalForm((p) => ({ ...p, birth_date: e.target.value }))} />
-                  <small style={{ color: "var(--color-text-soft)", fontSize: "0.74rem" }}>
-                    Si no la sabés, podés dejarlo vacío
-                  </small>
-                </label>
-                <label className="form-field">
-                  <span>Dirección</span>
-                  <input type="text" value={modalForm.address}
-                    onChange={(e) => setModalForm((p) => ({ ...p, address: e.target.value }))} />
-                </label>
-                <label className="form-field">
-                  <span>Observaciones</span>
-                  <textarea rows={3} value={modalForm.notes}
-                    onChange={(e) => setModalForm((p) => ({ ...p, notes: e.target.value }))} />
-                </label>
-              </>
-            ) : (
-              <div className="fe-modal-detail">
-                <div className="pet-modal-header">
-                  {selectedPet.photo_url ? (
-                    <img
-                      src={selectedPet.photo_url}
-                      alt=""
-                      className="pet-modal-avatar"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => setPhotoPreviewOpen(true)}
-                    />
-                  ) : (
-                    <div className="pet-modal-avatar" style={{ background: petColor(selectedPet.name) }}>
-                      {petInitial(selectedPet.name)}
-                    </div>
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "1.2rem" }}>{selectedPet.name}</div>
-                    {selectedPet.breed && <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>{selectedPet.breed}</div>}
-                  </div>
-                </div>
-                <div className="fe-modal-detail__rows">
-                  <div><strong>Dueño</strong><span>{selectedPet.owner_name || "-"}</span></div>
-                  <div><strong>Celular</strong><span>{selectedPet.owner_phone || "-"}</span></div>
-                  <div><strong>Edad</strong><span>{selectedPet.birth_date ? (calcularEdad(selectedPet.birth_date) !== null ? `${calcularEdad(selectedPet.birth_date)} años` : selectedPet.age || "-") : selectedPet.age || "-"}</span></div>
-                  {selectedPet.birth_date && (
-                    <div><strong>Cumpleaños</strong><span>{selectedPet.birth_date.split("T")[0].split("-").reverse().join("/")}</span></div>
-                  )}
-                  <div><strong>Castrado</strong><span>{selectedPet.neutered ? "Sí" : "No"}</span></div>
-                  <div><strong>Comportamiento</strong><span>{selectedPet.behavior || "-"}</span></div>
-                  <div><strong>Dirección</strong><span>{selectedPet.address || "-"}</span></div>
-                  {selectedPet.notes && (
-                    <div style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                      <strong>Observaciones</strong>
-                      <span style={{ marginTop: 4, fontSize: "0.88rem" }}>{selectedPet.notes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <div className="modal-actions">
-              {isEditingModal ? (
-                <>
-                  <button type="button" className="btn-secondary" onClick={() => setIsEditingModal(false)}>Cancelar</button>
-                  <button type="button" className="btn-primary" onClick={handleModalSave}>Guardar cambios</button>
-                </>
-              ) : (
-                <>
-                  {selectedPet.archived_at ? (
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      title="Volver a mostrar la mascota en las listas"
-                      onClick={async () => {
-                        const restored = await handleUnarchive(selectedPet.id);
-                        if (restored) closeModal();
-                      }}
-                    >
-                      Restaurar
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      title="Sacarla de las listas conservando su historial"
-                      onClick={async () => {
-                        const archived = await handleArchive(selectedPet.id);
-                        if (archived) closeModal();
-                      }}
-                    >
-                      Archivar
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      className="btn-danger"
-                      title="Eliminar definitivamente (solo si no tiene servicios registrados)"
-                      onClick={async () => {
-                        const removed = await handleDelete(selectedPet.id);
-                        if (removed) closeModal();
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  )}
-                  <Link to={`/pets/${selectedPet.id}`} className="btn-secondary" onClick={closeModal}>
-                    Ver ficha
-                  </Link>
-                  <button type="button" className="btn-primary" onClick={() => openModalEdit(selectedPet)}>
-                    Editar
-                  </button>
-                </>
-              )}
+      {error ? (
+        <div className="pv-state pv-state--error" role="alert">
+          <strong>No se pudieron cargar las mascotas.</strong>
+          <p>{error}</p>
+          <button type="button" className="pv-btn pv-btn--ghost" onClick={refresh}>
+            Reintentar
+          </button>
+        </div>
+      ) : loading && pets.length === 0 ? (
+        <div className="pv-grid" aria-busy="true" aria-label="Cargando mascotas">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="pv-card pv-card--skeleton">
+              <div className="pv-skel pv-skel--row" />
+              <div className="pv-skel pv-skel--line" />
+              <div className="pv-skel pv-skel--line pv-skel--short" />
+              <div className="pv-skel pv-skel--block" />
             </div>
-          </>
-        )}
-      </Modal>
+          ))}
+        </div>
+      ) : results.length === 0 ? (
+        <EmptyState
+          hasAny={inView.length > 0}
+          view={view}
+          q={q}
+          onlyIncomplete={onlyIncomplete}
+          onCreate={openCreate}
+          onSearchArchived={() => updateParams({ vista: "archivadas" })}
+          onClearIncomplete={() => updateParams({ incompletas: null })}
+        />
+      ) : (
+        <>
+          <p className="pv-results">
+            {fmt(results.length)} {results.length === 1 ? "mascota" : "mascotas"} · mostrando {fmt(showingFrom)}–
+            {fmt(showingTo)}
+          </p>
+          <div className="pv-grid">
+            {pageItems.map((pet) => (
+              <PetCard
+                key={pet.id}
+                pet={pet}
+                onOpen={() => setSelectedId(pet.id)}
+                fichaState={{ from: `/pets${listSearch ? `?${listSearch}` : ""}` }}
+              />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <nav className="pv-pagination" aria-label="Páginas">
+              <button type="button" className="pv-page-btn" onClick={() => goToPage(page - 1)} disabled={page === 1}>
+                ← Anterior
+              </button>
+              <div className="pv-pagination__pages">
+                {pageNumbers(page, totalPages).map((n, i) =>
+                  n === "…" ? (
+                    <span key={`e-${i}`} className="pv-pagination__ellipsis">
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`pv-page-btn pv-page-btn--num${page === n ? " is-active" : ""}`}
+                      aria-current={page === n ? "page" : undefined}
+                      onClick={() => goToPage(n)}
+                    >
+                      {n}
+                    </button>
+                  )
+                )}
+              </div>
+              <button
+                type="button"
+                className="pv-page-btn"
+                onClick={() => goToPage(page + 1)}
+                disabled={page === totalPages}
+              >
+                Siguiente →
+              </button>
+            </nav>
+          )}
+        </>
+      )}
 
-      <Modal isOpen={photoPreviewOpen} onClose={() => setPhotoPreviewOpen(false)} title="Foto">
-        {selectedPet?.photo_url && (
-          <img
-            src={selectedPet.photo_url}
-            alt=""
-            style={{
-              display: "block",
-              width: "100%",
-              maxHeight: "70vh",
-              objectFit: "contain",
-              borderRadius: 10,
-            }}
-          />
-        )}
-      </Modal>
+      {selectedPet && (
+        <PetQuickView
+          pet={selectedPet}
+          onClose={() => setSelectedId(null)}
+          onEdit={openEdit}
+          onArchive={actions.archive}
+          onRestore={actions.restore}
+          onSchedule={schedule}
+          fichaState={{ from: `/pets${listSearch ? `?${listSearch}` : ""}` }}
+        />
+      )}
+
+      <PetForm
+        open={formState.open}
+        pet={formState.pet}
+        initialName={formState.initialName}
+        onClose={() => setFormState({ open: false, pet: null, initialName: "" })}
+        onSaved={handleSaved}
+      />
+
+      {actions.dialogs}
+      <Toast message={toast} onDone={clearToast} />
+    </div>
+  );
+}
+
+function PetCard({ pet, onOpen, fichaState }) {
+  const stats = getPetStats(pet);
+  const color = petColor(pet.name);
+  const breedLine = [displayName(pet.breed), sizeLabel(pet.size)].filter(Boolean).join(" · ");
+  const age = petAgeLabel(pet);
+  const incomplete = isIncomplete(pet);
+
+  return (
+    <article
+      className="pv-card"
+      style={{ "--pet-color": color }}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      tabIndex={0}
+      aria-label={`${displayName(pet.name)}: vista rápida`}
+    >
+      <div className="pv-card__top">
+        <PetAvatar pet={pet} size={44} />
+        <div className="pv-card__id">
+          <h3 className="pv-card__name">{displayName(pet.name)}</h3>
+          {breedLine && <p className="pv-card__breed">{breedLine}</p>}
+        </div>
+        <div className="pv-card__count" title="Servicios finalizados">
+          <strong>{stats.servicios}</strong>
+          <span>servicios</span>
+        </div>
+      </div>
+
+      {(pet.owner_name || pet.owner_phone) && (
+        <div className="pv-card__owner">
+          {pet.owner_name && <span className="pv-ellipsis">{displayName(pet.owner_name)}</span>}
+          {pet.owner_phone && <span className="pv-muted">{pet.owner_phone}</span>}
+        </div>
+      )}
+
+      {pet.behavior && (
+        <div className="pv-card__behavior">
+          <p>{displayText(pet.behavior)}</p>
+        </div>
+      )}
+
+      <div className="pv-card__pills">
+        <Pill tone={pet.neutered ? "ok" : "muted"}>{pet.neutered ? "Castrado" : "Sin castrar"}</Pill>
+        {age && <Pill>{age}</Pill>}
+        {stats.proximoTurno && <Pill tone="info">Próximo {formatShortDate(stats.proximoTurno)}</Pill>}
+        {incomplete && <Pill tone="dashed">Incompleta</Pill>}
+      </div>
+
+      <div className="pv-card__foot">
+        <span className="pv-muted">
+          {stats.ultimaVisita ? `Última visita ${formatShortDate(stats.ultimaVisita)}` : "Sin visitas"}
+        </span>
+        <Link
+          to={`/pets/${pet.id}`}
+          state={fichaState}
+          className="pv-link"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          Ver ficha →
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function EmptyState({ hasAny, view, q, onlyIncomplete, onCreate, onSearchArchived, onClearIncomplete }) {
+  if (q) {
+    return (
+      <div className="pv-state">
+        <strong>No encontramos «{q}»</strong>
+        <p>
+          {view === "archived"
+            ? "Tampoco está entre las archivadas."
+            : "Revisá cómo está escrito o buscá entre las archivadas."}
+        </p>
+        <div className="pv-state__actions">
+          {view === "active" && (
+            <button type="button" className="pv-btn pv-btn--ghost" onClick={onSearchArchived}>
+              Buscar en archivadas
+            </button>
+          )}
+          <button type="button" className="pv-btn pv-btn--brand" onClick={() => onCreate(q)}>
+            Crear «{q}»
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (onlyIncomplete && hasAny) {
+    return (
+      <div className="pv-state">
+        <strong>No hay fichas incompletas</strong>
+        <p>Todas tienen cargado el tamaño y la edad.</p>
+        <div className="pv-state__actions">
+          <button type="button" className="pv-btn pv-btn--ghost" onClick={onClearIncomplete}>
+            Ver todas
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (view === "archived") {
+    return (
+      <div className="pv-state">
+        <strong>No hay mascotas archivadas</strong>
+        <p>Cuando archives una, va a aparecer acá con su ficha y su historial.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="pv-state">
+      <strong>Todavía no hay mascotas</strong>
+      <p>Registrá la primera o se van a ir creando solas cuando agendes turnos.</p>
+      <div className="pv-state__actions">
+        <button type="button" className="pv-btn pv-btn--brand" onClick={() => onCreate()}>
+          + Nueva mascota
+        </button>
+      </div>
     </div>
   );
 }
