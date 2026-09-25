@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "./Modal";
 
@@ -31,8 +31,21 @@ export default function PhotoUpload({
   className,
   size = 64,
   rounded = true,
+  // Opcionales: contenido/clase propios para el botón (ej. un ícono de cámara
+  // sobre el avatar) y un ref donde se expone open() para abrir el selector
+  // desde otro lado (ej. un menú).
+  triggerContent,
+  triggerClassName,
+  pickerRef,
 }) {
   const inputRef = useRef(null);
+  useEffect(() => {
+    if (!pickerRef) return undefined;
+    pickerRef.current = { open: () => inputRef.current?.click() };
+    return () => {
+      pickerRef.current = null;
+    };
+  }, [pickerRef]);
   const [stagedPreview, setStagedPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -115,11 +128,17 @@ export default function PhotoUpload({
       <div className="photo-upload__actions">
         <button
           type="button"
-          className="btn-secondary"
+          className={triggerClassName || "btn-secondary"}
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
+          aria-label={triggerContent ? label || "Cambiar foto" : undefined}
+          title={triggerContent ? label || "Cambiar foto" : undefined}
         >
-          {uploading ? "Subiendo…" : label || (displayUrl ? "Cambiar foto" : "Subir foto")}
+          {triggerContent && !uploading
+            ? triggerContent
+            : uploading
+            ? "Subiendo…"
+            : label || (displayUrl ? "Cambiar foto" : "Subir foto")}
         </button>
         <input
           ref={inputRef}
