@@ -1,135 +1,292 @@
 // src/pages/public/PublicBookingPage.jsx
-// Página pública de reservas (/reservar/:slug). La usa el cliente del local
-// desde el celular, sin login: elige servicio y tamaño del perro, día y
-// horario libre, deja sus datos y listo.
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+// Página pública de reservas (/reservar/:slug), rediseño v2.0.
+// La usa el cliente del local desde el celular, sin login: elige servicio,
+// día y horario libre, deja sus datos y confirma. El tamaño del perro no se
+// elige: lo define la peluquería al recibirlo.
+//
+// El estado del flujo vive en la URL (?s=servicio&d=día&t=hora&p=datos) para
+// que el botón "atrás" del navegador funcione paso a paso.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { createReservation, getAvailability, getBookingPage } from "../../services/publicBookingApi";
+import { accentStyle } from "../../lib/booking/accent";
 import {
-  createReservation,
+  addDaysISO,
+  argentinaToday,
+  dayChipParts,
+  formatDurationRange,
   formatLongDate,
-  formatMinutes,
-  formatMoney,
-  formatMonthName,
-  formatWeekdayShort,
-  getAvailability,
-  getBookingPage,
-  googleCalendarUrl,
-} from "../../services/publicBookingApi";
-import { whatsappUrl } from "../../utils/pets";
-import "../../styles/public-booking.css";
+  formatLongDateCap,
+  formatPriceRange,
+  formatShortDate,
+  groupSlots,
+  isSinglePrice,
+  isValidArPhone,
+  mapsLink,
+  normalizeArPhone,
+  weekdayOf,
+  whatsappLink,
+} from "../../lib/booking/format";
+import { buildIcs, downloadIcs } from "../../lib/booking/ics";
+import {
+  BottomSheet,
+  Button,
+  DayChip,
+  Field,
+  Notice,
+  PawWatermark,
+  PoweredBy,
+  ShopAvatar,
+  StepIndicator,
+  TimeSlot,
+} from "../../components/booking/BookingUI";
+import Celebration from "../../components/booking/Celebration";
+import {
+  BackIcon,
+  CalendarIcon,
+  ChevronDownIcon,
+  ClockIcon,
+  InfoIcon,
+  PawIcon,
+  PinIcon,
+  WhatsAppIcon,
+} from "../../components/booking/Icons";
+import "../../styles/booking-ui.css";
 
+const DAYS_PER_PAGE = 14;
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
-const DAYS_PER_PAGE = 14;
-const STEPS = ["time", "data"];
-const STEP_LABELS = { time: "Día y hora", data: "Tus datos" };
+const EMPTY_FORM = { phone: "", owner_name: "", pet_name: "", breed: "", email: "", notes: "", accept_policy: false, website: "" };
+const storageKey = (slug) => `bandidos_reserva_${slug}`;
 
-const EMPTY_FORM = {
-  phone: "",
-  owner_name: "",
-  pet_name: "",
-  breed: "",
-  email: "",
-  notes: "",
-  accept_policy: false,
-  website: "",
-};
-
-// "$15.000" o "$15.000 a $30.000" si el precio cambia según el tamaño.
-function priceRange(service) {
-  if (!service || service.price_from === null || service.price_from === undefined) return null;
-  if (service.price_to === null || service.price_to === undefined || service.price_to === service.price_from) {
-    return formatMoney(service.price_from);
+function loadSavedForm(slug) {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(storageKey(slug)) || "null");
+    return saved ? { ...EMPTY_FORM, ...saved, accept_policy: false, website: "" } : EMPTY_FORM;
+  } catch {
+    return EMPTY_FORM;
   }
-  return `${formatMoney(service.price_from)} a ${formatMoney(service.price_to)}`;
 }
 
-const varies = (service) => Boolean(service && service.price_to && service.price_to !== service.price_from);
-
-function groupSlots(slots) {
-  const groups = [
-    { key: "morning", label: "Mañana", slots: [] },
-    { key: "afternoon", label: "Tarde", slots: [] },
-    { key: "evening", label: "Noche", slots: [] },
-  ];
-  for (const slot of slots) {
-    const hour = Number(slot.slice(0, 2));
-    if (hour < 13) groups[0].slots.push(slot);
-    else if (hour < 19) groups[1].slots.push(slot);
-    else groups[2].slots.push(slot);
+function saveForm(slug, form) {
+  try {
+    const { phone, owner_name, pet_name, breed, email } = form;
+    window.localStorage.setItem(storageKey(slug), JSON.stringify({ phone, owner_name, pet_name, breed, email }));
+  } catch {
+    /* sin localStorage: la próxima vez se completa a mano */
   }
-  return groups.filter((g) => g.slots.length);
 }
 
-function durationRange(service) {
-  if (service.duration_min === service.duration_max) return formatMinutes(service.duration_min);
-  return `${formatMinutes(service.duration_min)} a ${formatMinutes(service.duration_max)}`;
+function validateField(name, form) {
+  switch (name) {
+    case "phone":
+      if (!form.phone.trim()) return "Necesitamos tu celular para confirmarte el turno.";
+      if (!isValidArPhone(form.phone)) return "Parece que falta un número. Escribilo sin el 15, por ejemplo: 11 2345 6789.";
+      return null;
+    case "owner_name":
+      return form.owner_name.trim() ? null : "¿Cómo te llamás? Así te saludamos cuando llegues.";
+    case "pet_name":
+      return form.pet_name.trim() ? null : "¿Cómo se llama tu perro? Lo necesitamos para recibirlo.";
+    case "email":
+      return !form.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+        ? null
+        : "Revisá el email: parece que le falta algo.";
+    case "accept_policy":
+      return form.accept_policy ? null : "Para reservar tenés que aceptar la política.";
+    default:
+      return null;
+  }
 }
 
-function BusinessHeader({ business, hours, showHours, onToggleHours }) {
-  const wa = whatsappUrl(business.whatsapp);
-  const initial = (business.name || "?").trim().charAt(0).toUpperCase();
+const REQUIRED_FIELDS = ["phone", "owner_name", "pet_name", "email", "accept_policy"];
+
+// Detecta el teclado del celular abierto con visualViewport.
+function useKeyboardOffset() {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    const update = () => {
+      const hidden = window.innerHeight - vv.height - vv.offsetTop;
+      setOffset(hidden > 120 ? hidden : 0);
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+  return offset;
+}
+
+// ── Piezas de la página ───────────────────────────────────────────────────
+
+function HoursList({ hours }) {
+  const todayWeekday = weekdayOf(argentinaToday());
   return (
-    <header className="pb-header">
-      <div className="pb-header__brand">
-        {business.logo_url ? (
-          <img className="pb-header__logo" src={business.logo_url} alt="" />
-        ) : (
-          <span className="pb-header__logo pb-header__logo--initial" aria-hidden="true">{initial}</span>
-        )}
-        <div className="pb-header__text">
-          <h1>{business.name}</h1>
-          {business.address && <p>{business.address}</p>}
-        </div>
-      </div>
-      <div className="pb-header__actions">
-        {wa && (
-          <a className="pb-chip pb-chip--wa" href={wa} target="_blank" rel="noreferrer">
-            WhatsApp
-          </a>
-        )}
-        {hours && hours.length > 0 && (
-          <button type="button" className="pb-chip" onClick={onToggleHours} aria-expanded={showHours}>
-            {showHours ? "Ocultar horarios" : "Ver horarios"}
-          </button>
-        )}
-      </div>
-      {showHours && hours && (
-        <ul className="pb-hours">
-          {WEEK_ORDER.map((weekday) => {
-            const ranges = hours.filter((h) => h.weekday === weekday);
-            return (
-              <li key={weekday}>
-                <span>{WEEKDAY_NAMES[weekday]}</span>
-                <span>{ranges.length ? ranges.map((r) => `${r.start_time} a ${r.end_time}`).join(" · ") : "Cerrado"}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </header>
+    <ul className="bk-hours">
+      {WEEK_ORDER.map((weekday) => {
+        const ranges = hours.filter((h) => h.weekday === weekday);
+        return (
+          <li key={weekday} className={weekday === todayWeekday ? "is-today" : ""}>
+            <span className="bk-hours__day">
+              {WEEKDAY_NAMES[weekday]}
+              {weekday === todayWeekday ? " (hoy)" : ""}
+            </span>
+            <span className="bk-hours__time">
+              {ranges.length ? ranges.map((r) => `${r.start_time} a ${r.end_time}`).join(" · ") : "Cerrado"}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
+function ServiceCard({ service, onReserve }) {
+  const [open, setOpen] = useState(false);
+  const long = (service.description || "").length > 90;
+  const single = isSinglePrice(service);
+  return (
+    <article className="bk-service">
+      <h3 className="bk-service__name">{service.name}</h3>
+      {service.description && (
+        <>
+          <p className={`bk-service__desc${open ? " is-open" : ""}`}>{service.description}</p>
+          {long && !open && (
+            <button type="button" className="bk-link bk-service__more" onClick={() => setOpen(true)}>
+              Ver más
+            </button>
+          )}
+        </>
+      )}
+      <div className="bk-service__foot">
+        <div>
+          {service.price_from !== null && (
+            <strong className="bk-service__price">{formatPriceRange(service.price_from, service.price_to)}</strong>
+          )}
+          <span className="bk-service__meta">
+            <ClockIcon size={13} />
+            {formatDurationRange(service.duration_min, service.duration_max)} · {single ? "precio único" : "según tamaño"}
+          </span>
+        </div>
+        <Button onClick={() => onReserve(service.id)} aria-label={`Reservar ${service.name}`}>
+          Reservar
+        </Button>
+      </div>
+    </article>
+  );
+}
+
+function MonthCalendar({ days, selected, onSelect }) {
+  const months = useMemo(() => {
+    const map = new Map();
+    for (const d of days) {
+      const key = d.date.slice(0, 7);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(d);
+    }
+    return [...map.entries()];
+  }, [days]);
+
+  return months.map(([key, list]) => {
+    const first = list[0].date;
+    const lead = (weekdayOf(`${key}-01`) + 6) % 7; // lunes primero
+    const byDate = new Map(list.map((d) => [d.date, d]));
+    const [y, m] = key.split("-").map(Number);
+    const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const cells = [];
+    for (let i = 0; i < lead; i += 1) cells.push(<span key={`e${i}`} />);
+    for (let day = 1; day <= lastDay; day += 1) {
+      const iso = `${key}-${String(day).padStart(2, "0")}`;
+      const info = byDate.get(iso);
+      if (!info) {
+        cells.push(<span key={iso} />);
+        continue;
+      }
+      const disabled = info.status !== "open";
+      cells.push(
+        <button
+          key={iso}
+          type="button"
+          className={`bk-month__day${disabled ? " is-disabled" : ""}${iso === selected ? " is-selected" : ""}`}
+          aria-disabled={disabled}
+          aria-pressed={iso === selected}
+          aria-label={formatLongDate(iso)}
+          onClick={() => !disabled && onSelect(iso)}
+        >
+          {day}
+        </button>
+      );
+    }
+    return (
+      <div key={key} className="bk-month">
+        <p className="bk-month__title">{formatLongDate(first).split(" de ").pop()}</p>
+        <div className="bk-month__grid">
+          {["L", "M", "M", "J", "V", "S", "D"].map((wd, i) => (
+            <span key={i} className="bk-month__wd">{wd}</span>
+          ))}
+          {cells}
+        </div>
+      </div>
+    );
+  });
+}
+
+function NotFound() {
+  return (
+    <div className="bk-page">
+      <div className="bk-center">
+        <div className="bk-lost" aria-hidden="true">
+          <PawIcon size={30} style={{ transform: "rotate(-20deg) translateY(10px)" }} />
+          <PawIcon size={30} style={{ transform: "rotate(10deg)" }} />
+          <span className="bk-lost__q">?</span>
+        </div>
+        <h1 className="bk-center__title">No encontramos esta página</h1>
+        <p className="bk-center__text">
+          Seguimos el rastro pero no hay nada acá. Puede que el link esté mal escrito: pedile a la peluquería que te lo mande de nuevo.
+        </p>
+        <PoweredBy />
+      </div>
+    </div>
+  );
+}
+
+// ── Página ────────────────────────────────────────────────────────────────
+
 export default function PublicBookingPage() {
   const { slug } = useParams();
+  const [params, setParams] = useSearchParams();
+  const serviceId = params.get("s");
+  const date = params.get("d");
+  const time = params.get("t");
+  const onDataStep = params.get("p") === "datos";
+
   const [page, setPage] = useState(null);
-  const [loadState, setLoadState] = useState("loading"); // loading | ready | not_found | error
+  const [loadState, setLoadState] = useState("loading");
   const [showHours, setShowHours] = useState(false);
 
-  const [step, setStep] = useState("home"); // home | service | time | data | done
-  const [serviceId, setServiceId] = useState(null);
   const [days, setDays] = useState([]);
+  const [daysFor, setDaysFor] = useState(null);
   const [daysLoading, setDaysLoading] = useState(false);
-  const [daysError, setDaysError] = useState("");
+  const [daysError, setDaysError] = useState(false);
   const [hasMoreDays, setHasMoreDays] = useState(true);
-  const [date, setDate] = useState(null);
-  const [time, setTime] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const [form, setForm] = useState(() => loadSavedForm(slug));
+  const [errors, setErrors] = useState({});
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [slotTaken, setSlotTaken] = useState(null); // { time, alternatives }
   const [reservation, setReservation] = useState(null);
 
+  const barRef = useRef(null);
+  const pageRef = useRef(null);
+  const keyboardOffset = useKeyboardOffset();
+
+  // ── Carga del local ─────────────────────────────────────────────────
   useEffect(() => {
     let active = true;
     getBookingPage(slug)
@@ -146,27 +303,38 @@ export default function PublicBookingPage() {
   }, [slug]);
 
   const service = useMemo(
-    () => page?.services?.find((s) => s.id === serviceId) ?? null,
+    () => (serviceId ? page?.services?.find((s) => s.id === serviceId) ?? null : null),
     [page, serviceId]
   );
+  const step = !service ? "home" : onDataStep && date && time ? "data" : "time";
 
-  // El cliente no elige tamaño: lo define el local. La disponibilidad se
-  // calcula con la duración más larga del servicio.
+  const updateParams = useCallback(
+    (changes, { replace = false } = {}) => {
+      const next = new URLSearchParams(params);
+      Object.entries(changes).forEach(([key, value]) => {
+        if (value === null || value === undefined || value === "") next.delete(key);
+        else next.set(key, value);
+      });
+      setParams(next, { replace });
+      if (!replace) window.scrollTo({ top: 0 });
+    },
+    [params, setParams]
+  );
+
+  // ── Disponibilidad ──────────────────────────────────────────────────
   const loadDays = useCallback(
-    async (from, append, serviceTypeId) => {
-      if (!serviceTypeId) return;
+    async (id, from, append) => {
       setDaysLoading(true);
-      setDaysError("");
+      setDaysError(false);
       try {
-        const data = await getAvailability(slug, { serviceTypeId, from, days: DAYS_PER_PAGE });
+        const data = await getAvailability(slug, { serviceTypeId: id, from, days: DAYS_PER_PAGE });
         setDays((prev) => (append ? [...prev, ...data.days] : data.days));
+        setDaysFor(id);
         setHasMoreDays(data.days.length === DAYS_PER_PAGE);
-        if (!append) {
-          const firstOpen = data.days.find((d) => d.slots.length);
-          setDate(firstOpen?.date ?? null);
-        }
+        return data.days;
       } catch {
-        setDaysError("No pudimos cargar los horarios. Probá de nuevo en un momento.");
+        setDaysError(true);
+        return null;
       } finally {
         setDaysLoading(false);
       }
@@ -174,51 +342,90 @@ export default function PublicBookingPage() {
     [slug]
   );
 
-  function chooseService(id) {
-    setServiceId(id);
-    setTime(null);
-    setDate(null);
-    setDays([]);
-    setStep("time");
-    loadDays(undefined, false, id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // Al elegir un servicio (o entrar con ?s= en la URL) se busca la disponibilidad.
+  useEffect(() => {
+    if (!service || daysFor === service.id || daysLoading || daysError) return;
+    loadDays(service.id);
+  }, [service, daysFor, daysLoading, daysError, loadDays]);
+
+  // Por defecto queda elegido el primer día con lugar.
+  useEffect(() => {
+    if (step !== "time" || daysFor !== service?.id || !days.length) return;
+    if (date && days.some((d) => d.date === date)) return;
+    const firstOpen = days.find((d) => d.status === "open");
+    if (firstOpen) updateParams({ d: firstOpen.date, t: null }, { replace: true });
+  }, [step, days, daysFor, service, date, updateParams]);
+
+  async function loadAllDays() {
+    // "Más fechas": completa hasta la anticipación máxima para el calendario.
+    let current = days;
+    const limit = addDaysISO(argentinaToday(), page.rules.max_days_ahead);
+    while (current.length && current[current.length - 1].date < limit) {
+      const more = await loadDays(service.id, addDaysISO(current[current.length - 1].date, 1), true);
+      if (!more || !more.length) break;
+      current = [...current, ...more];
+      if (more.length < DAYS_PER_PAGE) break;
+    }
+    setHasMoreDays(false);
   }
 
-  function loadMoreDays() {
-    const last = days[days.length - 1]?.date;
-    if (!last) return;
-    const [y, m, d] = last.split("-").map(Number);
-    const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-    loadDays(next, true, serviceId);
+  function openCalendar() {
+    setCalendarOpen(true);
+    if (hasMoreDays) loadAllDays();
   }
 
+  // ── Barra inferior: su alto se reserva abajo del contenido ───────────
+  useEffect(() => {
+    const bar = barRef.current;
+    const root = pageRef.current;
+    if (!bar || !root) return undefined;
+    const update = () => root.style.setProperty("--bar-h", `${bar.offsetHeight}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  });
+
+  // ── Formulario ──────────────────────────────────────────────────────
   function setField(name, value) {
-    setForm((prev) => ({ ...prev, [name]: value }));
-    setFormError("");
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (errors[name]) setErrors((e) => ({ ...e, [name]: validateField(name, next) }));
+      return next;
+    });
+    setSubmitError("");
   }
 
-  async function submit() {
-    if (!form.phone.trim() || !form.owner_name.trim() || !form.pet_name.trim()) {
-      setFormError("Completá tu celular, tu nombre y el nombre de tu perro.");
-      return;
+  function blurField(name) {
+    setErrors((e) => ({ ...e, [name]: validateField(name, form) }));
+  }
+
+  function validateAll() {
+    const next = Object.fromEntries(REQUIRED_FIELDS.map((f) => [f, validateField(f, form)]));
+    setErrors(next);
+    const missing = REQUIRED_FIELDS.filter((f) => next[f]);
+    setShowErrorSummary(missing.length > 0);
+    if (missing.length) {
+      const first = document.getElementById(`bk-${missing[0]}`);
+      first?.focus();
+      first?.scrollIntoView({ block: "center", behavior: "smooth" });
     }
-    if (form.phone.replace(/\D/g, "").length < 8) {
-      setFormError("Revisá el celular: poné la característica y el número, por ejemplo 381 555-1234.");
-      return;
-    }
-    if (!form.accept_policy) {
-      setFormError("Para reservar tenés que aceptar la política de cancelación.");
-      return;
-    }
+    return missing.length === 0;
+  }
+
+  async function submit(overrideTime) {
+    if (!validateAll()) return;
+    const chosenTime = overrideTime || time;
     setSubmitting(true);
-    setFormError("");
+    setSubmitError("");
+    saveForm(slug, form);
     try {
       const created = await createReservation(slug, {
         service_type_id: service.id,
         date,
-        time,
+        time: chosenTime,
         owner_name: form.owner_name.trim(),
-        phone: form.phone.trim(),
+        phone: normalizeArPhone(form.phone),
         pet_name: form.pet_name.trim(),
         breed: form.breed.trim() || null,
         email: form.email.trim() || null,
@@ -226,417 +433,583 @@ export default function PublicBookingPage() {
         accept_policy: true,
         website: form.website,
       });
-      setReservation(created);
-      setStep("done");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      setSlotTaken(null);
+      setReservation({ ...created, service });
+      window.scrollTo({ top: 0 });
     } catch (err) {
       if (err?.status === 409) {
-        setTime(null);
-        setStep("time");
-        loadDays(undefined, false, serviceId);
-        setFormError("");
-        alert("¡Uy! Alguien acaba de reservar ese horario. Elegí otro, por favor.");
+        setSlotTaken({ time: chosenTime, alternatives: err.payload?.alternatives || [] });
+        setDaysFor(null); // la disponibilidad cambió: se vuelve a pedir
       } else if (err?.status === 429) {
-        setFormError("Ya tenés varias reservas activas o hiciste muchos intentos. Escribinos por WhatsApp y te ayudamos.");
+        setSubmitError("Ya tenés varias reservas activas o hiciste muchos intentos. Escribinos por WhatsApp y te ayudamos.");
       } else if (err?.status === 400) {
-        setFormError("Revisá los datos: el email o el celular no parecen válidos.");
+        setSubmitError("Revisá los datos: el email o el celular no parecen válidos.");
       } else {
-        setFormError("No pudimos confirmar la reserva. Probá de nuevo en un momento.");
+        setSubmitError("No pudimos confirmar la reserva. Revisá tu conexión y probá de nuevo.");
       }
     } finally {
       setSubmitting(false);
     }
   }
 
-  // ── Estados de carga ────────────────────────────────────────────────────
+  function chooseAlternative(slot) {
+    updateParams({ t: slot }, { replace: true });
+    submit(slot);
+  }
 
+  // ── Estados de carga ────────────────────────────────────────────────
   if (loadState === "loading") {
     return (
-      <div className="pb-page">
-        <div className="pb-shell"><p className="pb-muted pb-center">Cargando…</p></div>
+      <div className="bk-page">
+        <div className="bk-center">
+          <p className="bk-loading-text"><PawIcon size={16} /> Cargando…</p>
+        </div>
       </div>
     );
   }
-
-  if (loadState === "not_found" || loadState === "error") {
+  if (loadState === "not_found") return <NotFound />;
+  if (loadState === "error") {
     return (
-      <div className="pb-page">
-        <div className="pb-shell pb-center">
-          <h1 className="pb-title">{loadState === "not_found" ? "No encontramos esta página" : "Algo salió mal"}</h1>
-          <p className="pb-muted">
-            {loadState === "not_found"
-              ? "Revisá el link o pedile uno nuevo a la peluquería."
-              : "Probá recargar la página en un momento."}
-          </p>
+      <div className="bk-page">
+        <div className="bk-center">
+          <h1 className="bk-center__title">Algo salió mal</h1>
+          <p className="bk-center__text">Revisá tu conexión y probá recargar la página.</p>
+          <Button onClick={() => window.location.reload()}>Reintentar</Button>
         </div>
       </div>
     );
   }
 
-  const { business } = page;
-  const accentStyle = business.primary_color ? { "--pb-accent": business.primary_color } : undefined;
+  const { business, rules, hours } = page;
+  const themeStyle = accentStyle(business.primary_color);
+  const pageClass = `bk-page${business.primary_color ? " has-brand" : ""}`;
+  const waGeneric = whatsappLink(business.whatsapp, "¡Hola! Quería sacar un turno.");
 
+  // ── Reservas apagadas ───────────────────────────────────────────────
   if (!page.enabled) {
-    const wa = whatsappUrl(business.whatsapp, "¡Hola! Quería sacar un turno.");
     return (
-      <div className="pb-page" style={accentStyle}>
-        <div className="pb-shell">
-          <BusinessHeader business={business} />
-          <section className="pb-card pb-center">
-            <h2 className="pb-title">Por ahora no tomamos reservas online</h2>
-            <p className="pb-muted">Escribinos y coordinamos tu turno.</p>
-            {wa && (
-              <a className="pb-btn pb-btn--primary" href={wa} target="_blank" rel="noreferrer">
-                Escribir por WhatsApp
-              </a>
-            )}
-          </section>
+      <div className={pageClass} style={themeStyle}>
+        <div className="bk-center">
+          <ShopAvatar name={business.name} logoUrl={business.logo_url} size={76} />
+          <p className="bk-center__name">{business.name}</p>
+          <h1 className="bk-center__title">Por ahora no tomamos reservas online</h1>
+          <p className="bk-center__text">Escribinos por WhatsApp y te buscamos un lugar para tu perro.</p>
+          {waGeneric && (
+            <Button variant="whatsapp" size="lg" href={waGeneric}>
+              <WhatsAppIcon /> Escribinos por WhatsApp
+            </Button>
+          )}
+          {business.address && (
+            <Button variant="secondary" href={mapsLink(business.address)}>
+              Ver dirección
+            </Button>
+          )}
         </div>
       </div>
     );
   }
 
-  // ── Confirmación ───────────────────────────────────────────────────────
-
-  if (step === "done" && reservation) {
-    const managePath = `/reservar/${slug}/turno/${reservation.token}`;
-    const calendarUrl = googleCalendarUrl({
-      title: `${reservation.service_name} · ${reservation.pet_name} (${business.name})`,
-      details: `Turno reservado en ${business.name}.`,
-      location: business.address,
-      date: reservation.date,
-      time: reservation.time,
-      duration: reservation.duration,
-    });
-    const wa = whatsappUrl(
+  // ── Confirmación ────────────────────────────────────────────────────
+  if (reservation) {
+    const r = reservation;
+    const svc = r.service;
+    const firstName = r.owner_name.split(" ")[0];
+    const managePath = `/reservar/${slug}/turno/${r.token}`;
+    const wa = whatsappLink(
       business.whatsapp,
-      `¡Hola! Reservé un turno para ${reservation.pet_name} el ${formatLongDate(reservation.date)} a las ${reservation.time}.`
+      `¡Hola! Reservé un turno para ${r.pet_name} el ${formatLongDate(r.date)} a las ${r.time}.`
     );
+    const addToCalendar = () =>
+      downloadIcs(
+        `turno-${r.pet_name.toLowerCase().replace(/\s+/g, "-")}.ics`,
+        buildIcs({
+          uid: r.token,
+          title: `${r.service_name} · ${r.pet_name} (${business.name})`,
+          description: `Turno en ${business.name}. Si no podés venir: ${window.location.origin}${managePath}`,
+          location: business.address,
+          date: r.date,
+          time: r.time,
+          duration: r.duration,
+        })
+      );
+
     return (
-      <div className="pb-page" style={accentStyle}>
-        <div className="pb-shell">
-          <section className="pb-card pb-done">
-            <div className="pb-done__icon" aria-hidden="true">✓</div>
-            <h1 className="pb-title">¡Listo, {reservation.owner_name.split(" ")[0]}!</h1>
-            <p className="pb-done__lead">
-              Te esperamos con <strong>{reservation.pet_name}</strong> el{" "}
-              <strong>{formatLongDate(reservation.date)}</strong> a las <strong>{reservation.time}</strong>.
-            </p>
-            <dl className="pb-summary">
-              <div><dt>Servicio</dt><dd>{reservation.service_name}</dd></div>
-              {service && <div><dt>Duración</dt><dd>{durationRange(service)}</dd></div>}
-              {business.address && <div><dt>Dónde</dt><dd>{business.address}</dd></div>}
-              {reservation.price !== null ? (
-                <div><dt>Precio</dt><dd>{formatMoney(reservation.price)}</dd></div>
-              ) : (
-                priceRange(service) && (
-                  <div><dt>Precio</dt><dd>{priceRange(service)}{varies(service) ? " según tamaño" : ""}</dd></div>
-                )
+      <div className={pageClass} style={themeStyle} ref={pageRef}>
+        <div className="bk-wrap bk-done">
+          <Celebration accent={themeStyle["--accent"]} />
+          <h1 className="bk-done__title">¡Listo, {firstName}!</h1>
+          <p className="bk-done__lead">
+            Te esperamos con <strong>{r.pet_name}</strong> el <strong>{formatLongDate(r.date)}</strong> a las{" "}
+            <strong>{r.time}</strong>.
+          </p>
+          <dl className="bk-details">
+            <div><dt>Servicio</dt><dd>{r.service_name}</dd></div>
+            <div><dt>Duración</dt><dd>{formatDurationRange(svc.duration_min, svc.duration_max)}</dd></div>
+            {business.address && (
+              <div>
+                <dt>Dirección</dt>
+                <dd>
+                  {business.address}
+                  <br />
+                  <a href={mapsLink(business.address)} target="_blank" rel="noreferrer">Cómo llegar</a>
+                </dd>
+              </div>
+            )}
+            {svc.price_from !== null && (
+              <div>
+                <dt>Precio</dt>
+                <dd>
+                  {r.price !== null ? formatPriceRange(r.price) : formatPriceRange(svc.price_from, svc.price_to)}
+                  {!isSinglePrice(svc) && r.price === null && <small>según tamaño, se confirma en el local</small>}
+                </dd>
+              </div>
+            )}
+          </dl>
+          <div className="bk-actions">
+            <Button size="lg" onClick={addToCalendar}>
+              <CalendarIcon size={18} /> Agregar a mi calendario
+            </Button>
+            {wa && (
+              <Button variant="whatsapp-outline" size="lg" href={wa}>
+                <WhatsAppIcon /> Escribinos por WhatsApp
+              </Button>
+            )}
+          </div>
+          <p className="bk-cancel-hint">
+            {r.can_cancel ? (
+              <>
+                <a className="bk-link" href={managePath}>Cancelá tu turno</a>
+                <br />
+                Podés hacerlo hasta el {formatLongDate(r.cancel_until.date).split(" ").slice(0, 2).join(" ")} a las{" "}
+                {r.cancel_until.time}.
+              </>
+            ) : (
+              <>
+                Si no podés venir, avisanos por WhatsApp. <a className="bk-link" href={managePath}>Ver mi turno</a>
+              </>
+            )}
+          </p>
+          <button
+            type="button"
+            className="bk-link bk-again"
+            onClick={() => {
+              setReservation(null);
+              setForm((prev) => ({ ...prev, pet_name: "", breed: "", notes: "", accept_policy: false }));
+              setParams(new URLSearchParams());
+            }}
+          >
+            Reservar otro turno
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Portada ─────────────────────────────────────────────────────────
+  if (step === "home") {
+    return (
+      <div className={pageClass} style={themeStyle}>
+        <div className="bk-wrap bk-home">
+          <header className="bk-hero">
+            <PawWatermark />
+            <div className="bk-hero__brand">
+              <ShopAvatar name={business.name} logoUrl={business.logo_url} size={60} />
+              <div>
+                <h1 className="bk-hero__name">{business.name}</h1>
+                {business.address && (
+                  <p className="bk-hero__address">
+                    <PinIcon size={14} /> {business.address}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="bk-hero__actions">
+              {waGeneric && (
+                <Button variant="whatsapp" href={waGeneric}>
+                  <WhatsAppIcon /> WhatsApp
+                </Button>
               )}
-            </dl>
-            <div className="pb-done__actions">
-              <a className="pb-btn pb-btn--primary" href={calendarUrl} target="_blank" rel="noreferrer">
-                Agregar a mi calendario
-              </a>
-              {wa && (
-                <a className="pb-btn" href={wa} target="_blank" rel="noreferrer">
-                  Escribinos por WhatsApp
-                </a>
+              {hours.length > 0 && (
+                <Button
+                  variant={showHours ? "dark" : "secondary"}
+                  className="bk-hide-desktop"
+                  onClick={() => setShowHours((v) => !v)}
+                  aria-expanded={showHours}
+                >
+                  {showHours ? "Ocultar horarios" : "Ver horarios"} <ChevronDownIcon up={showHours} />
+                </Button>
               )}
             </div>
-            <p className="pb-muted pb-done__manage">
-              {reservation.can_cancel ? (
-                <>
-                  ¿No podés venir? <Link to={managePath}>Cancelá tu turno desde acá</Link>
-                  {reservation.cancel_hours > 0 ? ` (hasta ${reservation.cancel_hours} h antes)` : ""}.
-                  {form.email ? " También te lo mandamos por email." : " Guardá este link."}
-                </>
-              ) : (
-                <>
-                  Si no podés venir, avisanos por WhatsApp. <Link to={managePath}>Ver mi turno</Link>
-                </>
-              )}
-            </p>
-            <button
-              type="button"
-              className="pb-link"
-              onClick={() => {
-                setReservation(null);
-                setForm((prev) => ({ ...EMPTY_FORM, phone: prev.phone, owner_name: prev.owner_name, email: prev.email }));
-                setServiceId(null);
-                setStep("home");
-              }}
-            >
-              Reservar otro turno
-            </button>
-          </section>
-        </div>
-      </div>
-    );
-  }
+            {hours.length > 0 && (
+              <div className={showHours ? "" : "bk-hours-desktop-only"}>
+                <HoursList hours={hours} />
+                {rules.cancel_hours > 0 && (
+                  <p className="bk-rule">Cancelás sin costo hasta {rules.cancel_hours} h antes.</p>
+                )}
+              </div>
+            )}
+          </header>
 
-  // ── Flujo de reserva ───────────────────────────────────────────────────
-
-  const selectedDay = days.find((d) => d.date === date);
-  const stepIndex = STEPS.indexOf(step);
-
-  let barAction = null;
-  if (step === "time") {
-    barAction = {
-      label: "Continuar",
-      disabled: !date || !time,
-      onClick: () => { setStep("data"); window.scrollTo({ top: 0, behavior: "smooth" }); },
-    };
-  } else if (step === "data") {
-    barAction = { label: submitting ? "Reservando…" : "Confirmar reserva", disabled: submitting, onClick: submit };
-  }
-
-  return (
-    <div className="pb-page" style={accentStyle}>
-      <div className="pb-shell">
-        <BusinessHeader
-          business={business}
-          hours={page.hours}
-          showHours={showHours}
-          onToggleHours={() => setShowHours((v) => !v)}
-        />
-
-        {step === "home" && (
-          <section>
-            <h2 className="pb-section-title">¿Qué necesita tu perro?</h2>
+          <main>
+            <h2 className="bk-home__title">¿Qué necesita tu perro?</h2>
+            <p className="bk-home__subtitle">Elegí un servicio y reservá en menos de un minuto.</p>
             {page.services.length === 0 ? (
-              <p className="pb-card pb-muted">Todavía no hay servicios para reservar online.</p>
+              <Notice variant="info">Todavía no hay servicios para reservar online. Escribinos por WhatsApp.</Notice>
             ) : (
-              <div className="pb-services">
+              <div className="bk-services">
                 {page.services.map((s) => (
-                  <button key={s.id} type="button" className="pb-service" onClick={() => chooseService(s.id)}>
-                    <span className="pb-service__name">{s.name}</span>
-                    {s.description && <span className="pb-service__desc">{s.description}</span>}
-                    <span className="pb-service__meta">
-                      {priceRange(s) && <strong>{priceRange(s)}</strong>}
-                      <span>{durationRange(s)}</span>
-                      {varies(s) && <span>según tamaño</span>}
-                    </span>
-                    <span className="pb-service__cta">Reservar</span>
-                  </button>
+                  <ServiceCard key={s.id} service={s} onReserve={(id) => updateParams({ s: id, d: null, t: null, p: null })} />
                 ))}
               </div>
             )}
-          </section>
-        )}
+            <PoweredBy />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
-        {step !== "home" && (
-          <>
-            <nav className="pb-steps" aria-label="Pasos">
-              {STEPS.map((key, index) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`pb-steps__item${index === stepIndex ? " is-active" : ""}${index < stepIndex ? " is-done" : ""}`}
-                  disabled={index >= stepIndex}
-                  onClick={() => setStep(key)}
-                >
-                  <span className="pb-steps__num">{index < stepIndex ? "✓" : index + 1}</span>
-                  {STEP_LABELS[key]}
-                </button>
-              ))}
-            </nav>
-            <button
-              type="button"
-              className="pb-back"
-              onClick={() => setStep(stepIndex === 0 ? "home" : STEPS[stepIndex - 1])}
-            >
-              ← Volver
-            </button>
-          </>
-        )}
+  // ── Pasos: día y hora / tus datos ───────────────────────────────────
+  const priceText = formatPriceRange(service.price_from, service.price_to);
+  const single = isSinglePrice(service);
+  const selectedDay = days.find((d) => d.date === date) || null;
+  const nextOpen = selectedDay ? days.find((d) => d.date > selectedDay.date && d.status === "open") : null;
+  const errorCount = REQUIRED_FIELDS.filter((f) => errors[f]).length;
+  const whenText = date && time ? `${formatShortDate(date)} · ${time} h` : null;
+  const priceLine = priceText ? `${priceText}${single ? "" : " · se confirma en el local"}` : "Precio a confirmar en el local";
 
-        {service && step !== "home" && (
-          <section className="pb-card pb-chosen">
-            <div className="pb-chosen__row">
-              <div>
-                <p className="pb-chosen__name">{service.name}</p>
-                <p className="pb-muted">
-                  {[priceRange(service), durationRange(service)].filter(Boolean).join(" · ")}
+  const barAction =
+    step === "time"
+      ? {
+          label: time ? "Continuar" : "Elegí un horario para seguir",
+          disabled: !time,
+          onClick: () => updateParams({ p: "datos" }),
+        }
+      : {
+          label: submitting ? "Reservando…" : "Confirmar reserva",
+          disabled: submitting,
+          softDisabled: REQUIRED_FIELDS.some((f) => validateField(f, form)),
+          onClick: () => submit(),
+        };
+
+  const summaryButton = (extraClass = "") => (
+    <Button
+      size="lg"
+      className={`bk-btn--block ${extraClass}`}
+      disabled={barAction.disabled}
+      aria-disabled={barAction.softDisabled || undefined}
+      onClick={barAction.onClick}
+    >
+      {barAction.label}
+    </Button>
+  );
+
+  return (
+    <div className={pageClass} style={themeStyle} ref={pageRef}>
+      <div className="bk-wrap">
+        <div className="bk-topbar">
+          <button
+            type="button"
+            className="bk-back"
+            aria-label="Volver"
+            onClick={() => (step === "data" ? updateParams({ p: null }) : updateParams({ s: null, d: null, t: null }))}
+          >
+            <BackIcon />
+          </button>
+          <ShopAvatar name={business.name} logoUrl={business.logo_url} size={30} />
+          <span className="bk-topbar__name">{business.name}</span>
+        </div>
+        <StepIndicator step={step} />
+
+        <div className="bk-flow">
+          <div className="bk-flow__main">
+            {step === "time" && (
+              <>
+                <section className="bk-card bk-chosen bk-hide-desktop">
+                  <div className="bk-chosen__row">
+                    <div>
+                      <p className="bk-chosen__name">{service.name}</p>
+                      <p className="bk-chosen__meta">
+                        {[priceText, formatDurationRange(service.duration_min, service.duration_max)].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <button type="button" className="bk-link" onClick={() => updateParams({ s: null, d: null, t: null })}>
+                      Cambiar
+                    </button>
+                  </div>
+                  {!single && (
+                    <Notice variant="info">
+                      El precio final depende del tamaño y el pelaje de tu perro: lo confirmamos cuando lo recibimos.
+                    </Notice>
+                  )}
+                </section>
+
+                <div className="bk-section-head">
+                  <h2 className="bk-section-title">Elegí el día</h2>
+                  <button type="button" className="bk-more-dates" onClick={openCalendar}>
+                    <CalendarIcon /> Más fechas
+                  </button>
+                </div>
+
+                {daysError && (
+                  <Notice variant="error" role="alert">
+                    <strong>No pudimos cargar los horarios.</strong> Revisá tu conexión y probá de nuevo.
+                    <div style={{ marginTop: 10 }}>
+                      <Button variant="ghost" size="sm" onClick={() => loadDays(service.id)}>Reintentar</Button>
+                    </div>
+                  </Notice>
+                )}
+
+                {days.length > 0 && daysFor === service.id && (
+                  <div className="bk-days" role="group" aria-label="Días">
+                    {days.slice(0, Math.max(DAYS_PER_PAGE, days.findIndex((d) => d.date === date) + 1)).map((d) => {
+                      const parts = dayChipParts(d.date);
+                      return (
+                        <DayChip
+                          key={d.date}
+                          {...parts}
+                          status={d.status}
+                          selected={d.date === date}
+                          onSelect={() => updateParams({ d: d.date, t: null }, { replace: true })}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="bk-rule">
+                  <InfoIcon size={14} /> Podés reservar hasta con {rules.max_days_ahead} días de anticipación.
                 </p>
+
+                <div className="bk-section-head">
+                  <h2 className="bk-section-title">Elegí el horario</h2>
+                </div>
+
+                {(daysLoading && daysFor !== service.id) || (!days.length && !daysError) ? (
+                  <div aria-busy="true">
+                    <div className="bk-skeleton bk-skeleton--line" />
+                    <div className="bk-slots">
+                      {Array.from({ length: 6 }).map((_, i) => <div key={i} className="bk-skeleton bk-skeleton--slot" />)}
+                    </div>
+                    <p className="bk-loading-text"><PawIcon size={14} /> Buscando horarios libres…</p>
+                  </div>
+                ) : selectedDay && selectedDay.slots.length > 0 ? (
+                  <>
+                    <p className="bk-section-sub">
+                      {formatLongDateCap(selectedDay.date)} · {selectedDay.slots.length}{" "}
+                      {selectedDay.slots.length === 1 ? "horario libre" : "horarios libres"}
+                    </p>
+                    {groupSlots(selectedDay.slots).map((group) => (
+                      <div key={group.key} className="bk-slot-group">
+                        <p className="bk-slot-group__label">
+                          {group.label}<span>{group.range}</span>
+                        </p>
+                        <div className="bk-slots">
+                          {group.slots.map((slot) => (
+                            <TimeSlot
+                              key={slot}
+                              time={slot}
+                              selected={slot === time}
+                              onSelect={() => updateParams({ t: slot }, { replace: true })}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : !daysError && days.length > 0 ? (
+                  <div className="bk-card bk-empty">
+                    <div className="bk-empty__icon"><PawIcon size={26} /></div>
+                    <p className="bk-empty__title">
+                      {selectedDay
+                        ? `El ${formatLongDate(selectedDay.date).split(" ").slice(0, 2).join(" ")} ya está completo`
+                        : "No quedan horarios libres en estos días"}
+                    </p>
+                    <p className="bk-empty__text">Probá con otro día o escribinos por WhatsApp.</p>
+                    {nextOpen && (
+                      <Button className="bk-btn--block" onClick={() => updateParams({ d: nextOpen.date, t: null }, { replace: true })}>
+                        Ver el {formatLongDate(nextOpen.date).split(" ").slice(0, 2).join(" ")} ({nextOpen.slots.length} libres)
+                      </Button>
+                    )}
+                    {waGeneric && (
+                      <Button variant="whatsapp-outline" className="bk-btn--block" href={waGeneric}>
+                        Escribinos por WhatsApp
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+              </>
+            )}
+
+            {step === "data" && (
+              <>
+                <h2 className="bk-form-title">Contanos de vos y de tu perro</h2>
+                {showErrorSummary && errorCount > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <Notice variant="error" role="alert">
+                      Te {errorCount === 1 ? "falta" : "faltan"} <strong>{errorCount} {errorCount === 1 ? "dato" : "datos"}</strong> para confirmar. Ya casi.
+                    </Notice>
+                  </div>
+                )}
+                <form className="bk-form" noValidate onSubmit={(e) => { e.preventDefault(); submit(); }}>
+                  <Field label="Celular" required htmlFor="bk-phone" help="Con característica, sin 0 ni 15." error={errors.phone}>
+                    <div className="bk-phone">
+                      <span className="bk-phone__prefix">+54 9</span>
+                      <input
+                        id="bk-phone" className="bk-input" type="tel" inputMode="tel" autoComplete="tel-national"
+                        placeholder="11 2345 6789" value={form.phone}
+                        aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? "bk-phone-error" : undefined}
+                        onChange={(e) => setField("phone", e.target.value)} onBlur={() => blurField("phone")}
+                      />
+                    </div>
+                  </Field>
+                  <Field label="Tu nombre" required htmlFor="bk-owner_name" error={errors.owner_name}>
+                    <input
+                      id="bk-owner_name" className="bk-input" type="text" autoComplete="name" value={form.owner_name}
+                      aria-invalid={Boolean(errors.owner_name)}
+                      onChange={(e) => setField("owner_name", e.target.value)} onBlur={() => blurField("owner_name")}
+                    />
+                  </Field>
+                  <div className="bk-form__row">
+                    <Field label="Tu perro" required htmlFor="bk-pet_name" error={errors.pet_name}>
+                      <input
+                        id="bk-pet_name" className="bk-input" type="text" value={form.pet_name}
+                        aria-invalid={Boolean(errors.pet_name)}
+                        onChange={(e) => setField("pet_name", e.target.value)} onBlur={() => blurField("pet_name")}
+                      />
+                    </Field>
+                    <Field label="Raza" optional htmlFor="bk-breed">
+                      <input id="bk-breed" className="bk-input" type="text" value={form.breed} onChange={(e) => setField("breed", e.target.value)} />
+                    </Field>
+                  </div>
+                  <Field label="Email" optional htmlFor="bk-email" help="Te mandamos la confirmación." error={errors.email}>
+                    <input
+                      id="bk-email" className="bk-input" type="email" autoComplete="email" inputMode="email"
+                      placeholder="nombre@email.com" value={form.email} aria-invalid={Boolean(errors.email)}
+                      onChange={(e) => setField("email", e.target.value)} onBlur={() => blurField("email")}
+                    />
+                  </Field>
+                  <Field label="Algo que tengamos que saber" optional htmlFor="bk-notes">
+                    <textarea
+                      id="bk-notes" className="bk-textarea" rows={3} maxLength={500}
+                      placeholder="Ej: es nervioso con el secador" value={form.notes}
+                      onChange={(e) => setField("notes", e.target.value)}
+                    />
+                  </Field>
+                  <input
+                    className="bk-hp" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true"
+                    value={form.website} onChange={(e) => setField("website", e.target.value)}
+                  />
+                  <div className={`bk-field${errors.accept_policy ? " has-error" : ""}`}>
+                    <div className="bk-policy">
+                      <p className="bk-policy__title">Política de cancelación</p>
+                      <p className="bk-policy__text">
+                        {rules.cancellation_policy ||
+                          `Si no podés venir, avisanos con ${rules.cancel_hours} horas de anticipación.`}
+                      </p>
+                      <label className="bk-check" htmlFor="bk-accept_policy">
+                        <input
+                          id="bk-accept_policy" type="checkbox" checked={form.accept_policy}
+                          onChange={(e) => { setField("accept_policy", e.target.checked); setErrors((er) => ({ ...er, accept_policy: null })); }}
+                        />
+                        Leí y acepto la política
+                      </label>
+                    </div>
+                    {errors.accept_policy && <p className="bk-field__error">{errors.accept_policy}</p>}
+                  </div>
+                  {submitError && <Notice variant="error" role="alert">{submitError}</Notice>}
+                  <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+                </form>
+              </>
+            )}
+          </div>
+
+          {/* Escritorio: resumen lateral en lugar de la barra inferior. */}
+          <aside className="bk-card bk-summary-card">
+            <p className="bk-summary-card__label">TU RESERVA</p>
+            <div className="bk-chosen__row">
+              <div>
+                <p className="bk-chosen__name">{service.name}</p>
+                <p className="bk-chosen__meta">{formatDurationRange(service.duration_min, service.duration_max)}</p>
               </div>
-              <button type="button" className="pb-link" onClick={() => setStep("home")}>
+              <button type="button" className="bk-link" onClick={() => updateParams({ s: null, d: null, t: null, p: null })}>
                 Cambiar
               </button>
             </div>
-            {varies(service) && (
-              <p className="pb-chosen__note">
+            <dl className="bk-details" style={{ marginTop: 12 }}>
+              <div><dt>Día y hora</dt><dd>{whenText || "—"}</dd></div>
+              <div><dt>Precio</dt><dd>{priceText || "A confirmar"}</dd></div>
+            </dl>
+            {!single && (
+              <Notice variant="info" icon={false}>
                 El precio final depende del tamaño y el pelaje de tu perro: lo confirmamos cuando lo recibimos.
-              </p>
+              </Notice>
             )}
-          </section>
-        )}
+            {summaryButton()}
+          </aside>
+        </div>
+      </div>
 
-        {step === "time" && (
-          <section className="pb-card">
-            <h2 className="pb-card__title">Elegí día y hora</h2>
-            {daysError && (
-              <p className="pb-error">
-                {daysError}{" "}
-                <button type="button" className="pb-link" onClick={() => loadDays(undefined, false)}>Reintentar</button>
-              </p>
-            )}
-            {days.length > 0 && (
-              <>
-                <p className="pb-month">{formatMonthName(date || days[0].date)}</p>
-                <div className="pb-days" role="listbox" aria-label="Días">
-                  {days.map((d) => {
-                    const available = d.slots.length > 0;
-                    return (
-                      <button
-                        key={d.date}
-                        type="button"
-                        role="option"
-                        aria-selected={d.date === date}
-                        className={`pb-day${d.date === date ? " is-selected" : ""}`}
-                        disabled={!available}
-                        onClick={() => { setDate(d.date); setTime(null); }}
-                      >
-                        <span className="pb-day__wd">{formatWeekdayShort(d.date)}</span>
-                        <span className="pb-day__num">{Number(d.date.slice(8))}</span>
-                      </button>
-                    );
-                  })}
-                  {hasMoreDays && (
-                    <button type="button" className="pb-day pb-day--more" disabled={daysLoading} onClick={loadMoreDays}>
-                      <span className="pb-day__wd">Más</span>
-                      <span className="pb-day__num">→</span>
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-            {daysLoading && days.length === 0 && <p className="pb-muted">Buscando horarios libres…</p>}
-            {!daysLoading && !daysError && days.length > 0 && !date && (
-              <p className="pb-muted">No quedan horarios libres en estos días. Probá con “Más” o escribinos por WhatsApp.</p>
-            )}
-            {selectedDay && (
-              <div className="pb-slots">
-                <p className="pb-slots__date">{formatLongDate(selectedDay.date)}</p>
-                {groupSlots(selectedDay.slots).map((group) => (
-                  <div key={group.key} className="pb-slots__group">
-                    <h3 className="pb-label">{group.label}</h3>
-                    <div className="pb-slots__grid">
-                      {group.slots.map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          className={`pb-slot${slot === time ? " is-selected" : ""}`}
-                          aria-pressed={slot === time}
-                          onClick={() => setTime(slot)}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+      <div
+        className={`bk-bar${keyboardOffset ? " is-compact" : ""}`}
+        ref={barRef}
+        style={keyboardOffset ? { bottom: keyboardOffset } : undefined}
+      >
+        <div className="bk-bar__inner">
+          <div className="bk-bar__text">
+            <p className="bk-bar__line1">
+              {keyboardOffset ? whenText || service.name : [service.name, whenText].filter(Boolean).join(" · ")}
+            </p>
+            <p className="bk-bar__line2">{keyboardOffset ? service.name : priceLine}</p>
+          </div>
+          {summaryButton()}
+        </div>
+      </div>
+
+      <BottomSheet open={calendarOpen} onClose={() => setCalendarOpen(false)} labelledBy="bk-cal-title">
+        <h2 className="bk-sheet__title" id="bk-cal-title">Elegí una fecha</h2>
+        <p className="bk-sheet__text">Podés reservar hasta con {rules.max_days_ahead} días de anticipación.</p>
+        {daysLoading && hasMoreDays && <p className="bk-loading-text"><PawIcon size={14} /> Buscando fechas…</p>}
+        <MonthCalendar
+          days={days}
+          selected={date}
+          onSelect={(iso) => {
+            updateParams({ d: iso, t: null }, { replace: true });
+            setCalendarOpen(false);
+          }}
+        />
+      </BottomSheet>
+
+      <BottomSheet open={Boolean(slotTaken)} onClose={() => setSlotTaken(null)} labelledBy="bk-taken-title">
+        {slotTaken && (
+          <>
+            <div className="bk-sheet__icon"><ClockIcon size={26} /></div>
+            <h2 className="bk-sheet__title" id="bk-taken-title">
+              ¡Uy! Alguien reservó las {slotTaken.time} justo antes que vos
+            </h2>
+            <p className="bk-sheet__text">
+              No perdiste nada: tus datos quedan guardados.
+              {slotTaken.alternatives.length > 0 && ` Elegí otro horario del ${formatLongDate(date).split(" ").slice(0, 2).join(" ")} y listo.`}
+            </p>
+            {slotTaken.alternatives.length > 0 && (
+              <div className="bk-sheet__slots">
+                {slotTaken.alternatives.map((slot) => (
+                  <TimeSlot key={slot} time={slot} selected={false} onSelect={() => chooseAlternative(slot)} />
                 ))}
               </div>
             )}
-            <p className="pb-rule">
-              Podés reservar hasta con {page.rules.max_days_ahead} días de anticipación.
-            </p>
-          </section>
-        )}
-
-        {step === "data" && (
-          <section className="pb-card">
-            <h2 className="pb-card__title">Tus datos</h2>
-            <form className="pb-form" onSubmit={(e) => { e.preventDefault(); submit(); }}>
-              <label className="pb-field">
-                <span>Celular *</span>
-                <input
-                  type="tel" inputMode="tel" autoComplete="tel" placeholder="Ej: 381 555-1234"
-                  value={form.phone} onChange={(e) => setField("phone", e.target.value)}
-                />
-                <small>Con característica, sin 0 ni 15.</small>
-              </label>
-              <label className="pb-field">
-                <span>Tu nombre *</span>
-                <input
-                  type="text" autoComplete="name"
-                  value={form.owner_name} onChange={(e) => setField("owner_name", e.target.value)}
-                />
-              </label>
-              <div className="pb-form__row">
-                <label className="pb-field">
-                  <span>Nombre de tu perro *</span>
-                  <input type="text" value={form.pet_name} onChange={(e) => setField("pet_name", e.target.value)} />
-                </label>
-                <label className="pb-field">
-                  <span>Raza</span>
-                  <input type="text" placeholder="Opcional" value={form.breed} onChange={(e) => setField("breed", e.target.value)} />
-                </label>
-              </div>
-              <label className="pb-field">
-                <span>Email</span>
-                <input
-                  type="email" autoComplete="email" placeholder="Opcional: te mandamos la confirmación"
-                  value={form.email} onChange={(e) => setField("email", e.target.value)}
-                />
-              </label>
-              <label className="pb-field">
-                <span>Algo que tengamos que saber</span>
-                <textarea
-                  rows={2} maxLength={500} placeholder="Ej: es nervioso con el secador"
-                  value={form.notes} onChange={(e) => setField("notes", e.target.value)}
-                />
-              </label>
-              {/* Campo trampa para bots: no se ve ni se puede tabular. */}
-              <input
-                className="pb-hp" type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true"
-                value={form.website} onChange={(e) => setField("website", e.target.value)}
-              />
-              {page.rules.cancellation_policy && (
-                <div className="pb-policy">
-                  <strong>Política de cancelación</strong>
-                  <p>{page.rules.cancellation_policy}</p>
-                </div>
-              )}
-              <label className="pb-check">
-                <input
-                  type="checkbox" checked={form.accept_policy}
-                  onChange={(e) => setField("accept_policy", e.target.checked)}
-                />
-                <span>
-                  {page.rules.cancellation_policy
-                    ? "Leí y acepto la política de cancelación."
-                    : `Si no puedo venir, aviso con ${page.rules.cancel_hours} horas de anticipación.`}
-                </span>
-              </label>
-              {formError && <p className="pb-error" role="alert">{formError}</p>}
-              <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
-            </form>
-          </section>
-        )}
-      </div>
-
-      {barAction && service && (
-        <div className="pb-bar">
-          <div className="pb-bar__inner">
-            <div className="pb-bar__summary">
-              <strong>{service.name}</strong>
-              <span>
-                {date && time ? `${formatLongDate(date)} · ${time}` : "Elegí día y horario"}
-                {priceRange(service) ? ` · ${priceRange(service)}` : ""}
-              </span>
-            </div>
-            <button
-              type="button"
-              className="pb-btn pb-btn--primary"
-              disabled={barAction.disabled}
-              onClick={barAction.onClick}
+            <Button
+              size="lg"
+              className="bk-btn--block"
+              onClick={() => {
+                setSlotTaken(null);
+                updateParams({ t: null, p: null });
+              }}
             >
-              {barAction.label}
-            </button>
-          </div>
-        </div>
-      )}
+              Ver todos los horarios
+            </Button>
+          </>
+        )}
+      </BottomSheet>
     </div>
   );
 }
