@@ -3,10 +3,75 @@ import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { COLOR_PALETTE as TYPE_COLORS } from "../../utils/colorPalette";
 import { showApiError } from "../../utils/errorDialog";
+import { BOOKING_SIZES } from "../../services/bookingApi";
+import "../../styles/booking.css";
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "-";
   return `$${Number(value).toLocaleString("es-AR")}`;
+}
+
+function formatDuration(minutes) {
+  const m = Number(minutes);
+  if (!m) return null;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  if (!h) return `${rest} min`;
+  return rest ? `${h} h ${rest} min` : `${h} h`;
+}
+
+const EMPTY_MODAL_FORM = {
+  name: "",
+  default_price: "",
+  duration_minutes: "",
+  online_enabled: false,
+  description: "",
+  size_pricing: Object.fromEntries(BOOKING_SIZES.map(({ value }) => [value, { price: "", duration: "" }])),
+};
+
+function toModalForm(item) {
+  return {
+    name: item.name || "",
+    default_price: item.default_price ? String(Number(item.default_price)) : "",
+    duration_minutes: item.duration_minutes ? String(item.duration_minutes) : "",
+    online_enabled: Boolean(item.online_enabled),
+    description: item.description || "",
+    size_pricing: Object.fromEntries(
+      BOOKING_SIZES.map(({ value }) => {
+        const entry = item.size_pricing?.[value] || {};
+        return [value, {
+          price: entry.price !== null && entry.price !== undefined ? String(entry.price) : "",
+          duration: entry.duration ? String(entry.duration) : "",
+        }];
+      })
+    ),
+  };
+}
+
+const numberOrNull = (value) => (String(value).trim() === "" ? null : Number(value));
+
+// Solo manda los tamaños que tienen algún valor propio; el resto usa los
+// valores generales del servicio.
+function toPayload(form) {
+  const sizePricing = {};
+  for (const { value } of BOOKING_SIZES) {
+    const price = numberOrNull(form.size_pricing[value].price);
+    const duration = numberOrNull(form.size_pricing[value].duration);
+    if (price !== null || duration !== null) sizePricing[value] = { price, duration };
+  }
+  return {
+    name: form.name.trim(),
+    default_price: numberOrNull(form.default_price),
+    duration_minutes: numberOrNull(form.duration_minutes),
+    online_enabled: form.online_enabled,
+    description: form.description.trim() || null,
+    size_pricing: sizePricing,
+  };
+}
+
+function validateDurations(form) {
+  const values = [form.duration_minutes, ...BOOKING_SIZES.map(({ value }) => form.size_pricing[value].duration)];
+  return values.every((v) => String(v).trim() === "" || (Number(v) >= 5 && Number(v) <= 600 && Number.isInteger(Number(v))));
 }
 
 export default function ServiceTypesPage() {
@@ -18,7 +83,7 @@ export default function ServiceTypesPage() {
   const [editingId, setEditingId] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalForm, setModalForm] = useState({ name: "", default_price: "" });
+  const [modalForm, setModalForm] = useState(EMPTY_MODAL_FORM);
 
   // ── Cálculos ──────────────────────────────────────────────────────────────
   const priced = items.filter((i) => i.default_price);
@@ -80,11 +145,15 @@ export default function ServiceTypesPage() {
   }
 
   function openModalEdit(item) {
-    setModalForm({
-      name: item.name || "",
-      default_price: item.default_price ? String(item.default_price) : "",
-    });
+    setModalForm(toModalForm(item));
     setIsEditingModal(true);
+  }
+
+  function setSizeField(size, field, value) {
+    setModalForm((p) => ({
+      ...p,
+      size_pricing: { ...p.size_pricing, [size]: { ...p.size_pricing[size], [field]: value } },
+    }));
   }
 
   async function handleModalSave() {
@@ -93,11 +162,12 @@ export default function ServiceTypesPage() {
       alert("Ingresá el nombre del servicio.");
       return;
     }
+    if (!validateDurations(modalForm)) {
+      alert("Las duraciones tienen que ser minutos enteros entre 5 y 600.");
+      return;
+    }
     try {
-      const payload = {
-        name: modalForm.name.trim(),
-        default_price: modalForm.default_price ? Number(modalForm.default_price) : null,
-      };
+      const payload = toPayload(modalForm);
       await updateItem(selectedType.id, payload);
       setSelectedType((prev) => prev ? { ...prev, ...payload } : prev);
       setIsEditingModal(false);
@@ -230,11 +300,13 @@ export default function ServiceTypesPage() {
                       </span>
                     )}
                   </div>
-                  {item.default_price && (
-                    <div className="fe-card__meta">
-                      <span className="fe-card__meta-item">precio sugerido</span>
-                    </div>
-                  )}
+                  <div className="fe-card__meta">
+                    {item.default_price && <span className="fe-card__meta-item">precio sugerido</span>}
+                    {formatDuration(item.duration_minutes) && (
+                      <span className="fe-card__meta-item">{formatDuration(item.duration_minutes)}</span>
+                    )}
+                    {item.online_enabled && <span className="fe-card__meta-item">🌐 En la web</span>}
+                  </div>
                 </div>
               </div>
             );
@@ -264,6 +336,63 @@ export default function ServiceTypesPage() {
                     onChange={(e) => setModalForm((p) => ({ ...p, default_price: e.target.value }))}
                   />
                 </label>
+                <label className="form-field">
+                  <span>Duración (minutos)</span>
+                  <input
+                    type="number" min="5" max="600" step="5" placeholder="Ej: 60"
+                    value={modalForm.duration_minutes}
+                    onChange={(e) => setModalForm((p) => ({ ...p, duration_minutes: e.target.value }))}
+                  />
+                </label>
+
+                <div className="service-online">
+                  <label className="service-online__toggle">
+                    <input
+                      type="checkbox"
+                      checked={modalForm.online_enabled}
+                      onChange={(e) => setModalForm((p) => ({ ...p, online_enabled: e.target.checked }))}
+                    />
+                    <span>Ofrecer en la web de reservas</span>
+                  </label>
+                  {modalForm.online_enabled && (
+                    <>
+                      <label className="form-field">
+                        <span>Descripción para el cliente (opcional)</span>
+                        <textarea
+                          rows={2} maxLength={500}
+                          placeholder="Ej: Baño con shampoo neutro, secado y perfume."
+                          value={modalForm.description}
+                          onChange={(e) => setModalForm((p) => ({ ...p, description: e.target.value }))}
+                        />
+                      </label>
+                      <p className="service-online__hint">
+                        Precio y duración por tamaño. Si dejás un tamaño vacío se usan el precio y la duración de arriba.
+                      </p>
+                      <div className="service-sizes">
+                        <span />
+                        <span className="service-sizes__head">Precio</span>
+                        <span className="service-sizes__head">Minutos</span>
+                        {BOOKING_SIZES.map(({ value, label }) => (
+                          <div key={value} className="service-sizes__row">
+                            <span className="service-sizes__label">{label}</span>
+                            <input
+                              type="number" min="0" step="100" aria-label={`Precio ${label}`}
+                              placeholder={modalForm.default_price || "-"}
+                              value={modalForm.size_pricing[value].price}
+                              onChange={(e) => setSizeField(value, "price", e.target.value)}
+                            />
+                            <input
+                              type="number" min="5" max="600" step="5" aria-label={`Minutos ${label}`}
+                              placeholder={modalForm.duration_minutes || "60"}
+                              value={modalForm.size_pricing[value].duration}
+                              onChange={(e) => setSizeField(value, "duration", e.target.value)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </>
             ) : (
               <div className="fe-modal-detail">
@@ -276,6 +405,28 @@ export default function ServiceTypesPage() {
                     <strong>Nombre</strong>
                     <span>{selectedType.name}</span>
                   </div>
+                  <div>
+                    <strong>Duración</strong>
+                    <span>{formatDuration(selectedType.duration_minutes) || "Sin cargar (se toma 1 h)"}</span>
+                  </div>
+                  <div>
+                    <strong>Web de reservas</strong>
+                    <span>{selectedType.online_enabled ? "🌐 Se ofrece online" : "Solo uso interno"}</span>
+                  </div>
+                  {selectedType.online_enabled &&
+                    BOOKING_SIZES.filter(({ value }) => selectedType.size_pricing?.[value]).map(({ value, label }) => {
+                      const entry = selectedType.size_pricing[value];
+                      return (
+                        <div key={value}>
+                          <strong>{label}</strong>
+                          <span>
+                            {entry.price !== null && entry.price !== undefined ? formatPrice(entry.price) : formatPrice(selectedType.default_price)}
+                            {" · "}
+                            {formatDuration(entry.duration || selectedType.duration_minutes) || "1 h"}
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}

@@ -9,6 +9,7 @@ const LS_KEY = "bandidos_vio_recordatorios";
 const PAGE_TITLES = {
   "/":                        "Inicio",
   "/agenda":                  "Agenda",
+  "/reservas-online":         "Reservas online",
   "/services":                "Servicios",
   "/pets":                    "Mascotas",
   "/customers":               "Clientes",

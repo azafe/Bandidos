@@ -27,6 +27,9 @@ import UsersPage from "./pages/admin/UsersPage";
 import SuperAdminPage from "./pages/admin/SuperAdminPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
+import BookingSettingsPage from "./pages/booking/BookingSettingsPage";
+import PublicBookingPage from "./pages/public/PublicBookingPage";
+import ReservationManagePage from "./pages/public/ReservationManagePage";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -52,6 +55,15 @@ function StaffGuard({ children, redirectTo = "/agenda" }) {
   return children;
 }
 
+// Pantallas de configuración que solo ve el admin del local.
+function AdminGuard({ children }) {
+  const { user } = useAuth();
+  if (user?.role !== "admin") {
+    return <Navigate to="/agenda" replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -62,6 +74,9 @@ function App() {
         <Route path="/suspended" element={<SuspendedPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Web de reservas: pública, sin login ni menú del panel. */}
+        <Route path="/reservar/:slug" element={<PublicBookingPage />} />
+        <Route path="/reservar/:slug/turno/:token" element={<ReservationManagePage />} />
         <Route
           path="/*"
           element={
@@ -73,6 +88,7 @@ function App() {
                   <Route path="/services/new" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/services/:id" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/agenda" element={<AgendaPage />} />
+                  <Route path="/reservas-online" element={<AdminGuard><BookingSettingsPage /></AdminGuard>} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
                   <Route path="/pets/:id" element={<PetDetailPage />} />

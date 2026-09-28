@@ -16,7 +16,7 @@ function formatDayName(iso) {
 
 function pillStatusClass(status) {
   if (status === "finished") return "agenda-week__pill--finished";
-  if (status === "cancelled") return "agenda-week__pill--cancelled";
+  if (status === "cancelled" || status === "no_show") return "agenda-week__pill--cancelled";
   return "agenda-week__pill--reserved";
 }
 
@@ -85,7 +85,7 @@ export default function AgendaWeekView({
           const iso = addDaysISO(weekStart, offset);
           const dayTurnos = turnosByDate.get(iso) || [];
           const activeCount = dayTurnos.filter(
-            (turno) => turno.status !== "cancelled"
+            (turno) => turno.status !== "cancelled" && turno.status !== "no_show"
           ).length;
           const visible =
             dayTurnos.length > MAX_PILLS + 1
