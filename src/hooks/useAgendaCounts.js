@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { listAgendaCounts } from "../services/agendaApi";
 
 // Conteos de turnos por día para la vista Mes. Devuelve countsByDate:
-// { "YYYY-MM-DD": { total, finished, reserved, cancelled } }.
+// { "YYYY-MM-DD": { total, finished, reserved, cancelled, no_show } }.
 // Cachea por clave `${from}_${to}` igual que useAgendaRange.
 export function useAgendaCounts(from, to, enabled) {
   const cacheRef = useRef(new Map());
@@ -37,6 +37,7 @@ export function useAgendaCounts(from, to, enabled) {
             finished: Number(row.finished) || 0,
             reserved: Number(row.reserved) || 0,
             cancelled: Number(row.cancelled) || 0,
+            no_show: Number(row.no_show) || 0,
           };
         });
         cacheRef.current.set(key, byDate);

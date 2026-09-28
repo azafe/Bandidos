@@ -104,6 +104,16 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </NavLink>
             )}
 
+            {isEnabled("agenda") && user?.role === "admin" && (
+              <NavLink
+                to="/reservas-online"
+                className={({ isActive }) => makeClassName(isActive)}
+                onClick={handleNavigate}
+              >
+                Reservas online
+              </NavLink>
+            )}
+
             {isEnabled("comunicaciones") && (
               <NavLink
                 to="/comunicaciones"

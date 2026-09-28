@@ -13,6 +13,14 @@ import {
   updateAgendaTurno,
 } from "../../services/agendaApi";
 import { apiRequest } from "../../services/apiClient";
+import {
+  bookingPublicUrl,
+  copyToClipboard,
+  createAgendaBlock,
+  deleteAgendaBlock,
+  getBookingLink,
+  listAgendaBlocks,
+} from "../../services/bookingApi";
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
 import AgendaWeekView from "../../components/agenda/AgendaWeekView";
@@ -28,19 +36,24 @@ import {
   todayISO,
 } from "../../utils/dates";
 import "../../styles/agenda.css";
+import "../../styles/booking.css";
 import { showApiError } from "../../utils/errorDialog";
 
 const STATUS_OPTIONS = [
   { value: "reserved", label: "Reservado" },
   { value: "finished", label: "Finalizado" },
   { value: "cancelled", label: "Cancelado" },
+  { value: "no_show", label: "No vino" },
 ];
 
 const STATUS_LABELS = {
   reserved: "Reservado",
   finished: "Finalizado",
   cancelled: "Cancelado",
+  no_show: "No vino",
 };
+
+const EMPTY_BLOCK_FORM = { start_time: "", end_time: "", reason: "" };
 
 const CALENDAR_VIEWS = [
   { value: "day", label: "Día" },
@@ -397,6 +410,12 @@ export default function AgendaPage() {
   const touchStartX = useRef(null);
   const dateInputRef = useRef(null);
   const [durationMode, setDurationMode] = useState("preset");
+  const [bookingLink, setBookingLink] = useState(null);
+  const [bookingLinkCopied, setBookingLinkCopied] = useState(false);
+  const [blocks, setBlocks] = useState([]);
+  const [blockFormOpen, setBlockFormOpen] = useState(false);
+  const [blockForm, setBlockForm] = useState(EMPTY_BLOCK_FORM);
+  const [blockSaving, setBlockSaving] = useState(false);
   const [customDuration, setCustomDuration] = useState("");
   const [finishForm, setFinishForm] = useState({
     groomer_id: "",
@@ -502,6 +521,29 @@ export default function AgendaPage() {
       /* localStorage no disponible */
     }
   }, [calendarView]);
+
+  // Link de la web de reservas: solo se muestra si está prendida.
+  useEffect(() => {
+    let active = true;
+    getBookingLink()
+      .then((link) => { if (active) setBookingLink(link); })
+      .catch(() => { /* sin link no se muestra la tarjeta */ });
+    return () => { active = false; };
+  }, []);
+
+  const loadBlocks = useCallback(async (date) => {
+    try {
+      const rows = await listAgendaBlocks({ from: date, to: date });
+      if (selectedDateRef.current === date) setBlocks(rows);
+    } catch {
+      if (selectedDateRef.current === date) setBlocks([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    setBlocks([]);
+    if (calendarView === "day") loadBlocks(selectedDate);
+  }, [selectedDate, calendarView, loadBlocks]);
 
   useEffect(() => {
     reminderMountedRef.current = true;
@@ -628,6 +670,17 @@ export default function AgendaPage() {
       })
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
   }, [items, search, filters, employeesById]);
+
+  // Turnos y bloqueos del día en una sola línea de tiempo. Con filtros o
+  // búsqueda activos se muestran solo los turnos que coinciden.
+  const hasActiveDayFilters = Boolean(search || filters.status || filters.without_groomer);
+  const timelineEntries = useMemo(() => {
+    const entries = filteredTurnos.map((turno) => ({ kind: "turno", key: `t-${turno.id}`, time: formatTime(turno.time), turno }));
+    if (!hasActiveDayFilters) {
+      blocks.forEach((block) => entries.push({ kind: "block", key: `b-${block.id}`, time: block.start_time, block }));
+    }
+    return entries.sort((a, b) => a.time.localeCompare(b.time));
+  }, [filteredTurnos, blocks, hasActiveDayFilters]);
 
   const closeFilteredTurnos = useMemo(() => {
     if (!closeGroomerId) return items;
@@ -1421,6 +1474,51 @@ export default function AgendaPage() {
     }
   }
 
+  async function handleCopyBookingLink() {
+    const ok = await copyToClipboard(bookingPublicUrl(bookingLink?.slug));
+    setBookingLinkCopied(ok);
+    if (ok) setTimeout(() => setBookingLinkCopied(false), 2000);
+  }
+
+  function openBlockForm() {
+    setBlockForm(EMPTY_BLOCK_FORM);
+    setBlockFormOpen(true);
+  }
+
+  async function handleSaveBlock(event) {
+    event.preventDefault();
+    if (!blockForm.start_time || !blockForm.end_time) return;
+    if (blockForm.start_time >= blockForm.end_time) {
+      alert("La hora de fin tiene que ser después de la de inicio.");
+      return;
+    }
+    setBlockSaving(true);
+    try {
+      await createAgendaBlock({
+        date: selectedDate,
+        start_time: blockForm.start_time,
+        end_time: blockForm.end_time,
+        reason: blockForm.reason.trim() || null,
+      });
+      setBlockFormOpen(false);
+      await loadBlocks(selectedDate);
+    } catch (err) {
+      showApiError(err, "No se pudo bloquear el horario.");
+    } finally {
+      setBlockSaving(false);
+    }
+  }
+
+  async function handleDeleteBlock(block) {
+    if (!window.confirm(`¿Desbloquear de ${block.start_time} a ${block.end_time}?`)) return;
+    try {
+      await deleteAgendaBlock(block.id);
+      await loadBlocks(selectedDate);
+    } catch (err) {
+      showApiError(err, "No se pudo quitar el bloqueo.");
+    }
+  }
+
   async function handleDelete(turno) {
     const turnoLabel = `${turno?.pet_name || "Mascota"} · ${formatDateDisplay(
       turno?.date
@@ -1688,6 +1786,19 @@ export default function AgendaPage() {
         )}
       </div>
 
+      {/* Link de la web de reservas */}
+      {calendarView === "day" && viewMode === "operation" && bookingLink?.enabled && (
+        <div className="agenda-booking-link card">
+          <div className="agenda-booking-link__text">
+            <strong>🌐 Compartí tu link y recibí turnos</strong>
+            <span>{bookingPublicUrl(bookingLink.slug)}</span>
+          </div>
+          <button type="button" className="btn-secondary" onClick={handleCopyBookingLink}>
+            {bookingLinkCopied ? "¡Copiado!" : "Copiar link"}
+          </button>
+        </div>
+      )}
+
       {/* Búsqueda y filtros */}
       {calendarView === "day" && viewMode === "operation" && (
         <div className="agenda-search-card card">
@@ -1756,6 +1867,9 @@ export default function AgendaPage() {
                   {formatDateDisplay(selectedDate)} · {filteredTurnos.length} turnos
                 </p>
               </div>
+              <button type="button" className="btn-secondary" onClick={openBlockForm}>
+                Bloquear horario
+              </button>
             </div>
             {error && <div className="agenda-empty">{error}</div>}
             {loading ? (
@@ -1767,14 +1881,14 @@ export default function AgendaPage() {
                   </div>
                 ))}
               </div>
-            ) : items.length === 0 ? (
+            ) : items.length === 0 && timelineEntries.length === 0 ? (
               <div className="agenda-empty">
                 <p>No hay turnos cargados para este dia.</p>
                 <button type="button" className="btn-primary" onClick={openCreate}>
                   Agregar primer turno
                 </button>
               </div>
-            ) : filteredTurnos.length === 0 ? (
+            ) : timelineEntries.length === 0 ? (
               <div className="agenda-empty">
                 <p>No hay resultados para la busqueda o filtros actuales.</p>
                 <button
@@ -1787,9 +1901,32 @@ export default function AgendaPage() {
               </div>
             ) : (
               <div className="agenda-timeline">
-                {filteredTurnos.map((turno) => (
+                {timelineEntries.map(({ kind, key, block, turno }) =>
+                  kind === "block" ? (
+                  <div key={key} className="agenda-timeline__row agenda-timeline__row--block">
+                    <div className="agenda-timeline__time">
+                      <span className="agenda-time-start">{block.start_time}</span>
+                      <span className="agenda-time-dot" aria-hidden="true" />
+                      <span className="agenda-time-line" aria-hidden="true" />
+                    </div>
+                    <div className="agenda-block-card">
+                      <span>
+                        <strong>Bloqueado</strong> · {block.start_time} a {block.end_time}
+                        {block.reason ? ` · ${block.reason}` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        className="booking-icon-btn"
+                        aria-label="Desbloquear horario"
+                        onClick={() => handleDeleteBlock(block)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  ) : (
                   <div
-                    key={turno.id}
+                    key={key}
                     className={`agenda-timeline__row agenda-timeline__row--${normalizeStatus(
                       turno.status
                     )}`}
@@ -1830,6 +1967,11 @@ export default function AgendaPage() {
                         )}
                         <div className="agenda-card__footer">
                           <div className="agenda-card__pills">
+                            {turno.source === "online" && (
+                              <span className="agenda-card__pill agenda-card__pill--online">
+                                🌐 Online
+                              </span>
+                            )}
                             {turno.payment_method?.name && (
                               <span className="agenda-card__pill">
                                 {turno.payment_method.name}
@@ -1853,7 +1995,8 @@ export default function AgendaPage() {
                       </div>
                     </button>
                   </div>
-                ))}
+                  )
+                )}
               </div>
             )}
           </div>
@@ -2242,6 +2385,11 @@ export default function AgendaPage() {
                       ? ` · Groomer: ${selectedTurno.groomer.name}`
                       : ""}
                   </p>
+                  {selectedTurno.source === "online" && (
+                    <span className="agenda-card__pill agenda-card__pill--online">
+                      🌐 Reservado por el cliente desde la web
+                    </span>
+                  )}
                 </div>
                 <span className={`agenda-badge agenda-badge--${selectedTurnoStatus}`}>
                   {STATUS_LABELS[selectedTurnoStatus]}
@@ -3130,6 +3278,44 @@ export default function AgendaPage() {
             )}
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={blockFormOpen}
+        onClose={() => setBlockFormOpen(false)}
+        title="Bloquear horario"
+      >
+        <form className="booking-block-form" onSubmit={handleSaveBlock}>
+          <p className="card-subtitle">
+            {formatDateDisplay(selectedDate)} · La web de reservas no va a ofrecer turnos en esta franja.
+          </p>
+          <div className="booking-block-form__times">
+            <input
+              type="time" step="900" aria-label="Desde" required
+              value={blockForm.start_time}
+              onChange={(e) => setBlockForm((p) => ({ ...p, start_time: e.target.value }))}
+            />
+            <span>a</span>
+            <input
+              type="time" step="900" aria-label="Hasta" required
+              value={blockForm.end_time}
+              onChange={(e) => setBlockForm((p) => ({ ...p, end_time: e.target.value }))}
+            />
+          </div>
+          <input
+            type="text" placeholder="Motivo (opcional): trámite, capacitación…" maxLength={200}
+            value={blockForm.reason}
+            onChange={(e) => setBlockForm((p) => ({ ...p, reason: e.target.value }))}
+          />
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary" onClick={() => setBlockFormOpen(false)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={blockSaving}>
+              {blockSaving ? "Guardando..." : "Bloquear"}
+            </button>
+          </div>
+        </form>
       </Modal>
 
       {/* FAB nuevo turno */}

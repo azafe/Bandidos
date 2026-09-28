@@ -1,0 +1,410 @@
+/* ===== Reservas online (configuración y agenda) ===== */
+
+.booking-settings .booking-section {
+  margin-top: 16px;
+}
+
+.booking-section__subtitle {
+  margin-top: 22px;
+}
+
+.booking-section__actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.booking-msg {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.booking-warning {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 0.85rem;
+}
+
+/* Estado + link */
+.booking-status {
+  border-left: 4px solid var(--border);
+}
+
+.booking-status.is-on {
+  border-left-color: var(--ok);
+}
+
+.booking-status__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.booking-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.booking-switch.is-on {
+  background: var(--ok);
+  box-shadow: none;
+}
+
+.booking-switch:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.booking-switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 18, 27, 0.25);
+  transition: transform 0.2s;
+}
+
+.booking-switch.is-on .booking-switch__knob {
+  transform: translateX(22px);
+}
+
+.booking-link-field {
+  margin-top: 16px;
+}
+
+.booking-link-input {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: #f9f9fc;
+  overflow: hidden;
+}
+
+.booking-link-input__prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 11px;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.form-field .booking-link-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding-left: 0;
+}
+
+.booking-link-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.booking-link-actions a {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Horario semanal */
+.booking-week {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.booking-day {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.booking-day__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 130px;
+  flex-shrink: 0;
+  padding-top: 7px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.booking-day.is-closed .booking-day__toggle span {
+  color: var(--text-faint);
+}
+
+.booking-day__closed {
+  padding-top: 7px;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+
+.booking-day__ranges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.booking-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.booking-range input,
+.booking-closed-form input,
+.booking-block-form input {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 7px 9px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #f9f9fc;
+  color: #1b1f2f;
+}
+
+.booking-icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.booking-icon-btn:hover {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.booking-link-btn {
+  border: none;
+  background: transparent;
+  color: var(--brand-violeta);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+/* Días cerrados */
+.booking-closed-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.booking-closed-form input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+}
+
+.booking-closed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.booking-closed-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.9rem;
+}
+
+.booking-closed-list__date {
+  font-weight: 600;
+  text-transform: capitalize;
+  min-width: 120px;
+}
+
+.booking-closed-list__reason {
+  flex: 1;
+  color: var(--text-muted);
+}
+
+.booking-hint a {
+  color: var(--brand-violeta);
+  font-weight: 600;
+}
+
+/* ── Agenda: tarjeta del link, pill online y bloqueos ─────────────────── */
+
+.agenda-booking-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agenda-booking-link__text {
+  min-width: 0;
+}
+
+.agenda-booking-link__text strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.agenda-booking-link__text span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agenda-card__pill--online {
+  background: #ede7ff;
+  color: var(--brand-violeta);
+}
+
+.agenda-timeline__row--block .agenda-time-dot {
+  background: var(--text-faint);
+}
+
+.agenda-block-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--text-faint);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bg-subtle),
+    var(--bg-subtle) 8px,
+    var(--bg-card) 8px,
+    var(--bg-card) 16px
+  );
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.agenda-block-card strong {
+  color: var(--text-strong);
+}
+
+.booking-block-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.booking-block-form__times {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .booking-day {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .booking-day__toggle {
+    width: auto;
+    padding-top: 0;
+  }
+
+  .booking-link-input__prefix {
+    max-width: 45%;
+  }
+}
+
+/* ── Tipos de servicio: sección web ───────────────────────────────────── */
+
+.service-online {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service-online__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.service-online__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.service-sizes {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.service-sizes__row {
+  display: contents;
+}
+
+.service-sizes__head {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.service-sizes__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.service-sizes input {
+  min-width: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-soft);
+  padding: 7px 9px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #f9f9fc;
+}

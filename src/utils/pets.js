@@ -256,4 +256,5 @@ export const TURNO_STATUS = {
   reserved: { label: "Reservado", tone: "info" },
   finished: { label: "Finalizado", tone: "ok" },
   cancelled: { label: "Cancelado", tone: "err" },
+  no_show: { label: "No vino", tone: "err" },
 };

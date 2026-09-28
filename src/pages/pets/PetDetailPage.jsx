@@ -183,7 +183,7 @@ export default function PetDetailPage() {
     : null;
 
   const filteredHistory =
-    historyFilter === "all" ? turnos : turnos.filter((t) => t.status === historyFilter);
+    historyFilter === "all" ? turnos : turnos.filter((t) => t.status === historyFilter || (historyFilter === "cancelled" && t.status === "no_show"));
   const visibleHistory = historyExpanded ? filteredHistory : filteredHistory.slice(0, HISTORY_PAGE);
   const hiddenCount = filteredHistory.length - visibleHistory.length;
 
@@ -472,7 +472,7 @@ export default function PetDetailPage() {
                   return (
                     <tr
                       key={t.id}
-                      className={t.status === "cancelled" ? "is-cancelled" : ""}
+                      className={t.status === "cancelled" || t.status === "no_show" ? "is-cancelled" : ""}
                       onClick={() => setSelectedTurno(t)}
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -498,7 +498,7 @@ export default function PetDetailPage() {
 
             <ul className="pv-history-list">
               {visibleHistory.map((t) => (
-                <li key={t.id} className={t.status === "cancelled" ? "is-cancelled" : ""}>
+                <li key={t.id} className={t.status === "cancelled" || t.status === "no_show" ? "is-cancelled" : ""}>
                   <button type="button" onClick={() => setSelectedTurno(t)}>
                     <span className="pv-history-list__main">
                       <strong>{resolve.serviceType(t) || "Servicio"}</strong>
