@@ -28,6 +28,8 @@ import SuperAdminPage from "./pages/admin/SuperAdminPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 import BookingSettingsPage from "./pages/booking/BookingSettingsPage";
+import PublicBookingPage from "./pages/public/PublicBookingPage";
+import ReservationManagePage from "./pages/public/ReservationManagePage";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -72,6 +74,9 @@ function App() {
         <Route path="/suspended" element={<SuspendedPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Web de reservas: pública, sin login ni menú del panel. */}
+        <Route path="/reservar/:slug" element={<PublicBookingPage />} />
+        <Route path="/reservar/:slug/turno/:token" element={<ReservationManagePage />} />
         <Route
           path="/*"
           element={
