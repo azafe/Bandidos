@@ -366,7 +366,7 @@ export default function ServiceTypesPage() {
                         />
                       </label>
                       <p className="service-online__hint">
-                        Precio y duración por tamaño. Si dejás un tamaño vacío se usan el precio y la duración de arriba.
+                        Precio y duración por tamaño. El cliente ve el rango de precios y no elige tamaño: lo definís vos al atender al perro. Para la web se reserva la duración más larga. Si dejás un tamaño vacío se usan el precio y la duración de arriba.
                       </p>
                       <div className="service-sizes">
                         <span />
