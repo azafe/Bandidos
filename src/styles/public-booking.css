@@ -291,46 +291,6 @@
   margin-bottom: -6px;
 }
 
-/* Tamaños */
-.pb-sizes {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.pb-size {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  border: 2px solid var(--border, #ececf3);
-  background: var(--bg-card, #fff);
-  border-radius: 14px;
-  padding: 12px;
-  font-family: inherit;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.pb-size.is-selected {
-  border-color: var(--pb-accent);
-  background: #fbf2fe;
-}
-
-.pb-size__label {
-  font-weight: 700;
-}
-
-.pb-size__price {
-  font-weight: 600;
-}
-
-.pb-size__time {
-  font-size: 0.8rem;
-  color: var(--text-muted, #6b7180);
-}
-
 /* Días y horarios */
 .pb-month {
   margin: 10px 0 8px;
@@ -744,12 +704,34 @@
     padding-top: 32px;
   }
 
-  .pb-sizes {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .pb-done__actions {
     flex-direction: row;
     justify-content: center;
   }
+}
+
+/* Servicio elegido (arriba de día/hora y datos) */
+.pb-chosen {
+  padding: 14px 16px;
+}
+
+.pb-chosen__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pb-chosen__name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.pb-chosen__note {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fdf1e3;
+  color: #b45309;
+  font-size: 0.82rem;
 }

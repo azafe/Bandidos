@@ -15,15 +15,14 @@ import {
   getBookingPage,
   googleCalendarUrl,
 } from "../../services/publicBookingApi";
-import { BOOKING_SIZES } from "../../services/bookingApi";
 import { whatsappUrl } from "../../utils/pets";
 import "../../styles/public-booking.css";
 
 const WEEKDAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAYS_PER_PAGE = 14;
-const STEPS = ["service", "time", "data"];
-const STEP_LABELS = { service: "Servicio", time: "Día y hora", data: "Tus datos" };
+const STEPS = ["time", "data"];
+const STEP_LABELS = { time: "Día y hora", data: "Tus datos" };
 
 const EMPTY_FORM = {
   phone: "",
@@ -36,9 +35,16 @@ const EMPTY_FORM = {
   website: "",
 };
 
-function sizeLabel(value) {
-  return BOOKING_SIZES.find((s) => s.value === value)?.label ?? value;
+// "$15.000" o "$15.000 a $30.000" si el precio cambia según el tamaño.
+function priceRange(service) {
+  if (!service || service.price_from === null || service.price_from === undefined) return null;
+  if (service.price_to === null || service.price_to === undefined || service.price_to === service.price_from) {
+    return formatMoney(service.price_from);
+  }
+  return `${formatMoney(service.price_from)} a ${formatMoney(service.price_to)}`;
 }
+
+const varies = (service) => Boolean(service && service.price_to && service.price_to !== service.price_from);
 
 function groupSlots(slots) {
   const groups = [
@@ -113,14 +119,12 @@ export default function PublicBookingPage() {
 
   const [step, setStep] = useState("home"); // home | service | time | data | done
   const [serviceId, setServiceId] = useState(null);
-  const [size, setSize] = useState(null);
   const [days, setDays] = useState([]);
   const [daysLoading, setDaysLoading] = useState(false);
   const [daysError, setDaysError] = useState("");
   const [hasMoreDays, setHasMoreDays] = useState(true);
   const [date, setDate] = useState(null);
   const [time, setTime] = useState(null);
-  const [offer, setOffer] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -145,16 +149,16 @@ export default function PublicBookingPage() {
     () => page?.services?.find((s) => s.id === serviceId) ?? null,
     [page, serviceId]
   );
-  const sizeOffer = service && size ? service.sizes[size] : null;
 
+  // El cliente no elige tamaño: lo define el local. La disponibilidad se
+  // calcula con la duración más larga del servicio.
   const loadDays = useCallback(
-    async (from, append) => {
-      if (!service || !size) return;
+    async (from, append, serviceTypeId) => {
+      if (!serviceTypeId) return;
       setDaysLoading(true);
       setDaysError("");
       try {
-        const data = await getAvailability(slug, { serviceTypeId: service.id, size, from, days: DAYS_PER_PAGE });
-        setOffer({ price: data.price, duration: data.duration });
+        const data = await getAvailability(slug, { serviceTypeId, from, days: DAYS_PER_PAGE });
         setDays((prev) => (append ? [...prev, ...data.days] : data.days));
         setHasMoreDays(data.days.length === DAYS_PER_PAGE);
         if (!append) {
@@ -167,21 +171,16 @@ export default function PublicBookingPage() {
         setDaysLoading(false);
       }
     },
-    [slug, service, size]
+    [slug]
   );
 
   function chooseService(id) {
     setServiceId(id);
-    setSize(null);
-    setStep("service");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function goToTime() {
     setTime(null);
+    setDate(null);
     setDays([]);
     setStep("time");
-    loadDays(undefined, false);
+    loadDays(undefined, false, id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -190,7 +189,7 @@ export default function PublicBookingPage() {
     if (!last) return;
     const [y, m, d] = last.split("-").map(Number);
     const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
-    loadDays(next, true);
+    loadDays(next, true, serviceId);
   }
 
   function setField(name, value) {
@@ -216,7 +215,6 @@ export default function PublicBookingPage() {
     try {
       const created = await createReservation(slug, {
         service_type_id: service.id,
-        size,
         date,
         time,
         owner_name: form.owner_name.trim(),
@@ -235,7 +233,7 @@ export default function PublicBookingPage() {
       if (err?.status === 409) {
         setTime(null);
         setStep("time");
-        loadDays(undefined, false);
+        loadDays(undefined, false, serviceId);
         setFormError("");
         alert("¡Uy! Alguien acaba de reservar ese horario. Elegí otro, por favor.");
       } else if (err?.status === 429) {
@@ -325,10 +323,16 @@ export default function PublicBookingPage() {
               <strong>{formatLongDate(reservation.date)}</strong> a las <strong>{reservation.time}</strong>.
             </p>
             <dl className="pb-summary">
-              <div><dt>Servicio</dt><dd>{reservation.service_name} · {sizeLabel(size)}</dd></div>
-              <div><dt>Duración</dt><dd>{formatMinutes(reservation.duration)}</dd></div>
+              <div><dt>Servicio</dt><dd>{reservation.service_name}</dd></div>
+              {service && <div><dt>Duración</dt><dd>{durationRange(service)}</dd></div>}
               {business.address && <div><dt>Dónde</dt><dd>{business.address}</dd></div>}
-              {reservation.price !== null && <div><dt>Precio</dt><dd>{formatMoney(reservation.price)}</dd></div>}
+              {reservation.price !== null ? (
+                <div><dt>Precio</dt><dd>{formatMoney(reservation.price)}</dd></div>
+              ) : (
+                priceRange(service) && (
+                  <div><dt>Precio</dt><dd>{priceRange(service)}{varies(service) ? " según tamaño" : ""}</dd></div>
+                )
+              )}
             </dl>
             <div className="pb-done__actions">
               <a className="pb-btn pb-btn--primary" href={calendarUrl} target="_blank" rel="noreferrer">
@@ -360,7 +364,6 @@ export default function PublicBookingPage() {
                 setReservation(null);
                 setForm((prev) => ({ ...EMPTY_FORM, phone: prev.phone, owner_name: prev.owner_name, email: prev.email }));
                 setServiceId(null);
-                setSize(null);
                 setStep("home");
               }}
             >
@@ -375,14 +378,10 @@ export default function PublicBookingPage() {
   // ── Flujo de reserva ───────────────────────────────────────────────────
 
   const selectedDay = days.find((d) => d.date === date);
-  const price = offer?.price ?? sizeOffer?.price ?? null;
-  const duration = offer?.duration ?? sizeOffer?.duration ?? null;
   const stepIndex = STEPS.indexOf(step);
 
   let barAction = null;
-  if (step === "service") {
-    barAction = { label: "Elegir día y hora", disabled: !size, onClick: goToTime };
-  } else if (step === "time") {
+  if (step === "time") {
     barAction = {
       label: "Continuar",
       disabled: !date || !time,
@@ -414,10 +413,9 @@ export default function PublicBookingPage() {
                     <span className="pb-service__name">{s.name}</span>
                     {s.description && <span className="pb-service__desc">{s.description}</span>}
                     <span className="pb-service__meta">
-                      {s.price_from !== null && (
-                        <strong>{s.varies_by_size ? "desde " : ""}{formatMoney(s.price_from)}</strong>
-                      )}
+                      {priceRange(s) && <strong>{priceRange(s)}</strong>}
                       <span>{durationRange(s)}</span>
+                      {varies(s) && <span>según tamaño</span>}
                     </span>
                     <span className="pb-service__cta">Reservar</span>
                   </button>
@@ -453,29 +451,24 @@ export default function PublicBookingPage() {
           </>
         )}
 
-        {step === "service" && service && (
-          <section className="pb-card">
-            <h2 className="pb-card__title">{service.name}</h2>
-            {service.description && <p className="pb-muted">{service.description}</p>}
-            <h3 className="pb-label">¿De qué tamaño es tu perro?</h3>
-            <div className="pb-sizes">
-              {BOOKING_SIZES.map(({ value, label }) => {
-                const o = service.sizes[value];
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`pb-size${size === value ? " is-selected" : ""}`}
-                    aria-pressed={size === value}
-                    onClick={() => { setSize(value); setOffer(null); }}
-                  >
-                    <span className="pb-size__label">{label}</span>
-                    {o.price !== null && <span className="pb-size__price">{formatMoney(o.price)}</span>}
-                    <span className="pb-size__time">{formatMinutes(o.duration)}</span>
-                  </button>
-                );
-              })}
+        {service && step !== "home" && (
+          <section className="pb-card pb-chosen">
+            <div className="pb-chosen__row">
+              <div>
+                <p className="pb-chosen__name">{service.name}</p>
+                <p className="pb-muted">
+                  {[priceRange(service), durationRange(service)].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <button type="button" className="pb-link" onClick={() => setStep("home")}>
+                Cambiar
+              </button>
             </div>
+            {varies(service) && (
+              <p className="pb-chosen__note">
+                El precio final depende del tamaño y el pelaje de tu perro: lo confirmamos cuando lo recibimos.
+              </p>
+            )}
           </section>
         )}
 
@@ -627,14 +620,10 @@ export default function PublicBookingPage() {
         <div className="pb-bar">
           <div className="pb-bar__inner">
             <div className="pb-bar__summary">
-              <strong>{service.name}{size ? ` · ${sizeLabel(size)}` : ""}</strong>
+              <strong>{service.name}</strong>
               <span>
-                {date && time && step !== "service"
-                  ? `${formatLongDate(date)} · ${time}`
-                  : duration
-                  ? formatMinutes(duration)
-                  : "Elegí el tamaño"}
-                {price !== null && size ? ` · ${formatMoney(price)}` : ""}
+                {date && time ? `${formatLongDate(date)} · ${time}` : "Elegí día y horario"}
+                {priceRange(service) ? ` · ${priceRange(service)}` : ""}
               </span>
             </div>
             <button
