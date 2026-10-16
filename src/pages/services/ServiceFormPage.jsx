@@ -1,3 +1,4 @@
+import { groomerOptions } from "../../lib/traslados";
 // src/pages/services/ServiceFormPage.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -122,7 +123,7 @@ export default function ServiceFormPage() {
   const filteredPaymentMethods = options.paymentMethods.filter((m) =>
     m.name?.toLowerCase().includes(normalizedPaymentMethodSearch)
   );
-  const filteredGroomers = options.employees.filter((e) =>
+  const filteredGroomers = groomerOptions(options.employees, form.groomer_id).filter((e) =>
     e.name?.toLowerCase().includes(normalizedGroomerSearch)
   );
 

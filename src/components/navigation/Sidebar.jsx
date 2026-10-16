@@ -254,13 +254,14 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </>
             )}
 
+            {user?.role === "admin" && <NavLink to="/traslados/configuracion" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles</NavLink>}
             {isEnabled("employees") && user?.role !== "staff" && (
               <NavLink
                 to="/employees"
                 className={({ isActive }) => makeClassName(isActive)}
                 onClick={handleNavigate}
               >
-                Estilista
+                Equipo
               </NavLink>
             )}
           </>

@@ -1,0 +1,63 @@
+.traslados-tramos {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.traslados-tramo {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  min-width: 0;
+}
+.traslados-tramo legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.traslados-tramo legend label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.traslados-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.traslados-panel h4,
+.traslados-panel p {
+  margin: 0;
+}
+.traslados-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.traslados-error {
+  color: var(--danger, #b91c1c);
+}
+.traslados-settings {
+  display: grid;
+  gap: 20px;
+}
+.traslados-settings table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.traslados-settings td,
+.traslados-settings th {
+  padding: 10px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-soft);
+}
+.traslados-table {
+  overflow-x: auto;
+}
+@media (max-width: 600px) {
+  .traslados-tramo .form-grid,
+  .traslados-panel .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .traslados-actions button {
+    flex: 1;
+  }
+}

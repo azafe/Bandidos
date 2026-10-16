@@ -317,7 +317,7 @@ export function buildDashboardMetrics({
   // realizados", así los dos números se pueden comparar entre sí.
   const traslados = services.filter((service) => service.traslado);
   const trasladosCount = traslados.length;
-  const trasladosIncome = sumBy(traslados, (service) => service.trasladoAmount);
+  const trasladosIncome = current.trasladosCobrado ? Number(current.trasladosCobrado.amount) : sumBy(traslados, (service) => service.trasladoAmount);
 
   const byDay = rangeDays.map((day) => {
     const key = formatDateKey(day);

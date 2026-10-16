@@ -24,7 +24,9 @@ import {
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
 import TrasladoFields from "../../components/agenda/TrasladoFields";
-import { getTrasladoError, getTrasladoPayload } from "../../lib/traslados";
+import { getTrasladoError, getTrasladoPayload, newTramos, solicitudPayload, groomerOptions } from "../../lib/traslados";
+import TramosFields from "../../components/traslados/TramosFields";
+import TurnoTrasladoPanel from "../../components/traslados/TurnoTrasladoPanel";
 import AgendaWeekView from "../../components/agenda/AgendaWeekView";
 import AgendaMonthView from "../../components/agenda/AgendaMonthView";
 import {
@@ -394,7 +396,12 @@ export default function AgendaPage() {
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [formStep, setFormStep] = useState("details");
+  // Una respuesta tardía de otro turno no debe alterar el detalle abierto.
+  const onTrasladoLoaded = useCallback((record, turnoId) => {
+    setSelectedTurno((prev) => prev?.id === turnoId && prev.traslado_detallado !== !!record ? { ...prev, traslado_detallado: !!record } : prev);
+  }, []);
   const [formLoading, setFormLoading] = useState(false);
+  const [tramosForm, setTramosForm] = useState(newTramos);
   const [reminder, setReminder] = useState("");
   const [reminderSaving, setReminderSaving] = useState(false);
   const [reminderMeta, setReminderMeta] = useState(null);
@@ -917,6 +924,7 @@ export default function AgendaPage() {
   // dateOverride: string ISO opcional; se usa como onClick={openCreate} directo,
   // por eso el guard de typeof (recibiría el click event).
   function openCreate(dateOverride) {
+    setTramosForm(newTramos());
     setSelectedTurno(null);
     setIsNewPet(false);
     setForm({
@@ -953,6 +961,7 @@ export default function AgendaPage() {
   }
 
   function openEdit(turno) {
+    setTramosForm(newTramos());
     const normalizedDuration = resolveDuration(turno.duration, 60);
     setSelectedTurno(turno);
 
@@ -1336,6 +1345,10 @@ export default function AgendaPage() {
 
   async function handleSubmit() {
     const trasladoPayload = getTrasladoPayload(form, isEditing ? selectedTurno : null);
+    if (form.traslado && (!isEditing || !selectedTurno?.traslado)) {
+      if (!tramosForm.length) { setFormError("Elegí al menos un tramo para el traslado."); return; }
+      trasladoPayload.traslado_solicitud = solicitudPayload(form, tramosForm, normalizeDate(form.date));
+    }
     if (normalizeStatus(form.status) === "finished" &&
         (normalizeStatus(selectedTurno?.status) !== "finished" || Object.keys(trasladoPayload).length > 0)) {
       const trasladoError = getTrasladoError({ ...form, ...trasladoPayload });
@@ -2201,7 +2214,7 @@ export default function AgendaPage() {
                     onChange={(e) => setCloseGroomerId(e.target.value)}
                   >
                     <option value="">Todos los groomers</option>
-                    {employees.map((emp) => (
+                    {groomerOptions(employees, closeGroomerId).map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.name}
                       </option>
@@ -2494,7 +2507,7 @@ export default function AgendaPage() {
                       "Sin notas cargadas para este turno."}
                   </p>
                 </article>
-                {selectedTurno.traslado && (
+                {selectedTurno.traslado && !selectedTurno.traslado_detallado && (
                   <article className="agenda-turno-modal__panel">
                     <h4>Traslado</h4>
                     <p className="agenda-turno-modal__notes">
@@ -2504,12 +2517,21 @@ export default function AgendaPage() {
                       {selectedTurno.traslado_bonificado === true
                         ? "Bonificado"
                         : Number(selectedTurno.traslado_amount) > 0
-                          ? `${formatCurrency(Number(selectedTurno.traslado_amount))} · cobrado por choferes`
+                          ? `${formatCurrency(Number(selectedTurno.traslado_amount))} · precio registrado`
                           : "Sin monto ni bonificación registrados"}
                     </p>
                   </article>
                 )}
 
+                {selectedTurno.traslado && <TurnoTrasladoPanel
+                  key={selectedTurno.id}
+                  turno={selectedTurno}
+                  onLoaded={onTrasladoLoaded}
+                  onSaved={async (record) => {
+                    await refreshAgendaData();
+                    setSelectedTurno((prev) => prev?.id === record.turno_id ? { ...prev, traslado_amount: record.precio_total ?? 0, traslado_bonificado: record.bonificado } : prev);
+                  }}
+                />}
                 <article className="agenda-turno-modal__panel">
                   <h4>Foto</h4>
                   <PhotoUpload
@@ -2569,7 +2591,7 @@ export default function AgendaPage() {
                         }
                       >
                         <option value="">Seleccioná</option>
-                        {employees.map((emp) => (
+                        {groomerOptions(employees, finishForm.groomer_id).map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.name}
                           </option>
@@ -2695,6 +2717,7 @@ export default function AgendaPage() {
                       });
                       setShowFinishForm(true);
                     }}
+                    disabled={selectedTurno.traslado && selectedTurno.traslado_detallado === undefined}
                   >
                     Dar por finalizado
                   </button>
@@ -2706,6 +2729,7 @@ export default function AgendaPage() {
                     setSelectedTurno(null);
                     openEdit(selectedTurno);
                   }}
+                  disabled={selectedTurno.traslado && selectedTurno.traslado_detallado === undefined}
                 >
                   Editar
                 </button>
@@ -3077,7 +3101,9 @@ export default function AgendaPage() {
               </label>
               {form.traslado && (
                 <>
-                  <label className="form-field">
+                  {(!isEditing || !selectedTurno?.traslado) ? (
+                    <TramosFields value={tramosForm} onChange={setTramosForm} fecha={normalizeDate(form.date)} />
+                  ) : <>                  {!selectedTurno?.traslado_detallado && (<label className="form-field">
                     <span>Dirección de traslado</span>
                     <input
                       type="text"
@@ -3087,7 +3113,7 @@ export default function AgendaPage() {
                       placeholder="Ej: Virgen de la Merced 843, San Miguel de Tucumán, Tucumán"
                       autoComplete="off"
                     />
-                  </label>
+                  </label>)}<small className="agenda-helper">Los tramos y sus asignaciones se editan desde el detalle del traslado.</small></>}
                   <TrasladoFields
                     id="edit-traslado"
                     value={form}
@@ -3209,7 +3235,7 @@ export default function AgendaPage() {
                   onChange={handleFormChange}
                 >
                   <option value="">Opcional</option>
-                  {employees.map((emp) => (
+                  {groomerOptions(employees, form.groomer_id).map((emp) => (
                     <option key={emp.id} value={emp.id}>
                       {emp.name}
                     </option>

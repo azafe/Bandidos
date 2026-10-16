@@ -28,10 +28,10 @@ export default function EmployeesPage() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "" });
+  const [form, setForm] = useState({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false });
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalForm, setModalForm] = useState({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "" });
+  const [modalForm, setModalForm] = useState({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false });
 
   // ── Cálculos ──────────────────────────────────────────────────────────────
   const activeEmployees  = employees.filter(isActive);
@@ -44,6 +44,7 @@ export default function EmployeesPage() {
       name:   source.name.trim(),
       role:   source.role,
       status: source.status,
+      is_driver: source.is_driver === true,
       ...(source.phone.trim() ? { phone: source.phone.trim() } : {}),
       ...(source.email.trim() ? { email: source.email.trim() } : {}),
       ...(source.notes.trim() ? { notes: source.notes.trim() } : {}),
@@ -51,13 +52,13 @@ export default function EmployeesPage() {
   }
 
   function resetForm() {
-    setForm({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "" });
+    setForm({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false });
     setEditingId(null);
   }
 
   function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   }
 
   async function handleSubmit(e) {
@@ -80,7 +81,7 @@ export default function EmployeesPage() {
   }
 
   function openModalEdit(emp) {
-    setModalForm({ name: emp.name || "", role: emp.role || "Groomer", phone: emp.phone || "", email: emp.email || "", status: emp.status || "active", notes: emp.notes || "" });
+    setModalForm({ name: emp.name || "", role: emp.role || "Groomer", phone: emp.phone || "", email: emp.email || "", status: emp.status || "active", notes: emp.notes || "", is_driver: emp.is_driver === true });
     setIsEditingModal(true);
   }
 
@@ -106,7 +107,7 @@ export default function EmployeesPage() {
       {/* Encabezado */}
       <header className="page-header">
         <div>
-          <h1 className="page-title">Estilistas</h1>
+          <h1 className="page-title">Equipo</h1>
           <p className="page-subtitle">Equipo de Bandidos: roles, contacto y estado.</p>
         </div>
         <button
@@ -114,7 +115,7 @@ export default function EmployeesPage() {
           className="btn-primary"
           onClick={() => { resetForm(); setFormOpen((v) => !v); }}
         >
-          {formOpen ? "Cancelar" : "+ Nuevo estilista"}
+          {formOpen ? "Cancelar" : "+ Nuevo integrante"}
         </button>
       </header>
 
@@ -146,7 +147,7 @@ export default function EmployeesPage() {
       {/* Formulario colapsable */}
       {formOpen && (
         <form className="form-card" onSubmit={handleSubmit}>
-          <h2 className="card-title">{editingId ? "Editar estilista" : "Nuevo estilista"}</h2>
+          <h2 className="card-title">{editingId ? "Editar estilista" : "Nuevo integrante"}</h2>
           <div className="form-grid">
             <div className="form-field">
               <label htmlFor="name">Nombre completo</label>
@@ -159,6 +160,8 @@ export default function EmployeesPage() {
                 <option value="Recepción">Recepción</option>
                 <option value="Ayudante">Ayudante</option>
                 <option value="Administración">Administración</option>
+                <option value="Socio">Socio</option>
+                <option value="Chofer">Chofer</option>
                 <option value="Otro">Otro</option>
               </select>
             </div>
@@ -177,13 +180,14 @@ export default function EmployeesPage() {
                 <option value="inactive">Inactivo</option>
               </select>
             </div>
+            <label className="agenda-traslado-toggle"><input type="checkbox" name="is_driver" checked={form.is_driver} onChange={handleChange} />También realiza traslados (chofer)</label>
             <div className="form-field form-field--full">
               <label htmlFor="notes">Notas</label>
               <textarea id="notes" name="notes" rows={3} placeholder="Horarios, días que no trabaja, etc." value={form.notes} onChange={handleChange} />
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn-primary">{editingId ? "Guardar cambios" : "Guardar estilista"}</button>
+            <button type="submit" className="btn-primary">{editingId ? "Guardar cambios" : "Guardar integrante"}</button>
             <button type="button" className="btn-secondary" onClick={() => { resetForm(); setFormOpen(false); }}>Cancelar</button>
           </div>
         </form>
@@ -202,7 +206,7 @@ export default function EmployeesPage() {
 
         {!loading && employees.length === 0 && (
           <div className="card-subtitle" style={{ textAlign: "center", padding: "24px 0" }}>
-            Sin estilistas cargados. Usá el botón "+ Nuevo estilista".
+            Sin integrantes cargados. Usá el botón "+ Nuevo integrante".
           </div>
         )}
 
@@ -225,7 +229,7 @@ export default function EmployeesPage() {
                       {initial(emp.name)}
                     </span>
                     <div className="employee-card__header-info">
-                      <div className="employee-card__name">{emp.name}</div>
+                      <div className="employee-card__name">{emp.name}{emp.is_driver ? " · Chofer" : ""}</div>
                       <span className="employee-card__role-badge" style={{ background: `${roleColor}20`, color: roleColor }}>
                         {emp.role || "Sin rol"}
                       </span>
@@ -283,7 +287,9 @@ export default function EmployeesPage() {
                     <option value="Recepción">Recepción</option>
                     <option value="Ayudante">Ayudante</option>
                     <option value="Administración">Administración</option>
-                    <option value="Otro">Otro</option>
+                    <option value="Socio">Socio</option>
+                <option value="Chofer">Chofer</option>
+                <option value="Otro">Otro</option>
                   </select>
                 </label>
                 <label className="form-field"><span>Teléfono</span>
@@ -298,6 +304,7 @@ export default function EmployeesPage() {
                     <option value="inactive">Inactivo</option>
                   </select>
                 </label>
+                <label className="agenda-traslado-toggle"><input type="checkbox" checked={modalForm.is_driver} onChange={(e) => setModalForm((prev) => ({ ...prev, is_driver: e.target.checked }))} />También realiza traslados (chofer)</label>
                 <label className="form-field"><span>Notas</span>
                   <textarea rows={3} value={modalForm.notes} onChange={(e) => setModalForm((p) => ({ ...p, notes: e.target.value }))} />
                 </label>

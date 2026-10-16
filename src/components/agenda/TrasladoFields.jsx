@@ -1,21 +1,23 @@
 // Compartimos los controles para que crear, editar y finalizar usen la misma
 // decisión explícita, sin confundir un campo vacío con un traslado bonificado.
-export default function TrasladoFields({ value, onChange, id, required = false }) {
+export default function TrasladoFields({ value, onChange, id, required = false, disabled = false }) {
   const bonificado = value.traslado_bonificado === true;
   return (
     <div className="agenda-traslado-fields">
       <label className="form-field" htmlFor={`${id}-amount`}>
-        <span>Monto traslado{required && !bonificado ? " *" : ""}</span>
+        <span>Precio total ida y vuelta{required && !bonificado ? " *" : ""}</span>
         <div className="agenda-input-currency">
           <span>$</span>
           <input
             id={`${id}-amount`}
-            type="text"
-            inputMode="numeric"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
             value={value.traslado_amount}
-            disabled={bonificado}
+            disabled={bonificado || disabled}
             required={required && !bonificado}
-            onChange={(event) => onChange({ traslado_amount: event.target.value.replace(/\D/g, "") })}
+            onChange={(event) => onChange({ traslado_amount: event.target.value })}
             placeholder={required ? "Ingresá el monto" : "Podés cargarlo al finalizar"}
           />
         </div>
@@ -24,6 +26,7 @@ export default function TrasladoFields({ value, onChange, id, required = false }
         <input
           type="checkbox"
           checked={bonificado}
+          disabled={disabled}
           onChange={(event) => onChange({
             traslado_bonificado: event.target.checked,
             traslado_amount: event.target.checked ? "0" : "",

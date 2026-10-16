@@ -34,3 +34,34 @@ test("altas guardan importe y decisión sin reutilizar datos del servicio", () =
   });
   assert.equal(getTrasladoPayload({ ...form, traslado_bonificado: true, traslado_amount: "9000" }).traslado_amount, 0);
 });
+
+test("ida y vuelta comparte un precio: no se duplica ni se reparte en los tramos", async () => {
+  const { newTramos, solicitudPayload } = await import("./traslados.js");
+  const payload = solicitudPayload({ traslado_amount: "8000.50", traslado_bonificado: false }, newTramos(), "2026-10-16");
+  assert.equal(payload.precio_total, 8000.50);
+  assert.deepEqual(payload.tramos.map((t) => t.tipo), ["busqueda", "entrega"]);
+  assert.ok(payload.tramos.every((t) => !Object.hasOwn(t, "monto")));
+  assert.ok(payload.tramos.every((t) => t.hora_programada === null));
+  assert.equal(solicitudPayload({ traslado_amount: "", traslado_bonificado: false }, [], "2026-10-16").precio_total, null);
+  assert.equal(solicitudPayload({ traslado_amount: "0", traslado_bonificado: false }, [], "2026-10-16").precio_total, 0);
+  assert.equal(solicitudPayload({ traslado_amount: "8000", traslado_bonificado: true }, [], "2026-10-16").precio_total, 0);
+});
+
+test("chofer socio no se ofrece como groomer; conserva asignaciones históricas y función doble", async () => {
+  const { groomerOptions } = await import("./traslados.js");
+  const employees = [{ id: "a", name: "Jorge", role: "Socio", is_driver: true, status: "active" }, { id: "b", role: "Groomer", is_driver: true, status: "active" }, { id: "c", role: "Groomer", is_driver: false, status: "inactive" }];
+  assert.deepEqual(groomerOptions(employees).map((e) => e.id), ["b"]);
+  assert.deepEqual(groomerOptions(employees, "a").map((e) => e.id), ["a", "b"]);
+  assert.deepEqual(groomerOptions(employees, "c").map((e) => e.id), ["b", "c"]);
+});
+
+test("dashboard muestra cobros reales, sin tratar la cotización como dinero recibido", async () => {
+  const { buildDashboardMetrics } = await import("./dashboardMetrics.js");
+  const current = { services: [{ id: "a", date: "2026-10-16", status: "finished", price: 27000, traslado: true, traslado_amount: 13000 }], dailyExpenses: [], fixedExpenses: [], employees: [], petshopSales: [], trasladosCobrado: { amount: 8000 } };
+  const args = { range: { from: "2026-10-01", to: "2026-10-31" }, current, previous: null, categories: [] };
+  const result = buildDashboardMetrics(args);
+  assert.equal(result.kpis.trasladosIncome, 8000);
+  assert.equal(result.kpis.income, 27000);
+  current.trasladosCobrado.amount = 0;
+  assert.equal(buildDashboardMetrics(args).kpis.trasladosIncome, 0);
+});

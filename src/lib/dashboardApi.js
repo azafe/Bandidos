@@ -14,6 +14,7 @@ export async function fetchDashboardData(range) {
     categories,
     groomerReport,
     sales,
+    trasladosCobrado,
   ] = await Promise.all([
     apiRequest("/agenda", { params }),
     apiRequest("/v2/daily-expenses", { params }),
@@ -29,6 +30,7 @@ export async function fetchDashboardData(range) {
     apiRequest("/v2/expense-categories"),
     apiRequest("/reports/by-groomer", { params }).catch(() => []),
     apiRequest("/v2/petshop/sales", { params }).catch(() => []),
+    params ? apiRequest("/v2/traslado-solicitudes/cobrados", { params }) : Promise.resolve(null),
   ]);
 
   return {
@@ -40,5 +42,6 @@ export async function fetchDashboardData(range) {
     categories: asList(categories),
     groomerReport: asList(groomerReport),
     petshopSales: asList(sales),
+    trasladosCobrado,
   };
 }

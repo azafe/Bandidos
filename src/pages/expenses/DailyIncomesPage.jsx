@@ -5,6 +5,7 @@ import { apiRequest } from "../../services/apiClient";
 import { todayISO } from "../../utils/dates";
 
 const CONCEPTS = [
+  { key: "traslados", label: "Traslados cobrados por el local", icon: "🚗", desc: "Cobros explícitos recibidos por el local" },
   { key: "servicios", label: "Servicios", icon: "✂️", desc: "Ingresos por prestaciones directas" },
   { key: "señas", label: "Señas / Anticipos", icon: "🎟️", desc: "Registro de reservas y señas" },
   { key: "ventas_petshop", label: "Ventas Pet Shop", icon: "🛍️", desc: "Comercialización de productos físicos" },
@@ -189,7 +190,7 @@ export default function DailyIncomesPage() {
         ) : (
           <strong className="incomes-ref-item-total">{formatCurrency(trasladosAmount)}</strong>
         )}
-        <p className="incomes-ref-help">Importe informativo de los traslados finalizados en la fecha elegida. Está separado de los totales de caja.</p>
+        <p className="incomes-ref-help">Cobros de choferes registrados en la fecha elegida. Los registros anteriores sin detalle conservan su fecha de turno. Está separado de los totales de caja.</p>
       </section>
     </div>
   );

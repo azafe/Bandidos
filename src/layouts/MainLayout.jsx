@@ -7,6 +7,7 @@ import AsistenteIA from "../components/dashboard/AsistenteIA";
 const LS_KEY = "bandidos_vio_recordatorios";
 
 const PAGE_TITLES = {
+  "/traslados/configuracion": "Bandimóviles",
   "/":                        "Inicio",
   "/agenda":                  "Agenda",
   "/reservas-online":         "Reservas online",
