@@ -22,3 +22,7 @@ export const avanzarTramo = (id, estado_anterior, estado) =>
   apiRequest(`/v2/traslados/${id}/estado`, { method: "PATCH", body: { estado_anterior, estado } });
 export const vincularCuentaChofer = (id, chofer_id) =>
   apiRequest(`/v2/users/${id}/chofer`, { method: "PUT", body: { chofer_id } });
+export const revisarHistoricos = () =>
+  apiRequest("/v2/traslados/historicos/revision", { params: { hasta: "2026-10-15" } });
+export const importarHistoricos = (body) =>
+  apiRequest("/v2/traslados/historicos/importar", { method: "POST", body });

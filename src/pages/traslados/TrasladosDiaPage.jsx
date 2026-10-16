@@ -7,6 +7,8 @@ import { bandimovilWhatsAppLink } from "../../utils/whatsapp";
 import { mapsLink } from "../../lib/booking/format";
 import { todayISO, addDaysISO } from "../../utils/dates";
 import "../../styles/traslados.css";
+import RevisionHistoricos from "../../components/traslados/RevisionHistoricos";
+import TrasladoHistoricoDetalle from "../../components/traslados/TrasladoHistoricoDetalle";
 
 export default function TrasladosDiaPage() {
   const { user } = useAuth();
@@ -87,7 +89,7 @@ export default function TrasladosDiaPage() {
       : loading ? <p role="status">Cargando hoja de ruta...</p> : <>
         {!driver && data.historicos_pendientes > 0 && <p className="card">Hay {data.historicos_pendientes} turno(s) con traslados del formato anterior. Su importación está pendiente de revisión; todavía no tienen una ruta asignada.</p>}
         <p>{data.items.length} paradas · {done} completadas · {data.items.length - done} pendientes</p>
-        {!data.items.length && !error && <div className="card">{driver ? "No tenés traslados asignados para este día." : "No hay traslados para esta fecha y estos filtros."}</div>}
+        {!data.items.length && !error && <div className="card">{driver ? "No tenés traslados asignados para este día." : "No hay paradas operativas para esta fecha y estos filtros."}</div>}
         {groups.map((group) => <section className="traslados-ruta" key={group.key} aria-label={`Ruta de ${group.chofer} · ${group.vehiculo}`}>
           <h2>{group.chofer} · {group.vehiculo}</h2>
           {(!group.chofer_id || !group.vehiculo_id) && <p>Asignación pendiente. Completala desde Agenda antes de salir.</p>}
@@ -113,6 +115,12 @@ export default function TrasladosDiaPage() {
             </li>;
           })}</ol>
         </section>)}
+        {!driver && (data.historial || []).length > 0 && <section className="traslados-ruta" aria-label="Historial importado">
+          <h2>Historial importado · {data.historial.length} traslados</h2>
+          <p>Estos registros se conservan como historia y no se cuentan como paradas pendientes.</p>
+          {data.historial.map((h) => <article className="card" key={h.solicitud_id}><h3>{h.pet_name || "Mascota sin nombre"} · {h.owner_name || "Dueño sin registrar"}</h3><TrasladoHistoricoDetalle historico={h} /></article>)}
+        </section>}
       </>}
+    {admin && <RevisionHistoricos onImported={load} />}
   </div>;
 }

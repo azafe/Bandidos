@@ -68,6 +68,15 @@
 .traslados-notas { white-space: pre-wrap; }
 .traslados-parada button,.traslados-parada a { min-height: 44px; }
 .traslados-parada a { display: inline-flex; align-items: center; text-decoration: none; }
+.traslados-revision,.traslados-historico { display: grid; gap: 12px; min-width: 0; }
+.traslados-revision p,.traslados-historico p,.traslados-revision h2 { margin: 0; }
+.traslados-revision button { min-height: 44px; }
+.traslados-revision details { min-width: 0; }
+.traslados-revision summary { cursor: pointer; padding: 10px 0; }
+.traslados-sql { overflow: auto; max-height: 240px; padding: 12px; border: 1px solid var(--border-soft); font-size: .8rem; }
+.traslados-revision-registros { max-height: 300px; overflow: auto; overflow-wrap: anywhere; }
+.traslados-confirmacion { display: flex; gap: 10px; align-items: flex-start; }
+.traslados-confirmacion input { flex-shrink: 0; margin-top: 5px; }
 @media (max-width: 600px) {
   .traslados-filtros { align-items: stretch; }
   .traslados-fecha { width: 100%; }
