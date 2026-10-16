@@ -9,6 +9,7 @@ import { solicitudPayload } from "../../lib/traslados";
 import { todayISO } from "../../utils/dates";
 import TrasladoFields from "../agenda/TrasladoFields";
 import TramosFields from "./TramosFields";
+import TrasladoHistoricoDetalle from "./TrasladoHistoricoDetalle";
 
 const fmt = (v) =>
   `$${Number(v).toLocaleString("es-AR", { minimumFractionDigits: 2 })}`;
@@ -120,6 +121,8 @@ export default function TurnoTrasladoPanel({ turno, onSaved, onLoaded }) {
             tramos, chofer y móvil no está registrado.
           </p>
         )
+      ) : record.origen === "historico" ? (
+        <TrasladoHistoricoDetalle historico={record.historico} />
       ) : (
         <>
           <p>
