@@ -97,6 +97,8 @@ function normalizeService(service) {
       service.owner_name || service.ownerName || service.customer?.name || "",
     paymentMethod: service.paymentMethod || service.payment_method?.name || "",
     serviceTypeName: service.service_type?.name || service.serviceTypeName || "",
+    traslado: Boolean(service.traslado),
+    trasladoAmount: Number(service.traslado_amount || 0) || 0,
   };
 }
 
@@ -311,6 +313,11 @@ export function buildDashboardMetrics({
   const margin = income > 0 ? profit / income : 0;
   const servicesCount = services.length;
   const avgTicket = servicesCount > 0 ? servicesIncome / servicesCount : 0;
+  // Traslados hechos: sale de los mismos turnos finalizados que "Servicios
+  // realizados", así los dos números se pueden comparar entre sí.
+  const traslados = services.filter((service) => service.traslado);
+  const trasladosCount = traslados.length;
+  const trasladosIncome = sumBy(traslados, (service) => service.trasladoAmount);
 
   const byDay = rangeDays.map((day) => {
     const key = formatDateKey(day);
@@ -411,6 +418,9 @@ export function buildDashboardMetrics({
           previousMetrics.kpis.servicesCount
         ),
         avgTicket: percentDelta(avgTicket, previousMetrics.kpis.avgTicket),
+        // Diferencia absoluta, no %: con pocos traslados por mes "+2" se lee
+        // mejor que "+40%", y un mes anterior en cero no rompe la cuenta.
+        trasladosCount: trasladosCount - previousMetrics.kpis.trasladosCount,
       }
     : null;
 
@@ -473,6 +483,8 @@ export function buildDashboardMetrics({
       margin,
       servicesCount,
       avgTicket,
+      trasladosCount,
+      trasladosIncome,
       deltas,
     },
     series: {
