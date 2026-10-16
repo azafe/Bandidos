@@ -16,7 +16,9 @@ export default function TabSituacion({ kpis }) {
     expenses, dailyExpenseTotal, fixedExpenseTotal,
     totalCosts, groomerCommissions, profit, margin,
     servicesCount, avgTicket,
+    trasladosCount = 0, trasladosIncome = 0,
   } = kpis;
+  const trasladosDelta = kpis.deltas?.trasladosCount;
 
   const commissionRate = servicesIncome > 0 ? groomerCommissions / servicesIncome : 0.40;
   const info = marginInfo(margin);
@@ -49,7 +51,7 @@ export default function TabSituacion({ kpis }) {
   return (
     <div>
       {/* KPIs */}
-      <div className="cd-kpi-row cd-kpi-row--5">
+      <div className="cd-kpi-row cd-kpi-row--6">
         <div className="cd-kpi-box">
           <span className="cd-kpi-box__label">Ingresos totales</span>
           <span className="cd-kpi-box__value cd-kpi-box__value--income">{fmt(income)}</span>
@@ -69,6 +71,22 @@ export default function TabSituacion({ kpis }) {
         <div className="cd-kpi-box">
           <span className="cd-kpi-box__label">Ticket promedio</span>
           <span className="cd-kpi-box__value">{fmt(avgTicket)}</span>
+        </div>
+        <div className="cd-kpi-box">
+          <span className="cd-kpi-box__label">Traslados realizados</span>
+          <span className="cd-kpi-box__value">{trasladosCount}</span>
+          <span className="cd-kpi-box__note">{fmt(trasladosIncome)} cobrados</span>
+          {trasladosDelta !== null && trasladosDelta !== undefined && (
+            <span
+              className={`cd-kpi-box__delta${
+                trasladosDelta > 0 ? " cd-kpi-box__delta--up" : trasladosDelta < 0 ? " cd-kpi-box__delta--down" : ""
+              }`}
+            >
+              {trasladosDelta === 0
+                ? "Igual que el mes anterior"
+                : `${trasladosDelta > 0 ? "+" : ""}${trasladosDelta} vs mes anterior`}
+            </span>
+          )}
         </div>
       </div>
 

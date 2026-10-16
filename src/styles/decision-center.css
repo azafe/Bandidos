@@ -41,8 +41,8 @@
   margin-bottom: 20px;
 }
 
-.cd-kpi-row--5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+.cd-kpi-row--6 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .cd-kpi-box {
@@ -76,6 +76,20 @@
 .cd-kpi-box__value--costs  { color: #ef4444; }
 .cd-kpi-box__value--profit { color: #3b82f6; }
 .cd-kpi-box__value--profit.negative { color: #ef4444; }
+
+.cd-kpi-box__note {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+
+.cd-kpi-box__delta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+.cd-kpi-box__delta--up   { color: #16a34a; }
+.cd-kpi-box__delta--down { color: #dc2626; }
 
 .cd-split {
   display: grid;
@@ -732,13 +746,8 @@
 /* ── Responsive ─────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .cd-kpi-row,
-  .cd-kpi-row--5 {
+  .cd-kpi-row--6 {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* El 5to KPI ocupa todo el ancho para que no quede solo y desalineado */
-  .cd-kpi-row--5 .cd-kpi-box:last-child {
-    grid-column: 1 / -1;
   }
 
   /* Valores numéricos más compactos en mobile */
