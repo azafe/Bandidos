@@ -23,6 +23,8 @@ import {
 } from "../../services/bookingApi";
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
+import TrasladoFields from "../../components/agenda/TrasladoFields";
+import { getTrasladoError, getTrasladoPayload } from "../../lib/traslados";
 import AgendaWeekView from "../../components/agenda/AgendaWeekView";
 import AgendaMonthView from "../../components/agenda/AgendaMonthView";
 import {
@@ -423,6 +425,7 @@ export default function AgendaPage() {
     price: "",
     payment_method_id: "",
     traslado_amount: "",
+    traslado_bonificado: false,
   });
   const [form, setForm] = useState({
     date: selectedDate,
@@ -445,6 +448,7 @@ export default function AgendaPage() {
     traslado: false,
     traslado_direccion: "",
     traslado_amount: "",
+    traslado_bonificado: false,
   });
 
   const { items: serviceTypes } = useApiResource("/v2/service-types");
@@ -588,6 +592,7 @@ export default function AgendaPage() {
           ? String(selectedTurno.price)
           : "",
       payment_method_id: selectedTurno.payment_method_id || "",
+      traslado_bonificado: selectedTurno.traslado_bonificado ?? false,
       traslado_amount:
         selectedTurno.traslado_amount !== null && selectedTurno.traslado_amount !== undefined
           ? String(selectedTurno.traslado_amount)
@@ -934,6 +939,7 @@ export default function AgendaPage() {
       traslado: false,
       traslado_direccion: "",
       traslado_amount: "",
+      traslado_bonificado: false,
     });
     setDurationMode("preset");
     setCustomDuration("");
@@ -996,6 +1002,7 @@ export default function AgendaPage() {
       base_price: catalogPrice,
       traslado: turno.traslado ?? false,
       traslado_direccion: turno.traslado_direccion || "",
+      traslado_bonificado: turno.traslado_bonificado ?? null,
       traslado_amount:
         turno.traslado_amount !== null && turno.traslado_amount !== undefined
           ? String(turno.traslado_amount)
@@ -1328,6 +1335,16 @@ export default function AgendaPage() {
   }
 
   async function handleSubmit() {
+    const trasladoPayload = getTrasladoPayload(form, isEditing ? selectedTurno : null);
+    if (normalizeStatus(form.status) === "finished" &&
+        (normalizeStatus(selectedTurno?.status) !== "finished" || Object.keys(trasladoPayload).length > 0)) {
+      const trasladoError = getTrasladoError({ ...form, ...trasladoPayload });
+      if (trasladoError) {
+        setFormError(trasladoError);
+        setFormStep("details");
+        return;
+      }
+    }
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -1365,9 +1382,7 @@ export default function AgendaPage() {
         groomer_id: groomerId ?? undefined,
         status: normalizeStatus(form.status),
         price: Number.isFinite(priceValue) && priceValue > 0 ? priceValue : undefined,
-        traslado: form.traslado,
-        traslado_direccion: form.traslado ? form.traslado_direccion.trim() || null : null,
-        traslado_amount: form.traslado ? Number(form.traslado_amount || 0) : 0,
+        ...trasladoPayload,
       };
       if (isEditing && selectedTurno) {
         await updateAgendaTurno(selectedTurno.id, payload);
@@ -1394,9 +1409,7 @@ export default function AgendaPage() {
             groomer_id: normalizeId(form.groomer_id) ?? undefined,
             status: normalizeStatus(form.status),
             price: Number.isFinite(priceValue) && priceValue > 0 ? priceValue : undefined,
-            traslado: form.traslado,
-            traslado_direccion: form.traslado ? form.traslado_direccion.trim() || null : null,
-            traslado_amount: form.traslado ? Number(form.traslado_amount || 0) : 0,
+            ...trasladoPayload,
           },
         });
         await refreshAgendaData();
@@ -1557,13 +1570,23 @@ export default function AgendaPage() {
       return;
     }
     const paymentMethodId = normalizeId(finishForm.payment_method_id);
-    const trasladoAmount = selectedTurno.traslado ? Number(finishForm.traslado_amount || 0) : 0;
+    const traslado = {
+      traslado: selectedTurno.traslado,
+      traslado_amount: selectedTurno.traslado && !finishForm.traslado_bonificado ? Number(finishForm.traslado_amount || 0) : 0,
+      traslado_bonificado: selectedTurno.traslado && finishForm.traslado_bonificado,
+    };
+    const trasladoError = getTrasladoError(traslado);
+    if (trasladoError) {
+      alert(trasladoError);
+      return;
+    }
     await updateStatusWithDetails(selectedTurno, "finished", {
       groomer_id: groomerId,
       service_type_id: serviceTypeId,
       price,
       ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
-      traslado_amount: trasladoAmount,
+      traslado_amount: traslado.traslado_amount,
+      traslado_bonificado: traslado.traslado_bonificado,
     });
   }
 
@@ -2477,6 +2500,13 @@ export default function AgendaPage() {
                     <p className="agenda-turno-modal__notes">
                       {selectedTurno.traslado_direccion || "Sin dirección registrada."}
                     </p>
+                    <p className="agenda-helper">
+                      {selectedTurno.traslado_bonificado === true
+                        ? "Bonificado"
+                        : Number(selectedTurno.traslado_amount) > 0
+                          ? `${formatCurrency(Number(selectedTurno.traslado_amount))} · cobrado por choferes`
+                          : "Sin monto ni bonificación registrados"}
+                    </p>
                   </article>
                 )}
 
@@ -2605,27 +2635,12 @@ export default function AgendaPage() {
                       </label>
                     </div>
                     {selectedTurno?.traslado && (
-                      <label className="form-field" style={{ marginTop: "12px" }}>
-                        <span>Monto traslado</span>
-                        <div className="agenda-input-currency">
-                          <span>$</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={finishForm.traslado_amount}
-                            onChange={(e) =>
-                              setFinishForm((prev) => ({
-                                ...prev,
-                                traslado_amount: e.target.value.replace(/\D/g, ""),
-                              }))
-                            }
-                            placeholder="0"
-                          />
-                        </div>
-                        <small className="agenda-helper">
-                          Monto cobrado específicamente por el traslado.
-                        </small>
-                      </label>
+                      <TrasladoFields
+                        id="finish-traslado"
+                        value={finishForm}
+                        required
+                        onChange={(patch) => setFinishForm((prev) => ({ ...prev, ...patch }))}
+                      />
                     )}
                   </div>
                   <div className="agenda-turno-modal__finish-actions">
@@ -3054,6 +3069,7 @@ export default function AgendaPage() {
                       traslado: e.target.checked,
                       traslado_direccion: e.target.checked ? prev.traslado_direccion : "",
                       traslado_amount: e.target.checked ? prev.traslado_amount : "",
+                      traslado_bonificado: e.target.checked ? prev.traslado_bonificado : false,
                     }))
                   }
                 />
@@ -3072,20 +3088,15 @@ export default function AgendaPage() {
                       autoComplete="off"
                     />
                   </label>
-                  <label className="form-field">
-                    <span>Monto de traslado</span>
-                    <div className="agenda-input-currency">
-                      <span>$</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        name="traslado_amount"
-                        value={form.traslado_amount}
-                        onChange={handleFormChange}
-                        placeholder="0"
-                      />
-                    </div>
-                  </label>
+                  <TrasladoFields
+                    id="edit-traslado"
+                    value={form}
+                    required={normalizeStatus(form.status) === "finished"}
+                    onChange={(patch) => {
+                      setFormError("");
+                      setForm((prev) => ({ ...prev, ...patch }));
+                    }}
+                  />
                 </>
               )}
             </div>

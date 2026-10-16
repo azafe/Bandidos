@@ -7,7 +7,6 @@ import { todayISO } from "../../utils/dates";
 const CONCEPTS = [
   { key: "servicios", label: "Servicios", icon: "✂️", desc: "Ingresos por prestaciones directas" },
   { key: "señas", label: "Señas / Anticipos", icon: "🎟️", desc: "Registro de reservas y señas" },
-  { key: "traslados", label: "Traslados", icon: "🚗", desc: "Ingresos específicos por transporte" },
   { key: "ventas_petshop", label: "Ventas Pet Shop", icon: "🛍️", desc: "Comercialización de productos físicos" },
 ];
 
@@ -23,6 +22,10 @@ export default function DailyIncomesPage() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [loading, setLoading] = useState(true);
   const [totalsMap, setTotalsMap] = useState({});
+  const [totalsError, setTotalsError] = useState("");
+  const [trasladosAmount, setTrasladosAmount] = useState(null);
+  const [trasladosLoading, setTrasladosLoading] = useState(true);
+  const [trasladosError, setTrasladosError] = useState("");
 
   const { items: paymentMethods, loading: pmLoading } = useApiResource("/v2/payment-methods");
 
@@ -30,6 +33,8 @@ export default function DailyIncomesPage() {
     let active = true;
     async function loadData() {
       setLoading(true);
+      setTotalsMap({});
+      setTotalsError("");
       try {
         const totals = await apiRequest(`/v2/daily-incomes/system-totals?date=${selectedDate}`);
         if (!active) return;
@@ -40,11 +45,27 @@ export default function DailyIncomesPage() {
         setTotalsMap(map);
       } catch (err) {
         console.error("[daily-incomes] Error cargando totales", err);
+        if (active) setTotalsError("No se pudo cargar la rendición. Volvé a elegir la fecha para reintentar.");
       } finally {
         if (active) setLoading(false);
       }
     }
+    async function loadTraslados() {
+      setTrasladosLoading(true);
+      setTrasladosAmount(null);
+      setTrasladosError("");
+      try {
+        const summary = await apiRequest("/v2/daily-incomes/traslados-summary", { params: { date: selectedDate } });
+        if (active) setTrasladosAmount(summary.amount);
+      } catch (err) {
+        console.error("[daily-incomes] Error cargando traslados", err);
+        if (active) setTrasladosError("No se pudo cargar lo cobrado por choferes. Volvé a elegir la fecha para reintentar.");
+      } finally {
+        if (active) setTrasladosLoading(false);
+      }
+    }
     loadData();
+    loadTraslados();
     return () => { active = false; };
   }, [selectedDate]);
 
@@ -100,6 +121,8 @@ export default function DailyIncomesPage() {
           <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
             Cargando rendición del día...
           </div>
+        ) : totalsError ? (
+          <p role="alert">{totalsError}</p>
         ) : (
           <div className="incomes-table-container">
             <table className="incomes-matrix-table">
@@ -156,6 +179,18 @@ export default function DailyIncomesPage() {
           </div>
         )}
       </div>
+
+      <section className="incomes-reference-card incomes-traslados-info" aria-labelledby="traslados-info-title">
+        <h3 id="traslados-info-title">Cobrado por choferes (no entra a caja)</h3>
+        {trasladosLoading ? (
+          <p>Cargando traslados del día...</p>
+        ) : trasladosError ? (
+          <p role="alert">{trasladosError}</p>
+        ) : (
+          <strong className="incomes-ref-item-total">{formatCurrency(trasladosAmount)}</strong>
+        )}
+        <p className="incomes-ref-help">Importe informativo de los traslados finalizados en la fecha elegida. Está separado de los totales de caja.</p>
+      </section>
     </div>
   );
 }

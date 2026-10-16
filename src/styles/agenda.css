@@ -2282,3 +2282,10 @@
     font-size: 0.72rem;
   }
 }
+
+.agenda-traslado-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
