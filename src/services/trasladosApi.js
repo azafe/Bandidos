@@ -14,3 +14,11 @@ export const getTrasladoConfig = () =>
   apiRequest("/v2/traslados/configuracion");
 export const saveTrasladoConfig = (body) =>
   apiRequest("/v2/traslados/configuracion", { method: "PUT", body });
+export const getHojaDeRuta = (params) =>
+  apiRequest("/v2/traslados/hoja-de-ruta", { params });
+export const ordenarRuta = (body) =>
+  apiRequest("/v2/traslados/orden-ruta", { method: "PUT", body });
+export const avanzarTramo = (id, estado_anterior, estado) =>
+  apiRequest(`/v2/traslados/${id}/estado`, { method: "PATCH", body: { estado_anterior, estado } });
+export const vincularCuentaChofer = (id, chofer_id) =>
+  apiRequest(`/v2/users/${id}/chofer`, { method: "PUT", body: { chofer_id } });

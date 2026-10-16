@@ -8,6 +8,7 @@ import {
   setUnauthorizedHandler,
   setSuspendedHandler,
 } from "../services/apiClient";
+import { disableLocalPush } from "../services/pushNotifications";
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,11 @@ export function AuthProvider({ children }) {
     setUser(null);
     setStoredToken(null);
   }, []);
+
+  useEffect(() => {
+    // Un dispositivo compartido puede conservar una suscripción del panel.
+    if (user?.chofer_id) disableLocalPush().catch(() => {});
+  }, [user?.chofer_id]);
 
   useEffect(() => {
     setStoredToken(token);

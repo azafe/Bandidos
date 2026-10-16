@@ -52,7 +52,28 @@
 .traslados-table {
   overflow-x: auto;
 }
+.traslados-dia { display: grid; gap: 18px; }
+.traslados-filtros { border: 0; padding: 0; margin: 0; display: flex; gap: 14px; flex-wrap: wrap; align-items: end; min-width: 0; }
+.traslados-fecha { display: flex; gap: 8px; align-items: end; min-width: 0; }
+.traslados-filtros .form-field { margin: 0; min-width: 0; }
+.traslados-ruta { display: grid; gap: 12px; min-width: 0; }
+.traslados-ruta h2 { font-size: 1.15rem; margin: 0; }
+.traslados-paradas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,300px),1fr)); gap: 14px; align-items: start; }
+.traslados-parada { display: grid; gap: 12px; min-width: 0; overflow-wrap: anywhere; }
+.traslados-parada p,.traslados-parada h3 { margin: 0; }
+.traslados-parada-titulo { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.traslados-estado { border-radius: 20px; padding: 5px 10px; background: #f1f1f8; font-size: .85rem; }
+.traslados-estado--entregado { background: #dcfce7; color: #166534; }
+.traslados-estado--en_camino,.traslados-estado--retirado { background: #dbeafe; color: #1e40af; }
+.traslados-notas { white-space: pre-wrap; }
+.traslados-parada button,.traslados-parada a { min-height: 44px; }
+.traslados-parada a { display: inline-flex; align-items: center; text-decoration: none; }
 @media (max-width: 600px) {
+  .traslados-filtros { align-items: stretch; }
+  .traslados-fecha { width: 100%; }
+  .traslados-fecha .form-field { flex: 1; }
+  .traslados-fecha input { width: 100%; box-sizing: border-box; min-width: 0; }
+  .traslados-parada .btn-primary { width: 100%; }
   .traslados-tramo .form-grid,
   .traslados-panel .form-grid {
     grid-template-columns: minmax(0, 1fr);

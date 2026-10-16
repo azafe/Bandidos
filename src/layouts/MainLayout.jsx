@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/navigation/Sidebar";
 import AsistenteIA from "../components/dashboard/AsistenteIA";
+import { useAuth } from "../context/AuthContext";
 
 const LS_KEY = "bandidos_vio_recordatorios";
 
 const PAGE_TITLES = {
+  "/traslados/dia": "Traslados del día",
   "/traslados/configuracion": "Bandimóviles",
   "/":                        "Inicio",
   "/agenda":                  "Agenda",
@@ -28,6 +30,7 @@ const PAGE_TITLES = {
 };
 
 export default function MainLayout({ children }) {
+  const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showToast, setShowToast] = useState(!localStorage.getItem(LS_KEY));
   const navigate = useNavigate();
@@ -79,7 +82,7 @@ export default function MainLayout({ children }) {
       {pathname === "/" && <AsistenteIA />}
 
       {/* Toast de bienvenida: Recordatorios */}
-      {showToast && (
+      {showToast && !user?.chofer_id && (
         <div
           style={{
             position: "fixed",

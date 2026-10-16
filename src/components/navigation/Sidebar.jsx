@@ -16,11 +16,11 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
   const showBackofficeLinks = user?.role === "admin" || user?.role === "super_admin";
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
-  const pushSupported = "serviceWorker" in navigator && "PushManager" in window;
+  const pushSupported = !user?.chofer_id && "serviceWorker" in navigator && "PushManager" in window;
 
   useEffect(() => {
     if (!pushSupported) return;
-    getSubscriptionStatus().then(setPushEnabled);
+    getSubscriptionStatus().then(setPushEnabled).catch(() => setPushEnabled(false));
   }, [pushSupported]);
 
   async function handlePushToggle() {
@@ -81,7 +81,8 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       </div>
 
       <nav className="sidebar__nav">
-        {user?.role !== "super_admin" && (
+        {user?.chofer_id && <NavLink to="/traslados/dia" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Mis traslados</NavLink>}
+        {user?.role !== "super_admin" && !user?.chofer_id && (
           <>
             {isEnabled("dashboard") && user?.role !== "staff" && (
               <NavLink
@@ -254,7 +255,8 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </>
             )}
 
-            {user?.role === "admin" && <NavLink to="/traslados/configuracion" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles</NavLink>}
+            {isEnabled("agenda") && <NavLink to="/traslados/dia" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Traslados del día</NavLink>}
+            {user?.role === "admin" && <NavLink to="/traslados/configuracion" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles · Configuración</NavLink>}
             {isEnabled("employees") && user?.role !== "staff" && (
               <NavLink
                 to="/employees"

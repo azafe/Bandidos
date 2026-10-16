@@ -18,5 +18,9 @@ export default function ProtectedRoute({ children }) {
     return <Navigate to="/suspended" replace state={{ reason: user.suspended_reason }} />;
   }
 
+  if (user.chofer_id && location.pathname !== "/traslados/dia") {
+    return <Navigate to="/traslados/dia" replace />;
+  }
+
   return children;
 }

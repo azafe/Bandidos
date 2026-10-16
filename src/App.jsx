@@ -12,6 +12,7 @@ import DailyIncomesPage from "./pages/expenses/DailyIncomesPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import SupplierDetailPage from "./pages/suppliers/SupplierDetailPage";
 import TrasladosSettingsPage from "./pages/traslados/TrasladosSettingsPage";
+import TrasladosDiaPage from "./pages/traslados/TrasladosDiaPage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
 import EmployeeDetailPage from "./pages/employees/EmployeeDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -89,6 +90,7 @@ function App() {
                   <Route path="/services/new" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/services/:id" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/agenda" element={<AgendaPage />} />
+                  <Route path="/traslados/dia" element={<TrasladosDiaPage />} />
                   <Route path="/traslados/configuracion" element={<AdminGuard><TrasladosSettingsPage /></AdminGuard>} />
                   <Route path="/reservas-online" element={<AdminGuard><BookingSettingsPage /></AdminGuard>} />
                   <Route path="/customers" element={<CustomersPage />} />
