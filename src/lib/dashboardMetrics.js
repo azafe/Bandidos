@@ -485,6 +485,7 @@ export function buildDashboardMetrics({
       avgTicket,
       trasladosCount,
       trasladosIncome,
+      trasladosResultado: current.trasladosResultado?.total || null,
       deltas,
     },
     series: {
@@ -501,6 +502,9 @@ export function buildDashboardMetrics({
       expenses === 0 &&
       servicesCount === 0 &&
       dailyExpenses.length === 0 &&
-      petshopSales.length === 0,
+      petshopSales.length === 0 &&
+      !current.trasladosResultado?.total?.ingresos &&
+      !current.trasladosResultado?.total?.gastos &&
+      !current.trasladosResultado?.total?.realizados,
   };
 }

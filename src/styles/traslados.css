@@ -91,3 +91,42 @@
     flex: 1;
   }
 }
+/* La tabla mantiene sus columnas en pantallas chicas sin ensanchar la página. */
+.traslados-resultados { display: grid; gap: 1rem; min-width: 0; }
+.traslados-resultados .card { min-width: 0; padding: 1.25rem; }
+.traslados-resultados-links { display: flex; flex-wrap: wrap; gap: 1rem; }
+.traslados-resultados-filtros { align-items: end; }
+.traslados-resultados-seccion > h2 { margin-top: 0; }
+.traslados-resultados-kpis { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .75rem; }
+.traslados-resultados-kpis .card { display: grid; align-content: start; gap: .65rem; }
+.traslados-resultados-kpis strong { font-size: 1.5rem; overflow-wrap: anywhere; }
+.traslados-resultados-pendientes { padding: 1rem; border-radius: 12px; background: #fff6e8; color: #654218; border: 1px solid #edce98; }
+.traslados-resultados-pendientes li { margin: .45rem 0; }
+.traslados-indicadores { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; }
+.traslados-indicadores p { display: grid; gap: .4rem; }
+.traslados-indicadores strong { font-size: 1.3rem; }
+.traslados-semana { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: .5rem; }
+.traslados-semana > div { display: grid; gap: .5rem; text-align: center; padding: .8rem .25rem; background: #f5f2fa; border-radius: 10px; }
+.traslados-tabla-scroll { overflow-x: auto; }
+.traslados-tabla-scroll table { border-collapse: collapse; width: 100%; }
+.traslados-tabla-scroll th, .traslados-tabla-scroll td { padding: .75rem; text-align: right; white-space: nowrap; border-bottom: 1px solid #e5e5ed; }
+.traslados-tabla-scroll th:first-child { text-align: left; }
+.traslados-check { display: flex; align-items: center; gap: .6rem; margin: .75rem 0; }
+.traslados-check input { width: auto; }
+.traslados-registros { display: grid; gap: .6rem; margin: 1rem 0; }
+.traslados-registro { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid #e5e5ed; padding: .75rem 0; }
+.traslados-registro p { margin: .4rem 0; }
+.traslados-registro .form-field { min-width: 180px; }
+.traslados-simulacion { padding: 1rem; margin-top: 1rem; background: #f5f2fa; border-radius: 12px; }
+.traslados-simulacion > strong { font-size: 1.3rem; }
+.traslados-resultados fieldset { min-width: 0; }
+.traslados-resultados .btn-secondary + .btn-secondary { margin-left: .5rem; }
+@media (max-width: 760px) {
+  .traslados-resultados-kpis, .traslados-indicadores { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .traslados-semana { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .traslados-resultados .card { padding: 1rem; }
+}
+@media (max-width: 420px) {
+  .traslados-semana { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .traslados-resultados-kpis strong { font-size: 1.2rem; }
+}

@@ -14,6 +14,20 @@ export const getTrasladoConfig = () =>
   apiRequest("/v2/traslados/configuracion");
 export const saveTrasladoConfig = (body) =>
   apiRequest("/v2/traslados/configuracion", { method: "PUT", body });
+export const getTrasladosResultados = (params) =>
+  apiRequest("/v2/traslados/resultados", { params });
+export const saveCategoriasTraslados = (ids) =>
+  apiRequest("/v2/traslados/resultados/categorias", { method: "PUT", body: { ids } });
+export const confirmarGastosTraslados = (body) =>
+  apiRequest("/v2/traslados/resultados/revision-gastos", { method: "POST", body });
+export const asignarGastoTraslado = (tipo, id, body) =>
+  apiRequest(`/v2/traslados/resultados/gastos/${tipo}/${id}`, { method: "PUT", body });
+export const repartirTraslado = (id, body) =>
+  apiRequest(`/v2/traslados/resultados/repartos/${id}`, { method: "PUT", body });
+export const revisarCondicionesTraslado = (id, body) =>
+  apiRequest(`/v2/traslados/resultados/condiciones/${id}`, { method: "PUT", body });
+export const guardarCostoTraslado = (tipo, id, body) =>
+  apiRequest(`/v2/traslados/resultados/${tipo}${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body });
 export const getHojaDeRuta = (params) =>
   apiRequest("/v2/traslados/hoja-de-ruta", { params });
 export const ordenarRuta = (body) =>
