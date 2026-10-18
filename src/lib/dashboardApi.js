@@ -15,6 +15,7 @@ export async function fetchDashboardData(range) {
     groomerReport,
     sales,
     trasladosCobrado,
+    trasladosResultado,
   ] = await Promise.all([
     apiRequest("/agenda", { params }),
     apiRequest("/v2/daily-expenses", { params }),
@@ -31,6 +32,9 @@ export async function fetchDashboardData(range) {
     apiRequest("/reports/by-groomer", { params }).catch(() => []),
     apiRequest("/v2/petshop/sales", { params }).catch(() => []),
     params ? apiRequest("/v2/traslado-solicitudes/cobrados", { params }) : Promise.resolve(null),
+    // La cuenta propia puede estar pendiente de configuración o despliegue.
+    // Su error no debe impedir consultar el resto del Inicio.
+    params ? apiRequest("/v2/traslados/resultados", { params }).catch(() => null) : Promise.resolve(null),
   ]);
 
   return {
@@ -43,5 +47,6 @@ export async function fetchDashboardData(range) {
     groomerReport: asList(groomerReport),
     petshopSales: asList(sales),
     trasladosCobrado,
+    trasladosResultado,
   };
 }

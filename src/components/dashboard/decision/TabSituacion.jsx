@@ -16,7 +16,7 @@ export default function TabSituacion({ kpis }) {
     expenses, dailyExpenseTotal, fixedExpenseTotal,
     totalCosts, groomerCommissions, profit, margin,
     servicesCount, avgTicket,
-    trasladosCount = 0, trasladosIncome = 0,
+    trasladosResultado,
   } = kpis;
   const trasladosDelta = kpis.deltas?.trasladosCount;
 
@@ -73,9 +73,10 @@ export default function TabSituacion({ kpis }) {
           <span className="cd-kpi-box__value">{fmt(avgTicket)}</span>
         </div>
         <div className="cd-kpi-box">
-          <span className="cd-kpi-box__label">Traslados realizados</span>
-          <span className="cd-kpi-box__value">{trasladosCount}</span>
-          <span className="cd-kpi-box__note">{fmt(trasladosIncome)} cobrados</span>
+          <span className="cd-kpi-box__label">Resultado de Bandimóviles</span>
+          <span className="cd-kpi-box__value">{trasladosResultado?.resultado !== null && trasladosResultado?.resultado !== undefined ? fmt(trasladosResultado.resultado) : "Pendiente"}</span>
+          <span className="cd-kpi-box__note">{trasladosResultado ? `${trasladosResultado.realizados.toLocaleString("es-AR", { maximumFractionDigits: 2 })} viajes completos · ${fmt(trasladosResultado.ingresos)} cobrados` : "Cuenta de traslados no disponible"}</span>
+          {trasladosResultado?.resultado === null && <span className="cd-kpi-box__note">Faltan datos para completar la cuenta</span>}
           {trasladosDelta !== null && trasladosDelta !== undefined && (
             <span
               className={`cd-kpi-box__delta${
@@ -83,8 +84,8 @@ export default function TabSituacion({ kpis }) {
               }`}
             >
               {trasladosDelta === 0
-                ? "Igual que el mes anterior"
-                : `${trasladosDelta > 0 ? "+" : ""}${trasladosDelta} vs mes anterior`}
+                ? "Misma cantidad de turnos con traslado"
+                : `${trasladosDelta > 0 ? "+" : ""}${trasladosDelta} turnos con traslado vs mes anterior`}
             </span>
           )}
         </div>
