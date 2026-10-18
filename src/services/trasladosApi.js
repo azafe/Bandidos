@@ -28,6 +28,17 @@ export const revisarCondicionesTraslado = (id, body) =>
   apiRequest(`/v2/traslados/resultados/condiciones/${id}`, { method: "PUT", body });
 export const guardarCostoTraslado = (tipo, id, body) =>
   apiRequest(`/v2/traslados/resultados/${tipo}${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", body });
+const rendicionesPath = "/v2/traslados/rendiciones";
+export const revisarRendiciones = (params) => apiRequest(`${rendicionesPath}/revision`, { params });
+export const listarRendiciones = (params) => apiRequest(rendicionesPath, { params });
+export const obtenerRendicion = (id) => apiRequest(`${rendicionesPath}/${id}`);
+export const aprobarReintegro = (id, body) => apiRequest(`${rendicionesPath}/gastos/${id}`, { method: "PUT", body });
+export const repartirRemuneracion = (id, body) => apiRequest(`${rendicionesPath}/repartos/${id}`, { method: "PUT", body });
+export const confirmarRendicion = (body) => apiRequest(rendicionesPath, { method: "POST", body });
+export const registrarMovimientoRendicion = (id, body) => apiRequest(`${rendicionesPath}/${id}/movimientos`, { method: "POST", body });
+export const revertirMovimientoRendicion = (id, body) => apiRequest(`${rendicionesPath}/${id}/reversiones`, { method: "POST", body });
+export const anularRendicion = (id, body) => apiRequest(`${rendicionesPath}/${id}/anulacion`, { method: "POST", body });
+export const obtenerCajaRendiciones = (fecha) => apiRequest(`${rendicionesPath}/caja`, { params: { fecha } });
 export const getHojaDeRuta = (params) =>
   apiRequest("/v2/traslados/hoja-de-ruta", { params });
 export const ordenarRuta = (body) =>

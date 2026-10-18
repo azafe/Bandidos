@@ -130,3 +130,28 @@
   .traslados-semana { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .traslados-resultados-kpis strong { font-size: 1.2rem; }
 }
+.rendiciones-page .card > h2, .rendicion-detalle > h2 { margin-top: 0; }
+.rendiciones-page .traslados-tramo { margin-top: 1rem; }
+.rendiciones-page fieldset { border: 0; padding: .5rem 0; }
+.rendiciones-page fieldset.card { border: 1px solid var(--border-soft); padding: 1rem; }
+.rendiciones-page .traslados-tabla-scroll td { white-space: normal; text-align: left; vertical-align: top; }
+.rendiciones-page .traslados-tabla-scroll th { text-align: left; vertical-align: top; }
+.rendicion-saldos { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .8rem; }
+.rendicion-saldos > p { display: grid; gap: .5rem; align-content: start; }
+.rendicion-saldos strong { font-size: 1.3rem; overflow-wrap: anywhere; }
+.rendicion-personas { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: .75rem; }
+.rendicion-personas p { display: grid; gap: .4rem; }
+.rendicion-personas strong { font-size: 1.2rem; }
+.rendicion-historial article { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.rendicion-reparto-fila { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr) auto; align-items: end; gap: .75rem; margin: .75rem 0; }
+.rendicion-titulo { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .75rem; }
+.rendicion-detalle { display: grid; gap: .75rem; }
+.rendiciones-page details > summary { padding: .75rem 0; cursor: pointer; font-weight: 600; }
+.rendiciones-page .traslados-tabla-scroll table { table-layout: fixed; min-width: 0; }
+.rendiciones-page .traslados-tabla-scroll th:first-child { width: 65%; }
+.rendiciones-page .traslados-tabla-scroll td { overflow-wrap: anywhere; }
+.rendiciones-page textarea { min-height: 80px; }
+@media (max-width:760px) {
+  .rendicion-saldos { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .rendicion-reparto-fila { grid-template-columns: minmax(0,1fr); }
+}
