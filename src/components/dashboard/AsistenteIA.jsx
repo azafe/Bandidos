@@ -1,5 +1,5 @@
 // src/components/dashboard/AsistenteIA.jsx
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { fetchDashboardData } from "../../lib/dashboardApi";
 import { buildDashboardMetrics } from "../../lib/dashboardMetrics";
 import { apiRequest } from "../../services/apiClient";
@@ -300,6 +300,45 @@ export default function AsistenteIA() {
   const [queriesLeft, setQueriesLeft] = useState(QUERY_LIMIT);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const panelRef = useRef(null);
+  const launcherRef = useRef(null);
+
+  const closeAssistant = useCallback(() => {
+    setIsOpen(false);
+    requestAnimationFrame(() => launcherRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const panel = panelRef.current;
+    const viewport = window.visualViewport;
+    let frame;
+    const updateViewport = () => {
+      panel.style.setProperty("--ai-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+      panel.style.setProperty("--ai-viewport-width", `${viewport?.width ?? window.innerWidth}px`);
+      panel.style.setProperty("--ai-viewport-top", `${viewport?.offsetTop ?? 0}px`);
+      panel.style.setProperty("--ai-viewport-left", `${viewport?.offsetLeft ?? 0}px`);
+    };
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateViewport);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") closeAssistant();
+    };
+    updateViewport();
+    viewport?.addEventListener("resize", scheduleUpdate);
+    viewport?.addEventListener("scroll", scheduleUpdate);
+    window.addEventListener("resize", scheduleUpdate);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport?.removeEventListener("resize", scheduleUpdate);
+      viewport?.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, closeAssistant]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -307,7 +346,8 @@ export default function AsistenteIA() {
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 150);
+      const timer = setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 150);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -434,6 +474,7 @@ export default function AsistenteIA() {
     <>
       {!isOpen && (
         <button
+          ref={launcherRef}
           className="ai-fab"
           onClick={() => setIsOpen(true)}
           aria-label="Abrir asistente IA"
@@ -445,7 +486,7 @@ export default function AsistenteIA() {
       )}
 
       {isOpen && (
-        <div className="ai-panel" role="dialog" aria-label="Asistente IA">
+        <div ref={panelRef} className="ai-panel" role="dialog" aria-label="Asistente IA">
           <div className="ai-panel__header">
             <div className="ai-panel__header-info">
               <div className="ai-panel__avatar">
@@ -464,11 +505,12 @@ export default function AsistenteIA() {
             </div>
             <button
               className="ai-panel__close"
-              onClick={() => setIsOpen(false)}
+              onClick={closeAssistant}
               aria-label="Cerrar asistente"
               type="button"
             >
-              ×
+              <span aria-hidden="true">×</span>
+              <span>Cerrar</span>
             </button>
           </div>
 
