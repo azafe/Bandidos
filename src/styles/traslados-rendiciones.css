@@ -1,0 +1,116 @@
+/* Rendiciones: saldo y próximo paso primero; revisión y comprobantes a demanda. */
+.rendiciones-page { max-width: 1120px; width: 100%; margin-inline: auto; gap: 16px; color: #302a3c; }
+.rendiciones-page h1, .rendiciones-page h2, .rendiciones-page h3 { line-height: 1.3; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.rendiciones-page h2 { font-size: 1.05rem; margin: 0; }
+.rendiciones-page h3 { font-size: 1rem; margin: 0; }
+.rendiciones-page p { font-size: .875rem; line-height: 1.6; }
+.rendiciones-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rendiciones-heading h1 { font-size: 1.65rem; margin: 3px 0; }
+.rendiciones-heading p { margin: 0; color: #676170; font-size: .85rem; }
+.rendicion-eyebrow { color: #774b92; font-size: .78rem; font-weight: 600; }
+.rendiciones-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.rendiciones-nav a, .rendicion-pendientes__actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6deed; background: #fbf9fe; color: #70468c; font-size: .82rem; text-decoration: none; }
+.rendiciones-page .rendiciones-filtros { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr); gap: 12px; border: 1px solid #e7e4ed; background: #fff; padding: 12px 16px 16px; margin: 0; border-radius: 16px; }
+.rendiciones-filtros legend { padding-inline: 5px; font-size: .8rem; color: #676170; }
+.rendiciones-page .form-field { min-width: 0; margin: 0; font-size: .85rem; }
+.rendiciones-page input:not([type=checkbox]), .rendiciones-page select, .rendiciones-page textarea { width: 100%; max-width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; font-size: 1rem; }
+.rendiciones-page input[type=date] { padding-inline: 8px; }
+.rendiciones-page .btn-primary, .rendiciones-page .btn-secondary { min-height: 44px; font-size: .83rem; white-space: normal; }
+.rendiciones-page .btn-secondary + .btn-secondary { margin-left: 0; }
+.rendiciones-page .rendicion-caption { color: #676170; font-size: .8rem; line-height: 1.6; }
+.rendicion-section-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 12px; }
+.rendicion-personas { gap: 14px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); }
+.rendicion-persona { min-width: 0; padding: 18px; border: 1px solid #e7e4ed; border-radius: 18px; background: #fff; display: flex; flex-direction: column; gap: 14px; }
+.rendicion-persona__name { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rendicion-status { padding: 4px 8px; border-radius: 7px; background: #f2eff6; color: #675572; font-size: .76rem; }
+.rendicion-balance { min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; background: #f5f1fb; border: 1px solid #e7dff2; border-radius: 12px; }
+.rendiciones-page .rendicion-balance__amount { font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.2; color: #63388b; letter-spacing: -.04em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.rendicion-balance__direction { color: #63388b; font-size: .85rem; font-weight: 600; }
+.rendicion-balance--pago { background: #eef6fc; border-color: #d7e6f3; }
+.rendiciones-page .rendicion-balance--pago .rendicion-balance__amount, .rendicion-balance--pago .rendicion-balance__direction { color: #225c81; }
+.rendicion-balance--cero, .rendicion-balance--anulada { background: #f7f7fa; border-color: #e6e6ed; }
+.rendiciones-page .rendicion-balance--cero .rendicion-balance__amount, .rendicion-balance--cero .rendicion-balance__direction, .rendiciones-page .rendicion-balance--anulada .rendicion-balance__amount, .rendicion-balance--anulada .rendicion-balance__direction { color: #676170; }
+.rendicion-balance--revision { background: #fffbf3; border-color: #f0dfbe; }
+.rendiciones-page .rendicion-balance--revision .rendicion-balance__amount, .rendicion-balance--revision .rendicion-balance__direction { color: #7d561c; }
+.rendicion-balance p { margin: 0; color: #676170; font-size: .8rem; }
+.rendicion-persona__review { display: grid; gap: 5px; grid-template-columns: minmax(0, 1fr) auto; padding: 0 2px; font-size: .8rem; color: #676170; }
+.rendicion-persona__review strong { max-width: 135px; font-size: .95rem; text-align: right; color: #302a3c; overflow-wrap: anywhere; }
+.rendicion-persona__review small { grid-column: 1 / -1; font-size: .78rem; }
+.rendicion-persona__actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.rendiciones-page .rendicion-empty { margin: 0; padding: 14px 16px; border: 1px dashed #e1dce9; border-radius: 10px; color: #676170; background: #faf9fc; }
+.rendicion-resumen-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 18px; margin-block: 16px; align-items: start; }
+.rendicion-importes { margin: 0; min-width: 0; }
+.rendicion-importes > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid #efedf3; padding: 12px 0; font-size: .85rem; }
+.rendicion-importes dt { color: #676170; }
+.rendicion-importes dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.rendicion-notice { padding: 12px 14px; border-radius: 10px; background: #fffbf3; border: 1px solid #efdfbd; color: #735120; }
+.rendicion-pendientes { border: 1px solid #efdfbd; border-radius: 16px; padding: 16px 18px; background: #fffbf3; color: #735120; }
+.rendicion-pendientes h2 { color: #735120; }
+.rendicion-pendientes p { margin: 6px 0 12px; }
+.rendicion-pendientes__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rendicion-pendientes__actions .btn-secondary, .rendicion-pendientes__actions a { border: 1px solid #e6d5b0; background: #fff; color: #735120; }
+.rendicion-pendientes ul { padding-left: 20px; font-size: .85rem; line-height: 1.65; }
+.rendicion-panel { min-width: 0; background: #fff; border: 1px solid #e7e4ed; border-radius: 16px; }
+.rendiciones-page .rendicion-panel > summary { list-style: none; display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 16px 18px; font-weight: 400; }
+.rendicion-panel > summary::-webkit-details-marker { display: none; }
+.rendicion-panel__title { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.rendicion-panel__title strong { font-size: .94rem; font-weight: 600; }
+.rendicion-panel__title > span { font-size: .8rem; line-height: 1.5; color: #676170; }
+.rendicion-panel__badge { max-width: 35%; text-align: right; overflow-wrap: anywhere; font-size: .8rem; font-weight: 600; color: #774b92; }
+.rendicion-panel__chevron { color: #82758e; font-size: 1.1rem; }
+.rendicion-panel[open] > summary .rendicion-panel__chevron { transform: rotate(180deg); }
+.rendicion-panel__body { border-top: 1px solid #efedf3; padding: 16px 18px; min-width: 0; }
+.rendicion-panel__body > p:first-child { margin-top: 0; }
+.rendicion-panel__body .traslados-tramo:first-child { margin-top: 0; }
+.rendiciones-page .rendicion-section-label { margin: 4px 2px -4px; color: #676170; font-size: .8rem; font-weight: 500; letter-spacing: 0; }
+.rendiciones-page .traslados-tramo p { font-size: .85rem; }
+.rendiciones-page .traslados-tramo h3 { font-size: .95rem; }
+.rendiciones-page fieldset { margin: 0; }
+.rendiciones-page fieldset legend { font-size: .95rem; }
+.rendiciones-page .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rendiciones-page .traslados-check { min-height: 44px; align-items: flex-start; font-size: .85rem; line-height: 1.5; }
+.rendiciones-page .traslados-check input { flex-shrink: 0; width: 18px; height: 18px; min-height: 0; margin: 2px 0 0; }
+.rendiciones-page details > summary { min-height: 44px; font-size: .85rem; }
+.rendicion-conceptos { margin-block: 12px; }
+.rendiciones-page .traslados-tabla-scroll th, .rendiciones-page .traslados-tabla-scroll td { padding: 12px 6px; font-size: .82rem; }
+.rendiciones-page .traslados-tabla-scroll th:first-child { width: 60%; }
+.rendiciones-page .traslados-tabla-scroll td:last-child { text-align: right; }
+.rendiciones-page .rendicion-historial__item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px 20px; padding: 18px 0; border-bottom: 1px solid #efedf3; }
+.rendicion-historial__item:last-child { border-bottom: 0; }
+.rendicion-historial__item .rendicion-balance { padding: 12px 14px; }
+.rendiciones-page .rendicion-historial__item .rendicion-balance__amount { font-size: 1.3rem; }
+.rendicion-historial__item .traslados-actions { grid-column: 1 / -1; }
+.rendicion-historial__item p { margin: 4px 0 0; }
+.rendicion-pagination { align-items: center; justify-content: space-between; margin-top: 16px; }
+.rendicion-detalle { border: 1px solid #dccce9; box-shadow: 0 4px 18px #4d296410; }
+.rendicion-titulo h2 { margin: 0; }
+.rendicion-detail-person { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.rendicion-detail-person p { flex-basis: 100%; margin: 0; }
+.rendicion-money-action { justify-self: start; }
+.rendiciones-page .rendicion-money-form { padding: 0; border: 0; margin: 0; }
+.rendicion-movimiento strong { font-size: .9rem; overflow-wrap: anywhere; }
+.rendicion-movimiento p { margin: 6px 0; overflow-wrap: anywhere; }
+.rendiciones-page .rendicion-feedback { padding: 14px 16px; margin: 0; border: 1px solid #e7e4ed; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+.rendiciones-page .rendicion-ayuda { color: #676170; padding: 0 4px; }
+.rendicion-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.rendiciones-page [id], .rendiciones-page h2 { scroll-margin-top: calc(90px + env(safe-area-inset-top, 0px)); }
+.rendiciones-page a:focus-visible, .rendiciones-page button:focus-visible, .rendiciones-page summary:focus-visible, .rendiciones-page h2:focus-visible { outline: 2px solid #8055c3; outline-offset: 3px; border-radius: 5px; }
+@media (max-width: 640px) {
+  .rendiciones-page { gap: 14px; }
+  .rendiciones-heading { align-items: flex-start; }
+  .rendiciones-heading h1 { font-size: 1.45rem; }
+  .rendiciones-heading p { font-size: .8rem; }
+  .rendiciones-page .rendiciones-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 12px 12px; gap: 10px; }
+  .rendiciones-filtros > label:last-child { grid-column: 1 / -1; }
+  .rendicion-persona { padding: 16px; }
+  .rendicion-resumen-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .rendiciones-page .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .rendicion-panel__body { padding: 14px; }
+  .rendiciones-page .rendicion-panel > summary { padding: 14px; gap: 8px; }
+  .rendicion-pendientes { padding: 14px; }
+  .rendiciones-page .rendicion-historial__item { grid-template-columns: minmax(0, 1fr); }
+  .rendicion-historial__item .traslados-actions { flex-direction: column; }
+  .rendicion-money-action { justify-self: stretch; }
+  .rendiciones-page fieldset > button, .rendicion-confirmacion > button { width: 100%; }
+  .rendicion-titulo { align-items: flex-start; }
+}
