@@ -3,12 +3,12 @@ import { simularMovil } from "../../lib/trasladosResultados";
 
 const fmt = (n) => n.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
-export default function SimuladorMovil({ promedio }) {
+export default function SimuladorMovil({ promedio, embedded = false }) {
   const [form, setForm] = useState({ precio: "", dias: "", costoFijo: "", costoVariable: "", modelo: "", valorChofer: "" });
   const change = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const result = simularMovil(form);
-  return <section className="card traslados-resultados-seccion" aria-label="Simulador de otro móvil">
-    <h2>¿Conviene sumar otro móvil?</h2>
+  return <section className={embedded ? "resultados-simulador" : "card traslados-resultados-seccion"} aria-label="Simulador de otro móvil">
+    {!embedded && <h2>¿Conviene sumar otro móvil?</h2>}
     <p>Probá los costos de un mes. El precio corresponde a un viaje completo de ida y vuelta. La simulación no guarda gastos ni cambia tarifas.</p>
     <div className="form-grid">
       <label className="form-field">Precio promedio por traslado ($)<input type="number" min="0.01" step="0.01" value={form.precio} onChange={change("precio")} /></label>

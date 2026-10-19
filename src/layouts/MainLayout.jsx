@@ -8,6 +8,7 @@ const LS_KEY = "bandidos_vio_recordatorios";
 
 const PAGE_TITLES = {
   "/traslados/dia": "Traslados del día",
+  "/traslados/resultados": "Resultados de traslados",
   "/traslados/configuracion": "Bandimóviles",
   "/":                        "Inicio",
   "/agenda":                  "Agenda",

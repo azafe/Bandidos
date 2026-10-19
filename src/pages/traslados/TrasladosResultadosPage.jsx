@@ -5,11 +5,14 @@ import { asignarGastoTraslado, confirmarGastosTraslados, getTrasladosResultados,
 import { MOTIVOS_RESULTADO } from "../../lib/trasladosResultados";
 import { monthBoundsISO, todayISO } from "../../utils/dates";
 import SimuladorMovil from "../../components/traslados/SimuladorMovil";
+import ResultadosPanel from "../../components/traslados/resultados/ResultadosPanel";
+import ResultadosPendientes from "../../components/traslados/resultados/ResultadosPendientes";
+import { monto as fmt, numero as num } from "../../components/traslados/resultados/formato";
 import "../../styles/traslados.css";
+import "../../styles/traslados-resultados.css";
 
-const fmt = (n) => n === null || n === undefined ? "Pendiente" : Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });
-const num = (n) => n === null || n === undefined ? "—" : Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 });
-const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const FULL_DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const vehicleName = (vehicles, id) => vehicles.find((v) => v.id === id)?.nombre || "Sin distribuir";
 
 function VehicleSelect({ vehicles, value, onChange, label = "Móvil", disabled = false }) {
@@ -18,13 +21,17 @@ function VehicleSelect({ vehicles, value, onChange, label = "Móvil", disabled =
 
 function Categorias({ categories, selected, mutate, busy }) {
   const [ids, setIds] = useState(selected);
+  const [search, setSearch] = useState("");
+  const visible = categories.filter((c) => c.name.toLocaleLowerCase("es-AR").includes(search.trim().toLocaleLowerCase("es-AR")));
   return <form onSubmit={(e) => { e.preventDefault(); mutate(() => saveCategoriasTraslados(ids), "Categorías guardadas. Volvé a revisar los gastos del mes."); }}>
     <fieldset disabled={busy} className="traslados-tramo">
       <legend>Categorías de gastos del vehículo</legend>
-      <p>Elegí las categorías que usás para nafta, mantenimiento, seguro y patente. Se leen los gastos diarios y los cargos fijos de cada mes; no se copian ni se vuelven a sumar en Caja.</p>
-      <p>Dejá afuera los pagos a choferes: se calculan por separado según las condiciones pactadas.</p>
-      {categories.length ? categories.map((c) => <label className="traslados-check" key={c.id}><input type="checkbox" checked={ids.includes(c.id)} onChange={(e) => setIds((old) => e.target.checked ? [...old, c.id] : old.filter((id) => id !== c.id))} />{c.name}</label>) : <p>No hay categorías. Podés crearlas en <Link to="/catalog/expense-categories">Categorías de gastos</Link>.</p>}
+      <p>Seleccioná los gastos de vehículos. Los pagos a choferes se calculan aparte.</p>
+      <label className="form-field">Buscar categoría<input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ej.: nafta, seguro, traslados…" /></label>
+      <span className="resultados-caption">{ids.length} seleccionadas · La selección se aplica a todos los meses.</span>
+      {categories.length ? <div className="resultados-categorias">{visible.map((c) => <label className="traslados-check" key={c.id}><input type="checkbox" checked={ids.includes(c.id)} onChange={(e) => setIds((old) => e.target.checked ? [...old, c.id] : old.filter((id) => id !== c.id))} />{c.name}</label>)}{!visible.length && <p>No hay categorías con ese nombre.</p>}</div> : <p>No hay categorías. Podés crearlas en <Link to="/catalog/expense-categories">Categorías de gastos</Link>.</p>}
       <button type="submit" className="btn-secondary">Guardar categorías</button>
+      <details className="resultados-ayuda"><summary>Cómo se toman estos gastos</summary><p>Se leen los gastos diarios y los cargos fijos de cada mes. No se copian ni se vuelven a sumar en Caja.</p></details>
     </fieldset>
   </form>;
 }
@@ -51,12 +58,12 @@ function Reparto({ operation, vehicles, mutate, busy }) {
 
 function CondicionesPendientes({ operations, config, busy, mutate }) {
   const [confirmed, setConfirmed] = useState({});
-  if (!operations.length) return null;
-  return <section className="card traslados-resultados-seccion"><h2>Viajes sin condiciones económicas</h2>
+  if (!operations.length) return <p>No hay viajes disponibles para asignar condiciones desde este resumen. Revisá los recorridos en la <Link to="/traslados/dia">Hoja de ruta</Link>.</p>;
+  return <div>
     <p>Guardar una configuración nueva no cambia viajes anteriores. Si verificaste que a uno de estos viajes le correspondían las condiciones vigentes, podés asignárselas individualmente. Queda registrada la revisión.</p>
     {config?.modelo_pago ? <p>Condiciones a asignar · versión {config.version}: {config.modelo_pago === "ninguno" ? "sin pago al chofer" : config.modelo_pago === "porcentaje" ? `${config.valor_pago}% para choferes` : `${fmt(config.valor_pago)} por jornal`}. Referencia: {config.costo_referencia === null ? "pendiente" : `${fmt(config.costo_referencia)} por ${config.unidad_referencia === "dia" ? "día" : "traslado"}`}.</p> : <p>Primero definí el pago al chofer en <Link to="/traslados/configuracion">Configuración</Link>.</p>}
     {operations.map((o) => <div key={o.id} className="traslados-tramo"><strong>{o.mascota} · {fmt(o.precio)}</strong><label className="traslados-check"><input type="checkbox" disabled={busy || !config?.modelo_pago} checked={!!confirmed[o.id]} onChange={(e) => setConfirmed((v) => ({ ...v, [o.id]: e.target.checked }))} />Verifiqué que estas condiciones corresponden a este viaje</label><button type="button" className="btn-secondary" disabled={busy || !confirmed[o.id] || !config?.modelo_pago} onClick={() => mutate(() => revisarCondicionesTraslado(o.id, { configuracion_id: config.id, confirmar: true }), "Condiciones revisadas para ese viaje.")}>Asignar condiciones a este viaje</button></div>)}
-  </section>;
+  </div>;
 }
 
 function Registros({ tipo, rows, vehicles, drivers, date, mutate, busy }) {
@@ -71,9 +78,8 @@ function Registros({ tipo, rows, vehicles, drivers, date, mutate, busy }) {
     const body = { ...common, ...(jornada ? { chofer_id: form.chofer_id } : { concepto: form.concepto, pagado_por: form.pagado_por }), ...(editing ? { revision: form.revision, anulado: form.anulado } : { id: form.id }) };
     if (await mutate(() => guardarCostoTraslado(tipo, editing ? form.id : null, body), "Registro guardado.")) { setForm(empty()); setEditing(false); }
   }
-  return <section className="card traslados-resultados-seccion">
-    <h2>{jornada ? "Jornales de choferes" : "Gastos pagados fuera del local"}</h2>
-    <p>{jornada ? "Registrá una jornada por chofer y fecha, con el importe pactado. No se multiplica por la cantidad de perros ni de tramos. Es un costo de la unidad; registrarlo no genera un pago en Caja." : "Cargá los gastos del vehículo que pagó un socio o chofer y que no están en Gastos del local. No repitas aquí un gasto ya registrado. Estos importes no generan movimientos en Caja."}</p>
+  return <div>
+    <p>{jornada ? "Un jornal por chofer y fecha. Registrarlo no genera un pago en Caja." : "Gastos que pagó un socio o chofer y no están en Gastos del local. Registrarlos aquí no genera movimientos en Caja."}</p>
     <div className="traslados-registros">
       {rows.map((r) => <div className="traslados-registro" key={r.id}>
         <div><strong>{jornada ? r.chofer_nombre : r.concepto}</strong><p>{r.fecha} · {fmt(r.monto)} · {vehicleName(vehicles, r.vehiculo_id)}{r.anulado ? " · Anulado" : ""}{!jornada ? ` · Pagó ${r.pagado_por}` : ""}</p></div>
@@ -94,7 +100,7 @@ function Registros({ tipo, rows, vehicles, drivers, date, mutate, busy }) {
       <button className="btn-primary" type="submit">{editing ? "Guardar cambios" : "Agregar registro"}</button>
       {editing && <button className="btn-secondary" type="button" onClick={() => { setForm(empty()); setEditing(false); }}>Cancelar edición</button>}
     </fieldset></form>
-  </section>;
+  </div>;
 }
 
 export default function TrasladosResultadosPage() {
@@ -108,6 +114,18 @@ export default function TrasladosResultadosPage() {
   const [catalogs, setCatalogs] = useState({ vehicles: [], drivers: [], categories: [], config: null });
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
   const [error, setError] = useState(""), [message, setMessage] = useState("");
+  const [sections, setSections] = useState({});
+  function toggleSection(id, open) {
+    setSections((old) => old[id] === open ? old : { ...old, [id]: open });
+  }
+  function openSection(id) {
+    setSections((old) => ({ ...old, [id]: true, ...(id === "categorias" ? { gastos: true } : {}) }));
+    requestAnimationFrame(() => {
+      const element = document.getElementById(id);
+      element?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+      element?.querySelector("summary")?.focus({ preventScroll: true });
+    });
+  }
   const generation = useRef(0);
   const load = useCallback(async () => {
     const current = ++generation.current;
@@ -127,61 +145,97 @@ export default function TrasladosResultadosPage() {
       await action();
       if (current === generation.current) { setMessage(text); await load(); }
       return true;
-    } catch (err) { if (current === generation.current) setError(`${err.message}${err.status === 409 ? " Usá Volver a cargar para revisar los datos actuales." : ""}`); return false; }
+    } catch (err) { if (current === generation.current) setError(`${err.message}${err.status === 409 ? " Usá Actualizar para revisar los datos actuales." : ""}`); return false; }
     finally { setBusy(false); }
   }
   const selected = data && (vehicle ? data.vehiculos.find((v) => (v.vehiculo_id || "sin_asignar") === vehicle) : data.total);
   const date = todayISO().startsWith(mes) ? todayISO() : `${mes}-01`;
-  return <div className="page-content traslados-resultados">
-    <header className="page-header"><div><h1>Bandimóviles · Resultados</h1><p>La cuenta de los traslados, con sus propios ingresos y costos.</p></div></header>
-    <nav className="traslados-resultados-links"><Link to="/traslados/dia">Hoja de ruta</Link><Link to="/traslados/configuracion">Configurar pago y referencia</Link><Link to="/traslados/rendiciones">Rendiciones de choferes y socios</Link></nav>
-    <div className="form-grid card traslados-resultados-filtros">
-      <label className="form-field">Mes<input type="month" required value={mes} disabled={busy} onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) { setMes(e.target.value); setMessage(""); } }} /></label>
-      <label className="form-field">Ver resultado de<select value={vehicle} onChange={(e) => setVehicle(e.target.value)} disabled={busy}><option value="">Todos los móviles</option>{catalogs.vehicles.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}<option value="sin_asignar">Sin distribuir</option></select></label>
-      <button type="button" className="btn-secondary" disabled={loading || busy} onClick={load}>Volver a cargar</button>
+  const financialPending = (selected?.pendientes || []).filter((p) => !p.startsWith("referencia"));
+  const referencePending = (selected?.pendientes || []).filter((p) => p.startsWith("referencia"));
+  const unknownConditions = data?.operaciones.filter((o) => o.condiciones_pendientes) || [];
+  const distributions = data?.operaciones.filter((o) => o.sin_distribuir || o.vehiculos.length > 1 || o.reparto.length > 0) || [];
+  const completed = selected?.resultado !== null && selected?.resultado !== undefined;
+  const monthLabel = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)) - 1, 1).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
+  const panel = (id) => ({ id, open: !!sections[id], onToggle: toggleSection });
+  return <div className="page-content traslados-resultados resultados-page">
+    <header className="resultados-heading">
+      <div><h1>Bandimóviles</h1><p>Resultados del mes</p></div>
+      <button type="button" className="resultados-refresh" disabled={loading || busy} onClick={load} aria-label="Actualizar resultados"><span aria-hidden="true">↻</span> Actualizar</button>
+    </header>
+    <nav className="resultados-nav" aria-label="Secciones de Bandimóviles"><Link to="/traslados/dia">Hoja de ruta</Link><Link to="/traslados/rendiciones">Rendiciones</Link><Link to="/traslados/configuracion">Configuración</Link></nav>
+    <div className="resultados-filtros">
+      <label className="form-field">Mes<input type="month" required value={mes} disabled={busy} onChange={(e) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value)) { setMes(e.target.value); setMessage(""); } }} /></label>
+      <label className="form-field">Móvil<select value={vehicle} onChange={(e) => setVehicle(e.target.value)} disabled={busy}><option value="">Todos los móviles</option>{catalogs.vehicles.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}<option value="sin_asignar">Sin distribuir</option></select></label>
     </div>
-    {error && <p role="alert" className="traslados-error">{error}</p>}
-    {message && <p role="status">{message}</p>}
-    {loading ? <p role="status">Cargando resultados…</p> : selected && <>
-      <section className="traslados-resultados-kpis" aria-label="Cuenta de resultados">
-        {[["Ingresos cobrados", selected.ingresos], ["Pago a choferes calculado", selected.pago_choferes], ["Gastos registrados", selected.gastos], ["Resultado según lo pactado", selected.resultado]].map(([label, value]) => <div className="card" key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>)}
+    {error && <p role="alert" className="traslados-error resultados-message">{error}</p>}
+    {message && <p role="status" className="resultados-message">{message}</p>}
+    {loading ? <p role="status">Cargando resultados…</p> : selected ? <>
+      <section className={`resultados-balance${completed && selected.resultado < 0 ? " resultados-balance--negative" : ""}`} aria-label="Resultado del período">
+        <span className="resultados-eyebrow">Resultado del mes</span>
+        <h2>{completed ? fmt(selected.resultado) : "Ganancia por calcular"}</h2>
+        <p>{selected.nombre} · {monthLabel}</p>
+        <span className={`resultados-status${completed ? " resultados-status--ready" : ""}`}>{completed ? "Resultado calculado" : financialPending.length ? `${financialPending.length} pendientes por revisar` : "Falta completar información"}</span>
+        <details className="resultados-ayuda"><summary>Cómo se calcula</summary><p>Cobros registrados menos el pago pactado a choferes y los gastos del período. El dinero cobrado por un chofer no determina su remuneración. Los presupuestos y los cobros pendientes no son ingresos cobrados.</p><p>En consultas parciales desde Inicio, los gastos fijos se prorratean por días.</p></details>
       </section>
-      <section className="card traslados-resultados-seccion">
-        <h2>{selected.nombre}</h2>
-        <p>Resultado = cobros registrados − pago a choferes según las condiciones guardadas − gastos del período. Quién cobró el traslado no determina cuánto le corresponde al chofer.</p>
-        <p>Los gastos fijos se prorratean por días si consultás parte del mes desde Inicio. Los presupuestos y cobros pendientes no se suman a los ingresos.</p>
-        {selected.pendientes.length > 0 && <div className="traslados-resultados-pendientes"><strong>Faltan datos para completar la cuenta</strong><ul>{selected.pendientes.map((p) => <li key={p}>{MOTIVOS_RESULTADO[p] || p}</li>)}</ul>{selected.resultado === null ? <p>Subtotal con los importes conocidos: {fmt(selected.subtotal)}. Puede cambiar al completar los datos.</p> : <p>El resultado según lo pactado está calculado. Los pendientes indicados afectan la comparación con un chofer de referencia.</p>}</div>}
-        <h3>Si contratáramos un chofer de referencia</h3>
-        <p>Costo de referencia: <strong>{fmt(selected.costo_referencia)}</strong> · Resultado estimado: <strong>{fmt(selected.resultado_referencia)}</strong></p>
-        <p className="agenda-helper">Esta comparación reemplaza el pago pactado por el costo de referencia; no suma ambos. Usa las condiciones guardadas en cada viaje, sin aplicar la configuración actual a los anteriores.</p>
-      </section>
-      <section className="card traslados-resultados-seccion">
-        <h2>Actividad e indicadores</h2>
-        <div className="traslados-indicadores">
-          <p><strong>{num(selected.realizados)}</strong> viajes completos realizados</p><p><strong>{num(selected.bonificados)}</strong> bonificados</p>
-          <p><strong>{fmt(selected.ingreso_promedio_cobrado)}</strong> por viaje cobrado</p><p><strong>{fmt(selected.costo_por_traslado)}</strong> de costo por viaje realizado</p>
-          <p><strong>{num(selected.traslados_por_dia_activo)}</strong> viajes por día con actividad</p><p><strong>{selected.dias_activos}</strong> días con actividad</p>
-        </div>
-        <p className="agenda-helper">Un viaje completo cuenta una vez cuando todos sus tramos activos están entregados, según la fecha programada del último tramo. Los repartos entre móviles cuentan como fracciones equivalentes. El ingreso promedio usa la fecha del cobro; el costo por viaje relaciona los costos del período con su actividad.</p>
-        <div className="traslados-semana">{[1, 2, 3, 4, 5, 6, 0].map((i) => <div key={i}><span>{DAYS[i]}</span><strong>{num(selected.por_dia_semana[i])}</strong></div>)}</div>
-      </section>
-      <section className="card traslados-resultados-seccion"><h2>Comparación por móvil</h2><div className="traslados-tabla-scroll"><table><thead><tr><th>Móvil</th><th>Cobrado</th><th>Choferes</th><th>Gastos</th><th>Resultado</th></tr></thead><tbody>{data.vehiculos.map((v) => <tr key={v.vehiculo_id || "sin_asignar"}><th>{v.nombre}</th><td>{fmt(v.ingresos)}</td><td>{fmt(v.pago_choferes)}</td><td>{fmt(v.gastos)}</td><td>{fmt(v.resultado)}</td></tr>)}</tbody></table></div></section>
-      {data.historicos.cantidad > 0 && <section className="card traslados-resultados-seccion"><h2>Registros del formato anterior</h2><p>{data.historicos.cantidad} traslados · {fmt(data.historicos.importe_registrado)} registrados con el criterio anterior. Se muestran aparte porque no conocemos sus costos, asignaciones o fecha real de cobro.</p></section>}
-      <CondicionesPendientes operations={data.operaciones.filter((o) => o.condiciones_pendientes)} config={catalogs.config} busy={busy} mutate={mutate} />
-      <section className="card traslados-resultados-seccion" aria-label="Revisión de gastos">
-        <h2>Gastos del mes y revisión</h2>
-        <Categorias categories={catalogs.categories} selected={data.gastos.categorias} mutate={mutate} busy={busy} />
+      {data.historicos.cantidad > 0 && <ResultadosPanel {...panel("historicos")} title="Registros anteriores" description={`${num(data.historicos.cantidad)} traslados · Importe registrado${vehicle ? " · Total del local" : ""}`} badge={fmt(data.historicos.importe_registrado)}>
+        <p>Se conservan separados de los cobros nuevos. Falta conocer sus costos, asignaciones y fecha real de cobro para calcular su ganancia.</p>
+        <p className="resultados-caption">Este importe es el total del registro anterior del local; no está distribuido entre móviles.</p>
+      </ResultadosPanel>}
+      {!completed && <ResultadosPendientes pendientes={financialPending} onOpen={openSection} />}
+      <ResultadosPanel {...panel("cuenta")} title="Cobros y costos actuales" description="Solo registros del formato actual" badge={fmt(selected.ingresos) + " cobrados"}>
+        <dl className="resultados-importes" aria-label="Cuenta de resultados">
+          {[["Cobros registrados", selected.ingresos], ["Pago calculado a choferes", selected.pago_choferes], ["Gastos registrados", selected.gastos]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{fmt(value)}</dd></div>)}
+        </dl>
+        {!completed && <p className="resultados-caption">Subtotal conocido: {fmt(selected.subtotal)}. Puede cambiar al completar los pendientes; no es la ganancia final.</p>}
+      </ResultadosPanel>
+      <div className="resultados-section-label">Gestión del mes</div>
+      <ResultadosPanel {...panel("gastos")} title="Gastos del mes" description="Categorías, asignaciones y revisión" badge={data.gastos.confirmado ? "Revisados" : "Por revisar"}>
+        <ResultadosPanel {...panel("categorias")} title="Categorías del vehículo" description="Elegí qué gastos corresponden a los móviles" badge={data.gastos.categorias.length + " elegidas"}>
+          <Categorias categories={catalogs.categories} selected={data.gastos.categorias} mutate={mutate} busy={busy} />
+        </ResultadosPanel>
         <div className="traslados-registros">{data.costos.filter((c) => c.tipo !== "externo").map((c) => <div className="traslados-registro" key={`${c.tipo}-${c.id}`}><div><strong>{c.concepto} · {fmt(c.monto_periodo)}</strong><p>{c.fecha} · {c.tipo === "fijo" ? "Cargo fijo del mes" : "Gasto diario"}</p></div><VehicleSelect vehicles={catalogs.vehicles} value={c.vehiculo_id} disabled={busy} onChange={(e) => mutate(() => asignarGastoTraslado(c.tipo, c.id, { vehiculo_id: e.target.value || null, revision: c.revision }), "Móvil del gasto actualizado.")} /></div>)}</div>
-        {data.costos.length === 0 && <p>No hay gastos de las categorías elegidas ni costos externos cargados en este mes.</p>}
-        {!data.gastos.mes_fijo_armado && <p>El mes todavía no está armado en Gastos fijos. Revisá si corresponde cargar seguro, patente u otros cargos.</p>}
-        <p>Antes de confirmar, revisá que estén cargados todos los gastos del mes, incluidos los pagados fuera del local. Si un gasto cambia, la revisión queda pendiente nuevamente.</p>
-        <button type="button" className="btn-primary" disabled={busy || data.gastos.confirmado || !data.gastos.configurado} onClick={() => mutate(() => confirmarGastosTraslados({ from: data.from, to: data.to, revision: data.gastos.revision, confirmar: true }), "Gastos revisados.")}>{data.gastos.confirmado ? "Gastos del mes revisados" : "Confirmar que revisé los gastos del mes"}</button>
-      </section>
-      <Registros tipo="costos-externos" rows={data.costos_externos} vehicles={catalogs.vehicles} drivers={catalogs.drivers} date={date} mutate={mutate} busy={busy} />
-      {data.jornadas_pendientes.length > 0 && <div className="traslados-resultados-pendientes"><strong>Jornales pendientes de registrar</strong><ul>{data.jornadas_pendientes.map((j) => <li key={`${j.fecha}-${j.chofer_id}`}>{j.fecha} · {catalogs.drivers.find((d) => d.id === j.chofer_id)?.name || "Chofer"} · valor pactado de referencia: {fmt(j.monto_sugerido)}</li>)}</ul></div>}
-      <Registros tipo="jornadas" rows={data.jornadas} vehicles={catalogs.vehicles} drivers={catalogs.drivers} date={date} mutate={mutate} busy={busy} />
-      <section className="card traslados-resultados-seccion"><h2>Reparto de viajes entre móviles</h2><p>Cuando un solo móvil hace el viaje, recibe el 100% automáticamente. Si participaron varios, indicá el reparto que corresponda.</p>{data.operaciones.filter((o) => o.sin_distribuir || o.vehiculos.length > 1 || o.reparto.length > 0).map((o) => <Reparto key={o.id} operation={o} vehicles={catalogs.vehicles} mutate={mutate} busy={busy} />)}{data.operaciones.every((o) => !o.sin_distribuir && o.vehiculos.length <= 1 && !o.reparto.length) && <p>No hay viajes que requieran un reparto manual en este mes.</p>}</section>
-      <SimuladorMovil promedio={selected.ingreso_promedio_cobrado} />
-    </>}
+        {data.costos.length === 0 && <p>No hay gastos registrados para las categorías elegidas ni costos externos en este mes.</p>}
+        {!data.gastos.mes_fijo_armado && <p className="resultados-notice">El mes aún no está armado en <Link to="/expenses/fixed">Gastos fijos</Link>. Revisá si corresponde cargar seguro, patente u otros cargos.</p>}
+        <p>Confirmá después de revisar todos los gastos del mes, incluidos los pagados por socios o choferes. Si un gasto cambia, la revisión vuelve a quedar pendiente.</p>
+        {!data.gastos.configurado && <p className="resultados-caption">Primero guardá la selección de categorías, incluso si verificaste que no corresponde elegir ninguna.</p>}
+        <button type="button" className="btn-primary" disabled={busy || data.gastos.confirmado || !data.gastos.configurado} onClick={() => mutate(() => confirmarGastosTraslados({ from: data.from, to: data.to, revision: data.gastos.revision, confirmar: true }), "Gastos revisados.")}>{data.gastos.confirmado ? "Gastos del mes revisados" : "Confirmar revisión del mes"}</button>
+      </ResultadosPanel>
+      <ResultadosPanel {...panel("externos")} title="Gastos de socios y choferes" description="Pagados fuera del local" badge={data.costos_externos.filter((r) => !r.anulado).length}>
+        <Registros tipo="costos-externos" rows={data.costos_externos} vehicles={catalogs.vehicles} drivers={catalogs.drivers} date={date} mutate={mutate} busy={busy} />
+      </ResultadosPanel>
+      <ResultadosPanel {...panel("jornales")} title="Jornales de choferes" description="Un registro por persona y día" badge={data.jornadas_pendientes.length ? `${data.jornadas_pendientes.length} pendientes` : data.jornadas.filter((r) => !r.anulado).length}>
+        {data.jornadas_pendientes.length > 0 && <div className="resultados-notice"><strong>Jornales por registrar</strong><ul>{data.jornadas_pendientes.map((j) => <li key={`${j.fecha}-${j.chofer_id}`}>{j.fecha} · {catalogs.drivers.find((d) => d.id === j.chofer_id)?.name || "Chofer"} · importe pactado: {fmt(j.monto_sugerido)}</li>)}</ul></div>}
+        <Registros tipo="jornadas" rows={data.jornadas} vehicles={catalogs.vehicles} drivers={catalogs.drivers} date={date} mutate={mutate} busy={busy} />
+      </ResultadosPanel>
+      {(unknownConditions.length > 0 || financialPending.includes("pago_sin_definir")) && <ResultadosPanel {...panel("condiciones")} title="Condiciones de los viajes" description="Revisión individual del pago pactado" badge={unknownConditions.length}>
+        <CondicionesPendientes operations={unknownConditions} config={catalogs.config} busy={busy} mutate={mutate} />
+      </ResultadosPanel>}
+      <div className="resultados-section-label">Actividad y análisis</div>
+      <ResultadosPanel {...panel("actividad")} title="Actividad del mes" description="Recorridos completos del formato actual" badge={`${num(selected.realizados)} viajes`}>
+        <div className="resultados-actividad">
+          {[["Viajes completos", num(selected.realizados)], ["Bonificados", num(selected.bonificados)], ["Promedio cobrado", fmt(selected.ingreso_promedio_cobrado)], ["Costo por viaje", fmt(selected.costo_por_traslado)], ["Viajes por día activo", num(selected.traslados_por_dia_activo)], ["Días con actividad", num(selected.dias_activos)]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}
+        </div>
+        {selected.realizados === 0 && <p className="resultados-caption">No hay recorridos completos registrados en el formato actual para este período. Los registros anteriores se muestran aparte.</p>}
+        <h3 className="resultados-subheading">Por día de la semana</h3>
+        <div className="resultados-semana">{[1, 2, 3, 4, 5, 6, 0].map((i) => <div key={i} aria-label={`${FULL_DAYS[i]}: ${num(selected.por_dia_semana[i])} viajes`}><span>{DAYS[i]}</span><strong>{num(selected.por_dia_semana[i])}</strong></div>)}</div>
+        <details className="resultados-ayuda"><summary>Cómo se cuenta la actividad</summary><p>Un viaje cuenta una vez cuando todos sus tramos activos están entregados, por la fecha programada del último tramo. Los repartos entre móviles cuentan como fracciones equivalentes. El promedio usa la fecha de cobro; el costo por viaje relaciona los costos del período con su actividad.</p></details>
+      </ResultadosPanel>
+      <ResultadosPanel {...panel("asignaciones")} title="Comparación y reparto por móvil" description="Resultados y distribución de los viajes" badge={distributions.length ? `${distributions.length} repartos` : null}>
+        <div className="resultados-vehiculos">{data.vehiculos.map((v) => <article key={v.vehiculo_id || "sin_asignar"}><h3>{v.nombre}</h3><dl>{[["Cobrado", v.ingresos], ["Choferes", v.pago_choferes], ["Gastos", v.gastos], ["Resultado", v.resultado]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{fmt(value)}</dd></div>)}</dl></article>)}</div>
+        <p>Los gastos se asignan a cada móvil desde <button className="resultados-text-button" type="button" onClick={() => openSection("gastos")}>Gastos del mes</button>.</p>
+        <h3 className="resultados-subheading">Reparto de viajes</h3><p>Un único móvil recibe el 100%. Si participaron varios, indicá el reparto del viaje completo.</p>
+        {distributions.map((o) => <Reparto key={o.id} operation={o} vehicles={catalogs.vehicles} mutate={mutate} busy={busy} />)}
+        {!distributions.length && <p>No hay viajes que requieran un reparto manual en este mes.</p>}
+      </ResultadosPanel>
+      <ResultadosPanel {...panel("referencia")} title="Comparar con un chofer de referencia" description="Escenario alternativo al pago pactado" badge={referencePending.length ? `${referencePending.length} pendientes` : null}>
+        <dl className="resultados-importes"><div><dt>Costo de referencia</dt><dd>{fmt(selected.costo_referencia)}</dd></div><div><dt>Resultado estimado</dt><dd>{fmt(selected.resultado_referencia)}</dd></div></dl>
+        {referencePending.length > 0 && <ul>{referencePending.map((p) => <li key={p}>{MOTIVOS_RESULTADO[p] || "Revisá las condiciones de referencia."}</li>)}</ul>}
+        <p className="resultados-caption">La comparación reemplaza el pago pactado por el costo de referencia; no suma ambos. Usa las condiciones guardadas en cada viaje.</p>
+        <Link to="/traslados/configuracion">Revisar configuración de referencia</Link>
+      </ResultadosPanel>
+      <ResultadosPanel {...panel("simulador")} title="¿Conviene sumar otro móvil?" description="Simulá costos y punto de equilibrio">
+        <SimuladorMovil promedio={selected.ingreso_promedio_cobrado} embedded />
+      </ResultadosPanel>
+    </> : !loading && !error && <p role="status" className="resultados-message">No hay información para este móvil. Elegí otro filtro.</p>}
   </div>;
 }
