@@ -486,6 +486,8 @@ export function buildDashboardMetrics({
       trasladosCount,
       trasladosIncome,
       trasladosResultado: current.trasladosResultado?.total || null,
+      trasladosHistoricos: current.trasladosResultado?.historicos || null,
+      trasladosMes: range.from.slice(0, 7),
       deltas,
     },
     series: {
