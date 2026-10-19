@@ -91,6 +91,19 @@
 .cd-kpi-box__delta--up   { color: #16a34a; }
 .cd-kpi-box__delta--down { color: #dc2626; }
 
+.cd-kpi-box--traslados {
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+.cd-traslados-pendientes {
+  font-size: 0.8rem;
+  color: var(--color-text-soft);
+}
+.cd-traslados-pendientes summary { cursor: pointer; }
+.cd-traslados-pendientes ul { margin: 8px 0 0; padding-left: 20px; }
+.cd-traslados-pendientes li + li { margin-top: 6px; }
+
 .cd-split {
   display: grid;
   grid-template-columns: 1fr 1fr;

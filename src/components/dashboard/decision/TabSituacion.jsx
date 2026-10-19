@@ -1,4 +1,6 @@
 // src/components/dashboard/decision/TabSituacion.jsx
+import BandimovilesResumen from "./BandimovilesResumen";
+
 const fmt = (n) => `$${Math.round(n).toLocaleString("es-AR")}`;
 const pct = (n) => `${(n * 100).toFixed(1)}%`;
 
@@ -13,12 +15,10 @@ function marginInfo(margin) {
 export default function TabSituacion({ kpis }) {
   const {
     income, servicesIncome, petshopIncome,
-    expenses, dailyExpenseTotal, fixedExpenseTotal,
+    dailyExpenseTotal, fixedExpenseTotal,
     totalCosts, groomerCommissions, profit, margin,
     servicesCount, avgTicket,
-    trasladosResultado,
   } = kpis;
-  const trasladosDelta = kpis.deltas?.trasladosCount;
 
   const commissionRate = servicesIncome > 0 ? groomerCommissions / servicesIncome : 0.40;
   const info = marginInfo(margin);
@@ -72,23 +72,7 @@ export default function TabSituacion({ kpis }) {
           <span className="cd-kpi-box__label">Ticket promedio</span>
           <span className="cd-kpi-box__value">{fmt(avgTicket)}</span>
         </div>
-        <div className="cd-kpi-box">
-          <span className="cd-kpi-box__label">Resultado de Bandimóviles</span>
-          <span className="cd-kpi-box__value">{trasladosResultado?.resultado !== null && trasladosResultado?.resultado !== undefined ? fmt(trasladosResultado.resultado) : "Pendiente"}</span>
-          <span className="cd-kpi-box__note">{trasladosResultado ? `${trasladosResultado.realizados.toLocaleString("es-AR", { maximumFractionDigits: 2 })} viajes completos · ${fmt(trasladosResultado.ingresos)} cobrados` : "Cuenta de traslados no disponible"}</span>
-          {trasladosResultado?.resultado === null && <span className="cd-kpi-box__note">Faltan datos para completar la cuenta</span>}
-          {trasladosDelta !== null && trasladosDelta !== undefined && (
-            <span
-              className={`cd-kpi-box__delta${
-                trasladosDelta > 0 ? " cd-kpi-box__delta--up" : trasladosDelta < 0 ? " cd-kpi-box__delta--down" : ""
-              }`}
-            >
-              {trasladosDelta === 0
-                ? "Misma cantidad de turnos con traslado"
-                : `${trasladosDelta > 0 ? "+" : ""}${trasladosDelta} turnos con traslado vs mes anterior`}
-            </span>
-          )}
-        </div>
+        <BandimovilesResumen kpis={kpis} />
       </div>
 
       {/* Split: margen + desglose */}

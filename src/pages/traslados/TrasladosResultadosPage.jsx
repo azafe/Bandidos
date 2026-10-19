@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient";
 import { asignarGastoTraslado, confirmarGastosTraslados, getTrasladosResultados, guardarCostoTraslado, repartirTraslado, saveCategoriasTraslados, getTrasladoConfig, revisarCondicionesTraslado } from "../../services/trasladosApi";
 import { MOTIVOS_RESULTADO } from "../../lib/trasladosResultados";
@@ -98,7 +98,11 @@ function Registros({ tipo, rows, vehicles, drivers, date, mutate, busy }) {
 }
 
 export default function TrasladosResultadosPage() {
-  const [mes, setMes] = useState(() => todayISO().slice(0, 7));
+  const [searchParams] = useSearchParams();
+  const [mes, setMes] = useState(() => {
+    const requested = searchParams.get("mes");
+    return /^\d{4}-(0[1-9]|1[0-2])$/.test(requested || "") ? requested : todayISO().slice(0, 7);
+  });
   const [vehicle, setVehicle] = useState("");
   const [data, setData] = useState(null);
   const [catalogs, setCatalogs] = useState({ vehicles: [], drivers: [], categories: [], config: null });
