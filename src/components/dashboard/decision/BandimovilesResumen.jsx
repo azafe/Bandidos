@@ -7,29 +7,44 @@ const num = (n) => Number(n).toLocaleString("es-AR", { maximumFractionDigits: 2 
 export default function BandimovilesResumen({ kpis }) {
   const { trasladosResultado: resultado, trasladosHistoricos: historicos } = kpis;
   const completo = resultado?.resultado !== null && resultado?.resultado !== undefined;
+  const anteriores = historicos?.cantidad > 0;
+  const cobrosActuales = resultado && (resultado.ingresos !== 0 || !anteriores);
   // Las referencias del simulador no bloquean el resultado con costos reales.
   const pendientes = (resultado?.pendientes || []).filter((p) => !p.startsWith("referencia"));
   const delta = kpis.deltas?.trasladosCount;
   const destino = `/traslados/resultados${kpis.trasladosMes ? `?mes=${kpis.trasladosMes}` : ""}`;
 
-  return <section className="cd-kpi-box cd-kpi-box--traslados" aria-label="Resumen de Bandimóviles">
-    <span className="cd-kpi-box__label">Resultado de Bandimóviles</span>
-    <span className="cd-kpi-box__value">{completo ? fmt(resultado.resultado) : resultado ? "Sin completar" : "No disponible"}</span>
-    <span className="cd-kpi-box__note">Agenda: {num(kpis.trasladosCount)} turnos finalizados con traslado.</span>
+  return <section className="cd-bandimoviles" aria-label="Resumen de Bandimóviles">
+    <div className="cd-bandimoviles__header">
+      <h3>Bandimóviles</h3>
+      <span className="cd-bandimoviles__count">{num(kpis.trasladosCount)} {kpis.trasladosCount === 1 ? "turno con traslado" : "turnos con traslado"}</span>
+    </div>
     {resultado ? <>
-      <span className="cd-kpi-box__note">Formato actual: {num(resultado.realizados)} viajes completos · {fmt(resultado.ingresos)} en cobros registrados.</span>
-      {historicos?.cantidad > 0 && <span className="cd-kpi-box__note">
-        Formato anterior: {num(historicos.cantidad)} traslados · {fmt(historicos.importe_registrado)} registrados. Estos importes no acreditan cobros nuevos ni incluyen sus costos.
+      <div className="cd-bandimoviles__amounts">
+        {completo && <div><span>Resultado</span><strong>{fmt(resultado.resultado)}</strong></div>}
+        {cobrosActuales && <div><span>Cobros registrados</span><strong>{fmt(resultado.ingresos)}</strong></div>}
+        {anteriores && <div><span>Importe registrado{cobrosActuales ? " anteriormente" : ""}</span><strong>{fmt(historicos.importe_registrado)}</strong></div>}
+      </div>
+      {!completo && <div className="cd-bandimoviles__pending">
+        <strong>Ganancia por calcular</strong>
+        <span>{pendientes.length ? `${pendientes.length} ${pendientes.length === 1 ? "pendiente por revisar" : "pendientes por revisar"}` : "Falta completar información"}</span>
+      </div>}
+    </> : <div className="cd-bandimoviles__pending">
+      <strong>Resultado no disponible</strong><span>No se pudo consultar. Volvé a intentarlo desde el detalle.</span>
+    </div>}
+    <div className="cd-bandimoviles__footer">
+      {delta !== null && delta !== undefined && <span className="cd-bandimoviles__delta">
+        {delta === 0 ? "Sin variación respecto al mes anterior"
+          : `${delta > 0 ? "+" : ""}${delta} ${Math.abs(delta) === 1 ? "turno" : "turnos"} vs mes anterior`}
       </span>}
-      {!completo && (pendientes.length ? <details className="cd-traslados-pendientes">
-        <summary>Ver {pendientes.length} {pendientes.length === 1 ? "pendiente del cálculo" : "pendientes del cálculo"}</summary>
-        <ul>{pendientes.map((p) => <li key={p}>{MOTIVOS_RESULTADO[p] || "Hay datos por revisar en el detalle del resultado."}</li>)}</ul>
-      </details> : <span className="cd-kpi-box__note">Revisá el detalle para conocer los datos que faltan.</span>)}
-    </> : <span className="cd-kpi-box__note">No se pudo consultar el resultado. Los turnos de agenda no confirman el cobro ni la finalización del recorrido.</span>}
-    {delta !== null && delta !== undefined && <span className="cd-kpi-box__delta">
-      {delta === 0 ? "Misma cantidad de turnos finalizados con traslado que el mes anterior."
-        : `${delta > 0 ? "+" : ""}${delta} turnos finalizados con traslado vs mes anterior.`}
-    </span>}
-    <Link to={destino}>{completo ? "Ver detalle del resultado" : "Revisar resultado"}</Link>
+      <Link className="cd-bandimoviles__action" to={destino}>{completo ? "Ver resultado" : resultado ? "Revisar pendientes" : "Volver a consultar"}<span aria-hidden="true">→</span></Link>
+    </div>
+    {resultado && <details className="cd-bandimoviles__detail">
+      <summary>Ver detalle de los registros</summary>
+      <p>Los {num(kpis.trasladosCount)} turnos con traslado corresponden a servicios finalizados en Agenda.</p>
+      <p>Recorridos completos en el formato actual: {num(resultado.realizados)}. Cobros registrados: {fmt(resultado.ingresos)}.</p>
+      {anteriores && <p>Registro anterior: {num(historicos.cantidad)} traslados · {fmt(historicos.importe_registrado)}. Este importe no acredita cobros nuevos ni incluye los costos necesarios para calcular la ganancia.</p>}
+      {!completo && pendientes.length > 0 && <ul>{pendientes.map((p) => <li key={p}>{MOTIVOS_RESULTADO[p] || "Hay datos por revisar en el detalle del resultado."}</li>)}</ul>}
+    </details>}
   </section>;
 }

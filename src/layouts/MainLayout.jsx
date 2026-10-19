@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "../components/navigation/Sidebar";
-import AsistenteIA from "../components/dashboard/AsistenteIA";
 import { useAuth } from "../context/AuthContext";
 
 const LS_KEY = "bandidos_vio_recordatorios";
@@ -77,9 +76,6 @@ export default function MainLayout({ children }) {
 
         <main className="app-main-content">{children}</main>
       </div>
-
-      {/* Asistente IA: solo en Inicio */}
-      {pathname === "/" && <AsistenteIA />}
 
       {/* Toast de bienvenida: Recordatorios */}
       {showToast && !user?.chofer_id && (
