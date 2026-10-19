@@ -6,10 +6,8 @@ export default function DecisionCenter({ kpis }) {
   if (!kpis) return null;
 
   return (
-    <div className="cd-section">
-      <div className="cd-panel">
-        <TabSituacion kpis={kpis} />
-      </div>
-    </div>
+    <section className="cd-section" aria-label="Resumen económico">
+      <TabSituacion kpis={kpis} />
+    </section>
   );
 }

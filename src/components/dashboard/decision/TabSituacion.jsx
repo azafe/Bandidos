@@ -2,14 +2,14 @@
 import BandimovilesResumen from "./BandimovilesResumen";
 
 const fmt = (n) => `$${Math.round(n).toLocaleString("es-AR")}`;
-const pct = (n) => `${(n * 100).toFixed(1)}%`;
+const pct = (n) => `${(n * 100).toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
 function marginInfo(margin) {
-  if (margin < 0)    return { color: "#ef4444", bg: "#ef4444", label: "EN PÉRDIDA" };
-  if (margin < 0.10) return { color: "#f97316", bg: "#f97316", label: "MUY BAJO" };
-  if (margin < 0.20) return { color: "#eab308", bg: "#eab308", label: "BAJO" };
-  if (margin < 0.30) return { color: "#22c55e", bg: "#22c55e", label: "EN CRECIMIENTO" };
-  return               { color: "#3b82f6", bg: "#3b82f6", label: "OBJETIVO ALCANZADO" };
+  if (margin < 0)    return { color: "#b91c1c", bg: "#ef4444", label: "En pérdida" };
+  if (margin < 0.10) return { color: "#9a3412", bg: "#f97316", label: "Muy bajo" };
+  if (margin < 0.20) return { color: "#854d0e", bg: "#eab308", label: "Bajo" };
+  if (margin < 0.30) return { color: "#166534", bg: "#22c55e", label: "En crecimiento" };
+  return               { color: "#1d4ed8", bg: "#3b82f6", label: "Objetivo alcanzado" };
 }
 
 export default function TabSituacion({ kpis }) {
@@ -22,7 +22,7 @@ export default function TabSituacion({ kpis }) {
 
   const commissionRate = servicesIncome > 0 ? groomerCommissions / servicesIncome : 0.40;
   const info = marginInfo(margin);
-  const progressPct = Math.min(margin / 0.30, 1) * 100;
+  const progressPct = Math.max(0, Math.min(margin / 0.30, 1)) * 100;
 
   // Barra apilada: % sobre income
   const netPct    = income > 0 ? Math.max(profit, 0) / income : 0;
@@ -49,57 +49,50 @@ export default function TabSituacion({ kpis }) {
   };
 
   return (
-    <div>
-      {/* KPIs */}
-      <div className="cd-kpi-row cd-kpi-row--6">
+    <div className="cd-overview-content">
+      <div className="cd-overview">
+        <section className={`cd-result${profit < 0 ? " cd-result--negative" : ""}`} aria-label="Resultado del mes">
+          <span className="cd-result__eyebrow">Resultado del mes</span>
+          <h3>Ganancia neta</h3>
+          <strong className="cd-result__amount">{fmt(profit)}</strong>
+          <div className="cd-result__margin">
+            <span className="cd-result__margin-value">{pct(margin)} de margen</span>
+            <span className="cd-result__status" style={{ color: info.color }}>{info.label}</span>
+          </div>
+          <div className="cd-progress__track" aria-hidden="true">
+            <div className="cd-progress__fill" style={{ width: `${progressPct}%`, background: info.bg }} />
+          </div>
+          <p className="cd-result__hint">Objetivo de margen: 30%</p>
+        </section>
+      <div className="cd-kpi-row cd-kpi-row--overview" aria-label="Indicadores del mes">
         <div className="cd-kpi-box">
-          <span className="cd-kpi-box__label">Ingresos totales</span>
+          <span className="cd-kpi-box__label">Ingresos</span>
           <span className="cd-kpi-box__value cd-kpi-box__value--income">{fmt(income)}</span>
         </div>
         <div className="cd-kpi-box">
-          <span className="cd-kpi-box__label">Costos totales</span>
+          <span className="cd-kpi-box__label">Costos</span>
           <span className="cd-kpi-box__value cd-kpi-box__value--costs">{fmt(totalCosts)}</span>
         </div>
         <div className="cd-kpi-box">
-          <span className="cd-kpi-box__label">Ganancia neta</span>
-          <span className={`cd-kpi-box__value cd-kpi-box__value--profit${profit < 0 ? " negative" : ""}`}>{fmt(profit)}</span>
-        </div>
-        <div className="cd-kpi-box">
-          <span className="cd-kpi-box__label">Servicios realizados</span>
+          <span className="cd-kpi-box__label">Servicios</span>
           <span className="cd-kpi-box__value">{servicesCount}</span>
         </div>
         <div className="cd-kpi-box">
           <span className="cd-kpi-box__label">Ticket promedio</span>
           <span className="cd-kpi-box__value">{fmt(avgTicket)}</span>
         </div>
-        <BandimovilesResumen kpis={kpis} />
+      </div>
       </div>
 
+      <BandimovilesResumen kpis={kpis} />
+
       {/* Split: margen + desglose */}
+      <details className="cd-panel cd-financial-detail">
+      <summary>Ver desglose y análisis<span>Ingresos, gastos y comisiones</span></summary>
       <div className="cd-split">
         {/* Columna izquierda */}
         <div>
-          <div className="cd-margin-hero">
-            <span className="cd-margin-hero__number" style={{ color: info.color }}>
-              {(margin * 100).toFixed(1)}%
-            </span>
-            <span className="cd-margin-hero__badge" style={{ background: info.bg }}>
-              {info.label}
-            </span>
-          </div>
-
-          <div className="cd-progress">
-            <div className="cd-progress__label">
-              <span>Margen actual</span>
-              <span>Objetivo: 30%</span>
-            </div>
-            <div className="cd-progress__track">
-              <div
-                className="cd-progress__fill"
-                style={{ width: `${progressPct}%`, background: info.color }}
-              />
-            </div>
-          </div>
+          <h3 className="cd-detail-title">Distribución de ingresos</h3>
 
           {/* Barra apilada */}
           {income > 0 && (
@@ -188,6 +181,7 @@ export default function TabSituacion({ kpis }) {
           {diagTicket.msg}
         </div>
       </div>
+      </details>
     </div>
   );
 }
