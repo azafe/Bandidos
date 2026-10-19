@@ -130,7 +130,7 @@ export default function TrasladosResultadosPage() {
   const date = todayISO().startsWith(mes) ? todayISO() : `${mes}-01`;
   return <div className="page-content traslados-resultados">
     <header className="page-header"><div><h1>Bandimóviles · Resultados</h1><p>La cuenta de los traslados, con sus propios ingresos y costos.</p></div></header>
-    <nav className="traslados-resultados-links"><Link to="/traslados/dia">Hoja de ruta</Link><Link to="/traslados/configuracion">Configurar pago y referencia</Link></nav>
+    <nav className="traslados-resultados-links"><Link to="/traslados/dia">Hoja de ruta</Link><Link to="/traslados/configuracion">Configurar pago y referencia</Link><Link to="/traslados/rendiciones">Rendiciones de choferes y socios</Link></nav>
     <div className="form-grid card traslados-resultados-filtros">
       <label className="form-field">Mes<input type="month" required value={mes} disabled={busy} onChange={(e) => { if (/^\d{4}-\d{2}$/.test(e.target.value)) { setMes(e.target.value); setMessage(""); } }} /></label>
       <label className="form-field">Ver resultado de<select value={vehicle} onChange={(e) => setVehicle(e.target.value)} disabled={busy}><option value="">Todos los móviles</option>{catalogs.vehicles.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}<option value="sin_asignar">Sin distribuir</option></select></label>

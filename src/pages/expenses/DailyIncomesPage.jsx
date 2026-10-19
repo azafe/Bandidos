@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import { apiRequest } from "../../services/apiClient";
 import { todayISO } from "../../utils/dates";
+import { useAuth } from "../../context/AuthContext";
+import RendicionesCaja from "../../components/traslados/RendicionesCaja";
 
 const CONCEPTS = [
   { key: "traslados", label: "Traslados cobrados por el local", icon: "🚗", desc: "Cobros explícitos recibidos por el local" },
@@ -19,6 +21,7 @@ function formatCurrency(value) {
 }
 
 export default function DailyIncomesPage() {
+  const { user } = useAuth();
   const today = todayISO();
   const [selectedDate, setSelectedDate] = useState(today);
   const [loading, setLoading] = useState(true);
@@ -192,6 +195,7 @@ export default function DailyIncomesPage() {
         )}
         <p className="incomes-ref-help">Cobros de choferes registrados en la fecha elegida. Los registros anteriores sin detalle conservan su fecha de turno. Está separado de los totales de caja.</p>
       </section>
+      {user?.role === "admin" && !user?.chofer_id && <RendicionesCaja fecha={selectedDate} />}
     </div>
   );
 }
