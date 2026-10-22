@@ -105,6 +105,10 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </NavLink>
             )}
 
+            {(isEnabled("agenda") || user?.role === "admin") && (
+              <NavLink to="/traslados" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles</NavLink>
+            )}
+
             {isEnabled("agenda") && user?.role === "admin" && (
               <NavLink
                 to="/reservas-online"
@@ -255,10 +259,6 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               </>
             )}
 
-            {isEnabled("agenda") && <NavLink to="/traslados/dia" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Traslados del día</NavLink>}
-            {user?.role === "admin" && <NavLink to="/traslados/resultados" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles · Resultados</NavLink>}
-            {user?.role === "admin" && <NavLink to="/traslados/rendiciones" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles · Rendiciones</NavLink>}
-            {user?.role === "admin" && <NavLink to="/traslados/configuracion" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Bandimóviles · Configuración</NavLink>}
             {isEnabled("employees") && user?.role !== "staff" && (
               <NavLink
                 to="/employees"

@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 const LS_KEY = "bandidos_vio_recordatorios";
 
 const PAGE_TITLES = {
+  "/traslados": "Bandimóviles",
   "/traslados/dia": "Traslados del día",
   "/traslados/resultados": "Resultados de traslados",
   "/traslados/rendiciones": "Rendiciones de traslados",

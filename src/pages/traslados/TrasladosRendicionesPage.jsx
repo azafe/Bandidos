@@ -120,7 +120,7 @@ export default function TrasladosRendicionesPage() {
   const pendientesRepartos = visible ? data.viajes.filter((t) => !t.repartido).length : 0;
   return <div className="page-content traslados-resultados rendiciones-page">
     <header className="rendiciones-heading"><div><span className="rendicion-eyebrow">Bandimóviles</span><h1>Rendiciones</h1><p>Las cuentas de cada chofer y socio, en un solo lugar.</p></div><button className="btn-secondary" type="button" disabled={busy || loading || !validRange} onClick={() => setRefresh((v) => v + 1)}>Actualizar</button></header>
-    <nav className="rendiciones-nav" aria-label="Secciones de Bandimóviles"><Link to="/traslados/resultados">Resultados</Link><Link to="/expenses/daily-incomes">Movimientos en Caja</Link></nav>
+    <nav className="rendiciones-nav" aria-label="Caja"><Link to="/expenses/daily-incomes">Movimientos en Caja</Link></nav>
     <fieldset className="rendiciones-filtros" disabled={busy}><legend>Conceptos por revisar</legend>
       <label className="form-field">Desde<input required type="date" value={from} max={to || todayISO()} onChange={(e) => { setFrom(e.target.value); setMessage(""); }} /></label>
       <label className="form-field">Hasta<input required type="date" value={to} min={from} max={todayISO()} onChange={(e) => { setTo(e.target.value); setMessage(""); }} /></label>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useApiResource } from "../../hooks/useApiResource";
 import "../../styles/traslados.css";
 
@@ -13,13 +14,17 @@ export default function TramosFields({
   const vehicles = useApiResource("/v2/vehiculos");
   const zones = useApiResource("/v2/traslado-zonas");
   const employees = useApiResource("/v2/employees");
-  const patch = (tipo, changes) =>
+  const [copied, setCopied] = useState(false);
+  const busqueda = value.find((t) => t.tipo === "busqueda");
+  const patch = (tipo, changes) => {
+    setCopied(false);
     onChange(value.map((t) => (t.tipo === tipo ? { ...t, ...changes } : t)));
+  };
   return (
     <div className="traslados-tramos">
       <p className="agenda-helper">
-        Un solo precio para todo el traslado. Elegí los tramos que necesitás;
-        podés asignar chofer y móvil después.
+        Elegí si hay que buscar a la mascota, llevarla de vuelta o ambas.
+        El precio se carga una sola vez. Podés asignar chofer y móvil después.
       </p>
       {[vehicles.error, zones.error, employees.error].some(Boolean) && (
         <p role="alert">
@@ -36,7 +41,8 @@ export default function TramosFields({
                 <input
                   type="checkbox"
                   checked={!!t}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setCopied(false);
                     onChange(
                       event.target.checked
                         ? [
@@ -48,29 +54,26 @@ export default function TramosFields({
                             },
                           ]
                         : value.filter((v) => v.tipo !== tipo),
-                    )
-                  }
+                    );
+                  }}
                 />{" "}
                 {labels[tipo]}
               </label>
             </legend>
-            {t && (
+            {t && (<>
+              {tipo === "entrega" && busqueda && <>
+                <button type="button" className="btn-secondary traslados-copiar" disabled={!busqueda.direccion && !busqueda.chofer_id && !busqueda.vehiculo_id} onClick={() => {
+                  patch("entrega", { direccion: busqueda.direccion || "", chofer_id: busqueda.chofer_id || null, vehiculo_id: busqueda.vehiculo_id || null });
+                  setCopied(true);
+                }}>Usar dirección, chofer y móvil de la búsqueda</button>
+                {copied && <p role="status" className="agenda-helper">Datos copiados. Revisá la hora de entrega.</p>}
+              </>}
               <div className="form-grid">
                 <label className="form-field">
                   <span>Dirección de {labels[tipo].toLowerCase()}</span>
                   <input
                     value={t.direccion || ""}
                     onChange={(e) => patch(tipo, { direccion: e.target.value })}
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Fecha de {labels[tipo].toLowerCase()}</span>
-                  <input
-                    type="date"
-                    value={t.fecha_programada || fecha}
-                    onChange={(e) =>
-                      patch(tipo, { fecha_programada: e.target.value })
-                    }
                   />
                 </label>
                 <label className="form-field">
@@ -125,6 +128,14 @@ export default function TramosFields({
                     ))}
                   </select>
                 </label>
+              </div>
+              <details className="traslados-opciones">
+                <summary>Fecha y zona{t.fecha_programada && t.fecha_programada !== fecha ? ` · ${t.fecha_programada}` : " · mismo día del turno"}{t.zona_id ? " · zona asignada" : ""}</summary>
+                <div className="form-grid">
+                  <label className="form-field">
+                    <span>Fecha de {labels[tipo].toLowerCase()}</span>
+                    <input type="date" value={t.fecha_programada || fecha} onChange={(e) => patch(tipo, { fecha_programada: e.target.value })} />
+                  </label>
                 <label className="form-field">
                   <span>Zona de {labels[tipo].toLowerCase()}</span>
                   <select
@@ -147,7 +158,9 @@ export default function TramosFields({
                     )}
                   </select>
                 </label>
-              </div>
+                </div>
+              </details>
+            </>
             )}
           </fieldset>
         );

@@ -15,6 +15,8 @@ import TrasladosSettingsPage from "./pages/traslados/TrasladosSettingsPage";
 import TrasladosDiaPage from "./pages/traslados/TrasladosDiaPage";
 import TrasladosResultadosPage from "./pages/traslados/TrasladosResultadosPage";
 import TrasladosRendicionesPage from "./pages/traslados/TrasladosRendicionesPage";
+import BandimovilesLayout from "./pages/traslados/BandimovilesLayout";
+import BandimovilesInicioPage from "./pages/traslados/BandimovilesInicioPage";
 import EmployeesPage from "./pages/employees/EmployeesPage";
 import EmployeeDetailPage from "./pages/employees/EmployeeDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
@@ -92,10 +94,13 @@ function App() {
                   <Route path="/services/new" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/services/:id" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/agenda" element={<AgendaPage />} />
-                  <Route path="/traslados/dia" element={<TrasladosDiaPage />} />
-                  <Route path="/traslados/resultados" element={<AdminGuard><TrasladosResultadosPage /></AdminGuard>} />
-                  <Route path="/traslados/rendiciones" element={<AdminGuard><TrasladosRendicionesPage /></AdminGuard>} />
-                  <Route path="/traslados/configuracion" element={<AdminGuard><TrasladosSettingsPage /></AdminGuard>} />
+                  <Route path="/traslados" element={<BandimovilesLayout />}>
+                    <Route index element={<BandimovilesInicioPage />} />
+                    <Route path="dia" element={<TrasladosDiaPage />} />
+                    <Route path="resultados" element={<AdminGuard><TrasladosResultadosPage /></AdminGuard>} />
+                    <Route path="rendiciones" element={<AdminGuard><TrasladosRendicionesPage /></AdminGuard>} />
+                    <Route path="configuracion" element={<AdminGuard><TrasladosSettingsPage /></AdminGuard>} />
+                  </Route>
                   <Route path="/reservas-online" element={<AdminGuard><BookingSettingsPage /></AdminGuard>} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />

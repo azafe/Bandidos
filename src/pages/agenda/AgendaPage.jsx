@@ -470,12 +470,14 @@ export default function AgendaPage() {
   } = useAgendaDay(selectedDate);
 
   // Enlaces desde la ficha de mascota:
-  // - /agenda?nuevoTurno=1&petId=… abre el alta de turno con la mascota elegida.
+  // - /agenda?nuevoTurno=1 abre el alta; petId y traslado son opcionales.
   // - /agenda?date=YYYY-MM-DD&turno=… abre ese turno en su día.
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkRef = useRef(null);
   if (deepLinkRef.current === null) {
     deepLinkRef.current = {
+      nuevoTurno: searchParams.get("nuevoTurno") === "1",
+      traslado: searchParams.get("traslado") === "1",
       petId: searchParams.get("nuevoTurno") ? searchParams.get("petId") : null,
       turnoId: searchParams.get("turno"),
       date: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get("date") || "") ? searchParams.get("date") : null,
@@ -484,7 +486,7 @@ export default function AgendaPage() {
 
   useEffect(() => {
     const link = deepLinkRef.current;
-    if (!link.petId && !link.turnoId && !link.date) return;
+    if (!link.nuevoTurno && !link.petId && !link.turnoId && !link.date) return;
     if (link.date) {
       setSelectedDate(link.date);
       setCalendarView("day");
@@ -496,10 +498,12 @@ export default function AgendaPage() {
 
   useEffect(() => {
     const link = deepLinkRef.current;
-    if (!link.petId || pets.length === 0) return;
+    if ((!link.nuevoTurno && !link.petId) || (link.petId && pets.length === 0)) return;
     const petId = link.petId;
+    link.nuevoTurno = false;
     link.petId = null;
-    openCreate();
+    openCreate(link.date || undefined);
+    if (link.traslado) setForm((prev) => ({ ...prev, traslado: true }));
     if (pets.some((p) => String(p.id) === String(petId))) handlePetSelect(petId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pets]);
