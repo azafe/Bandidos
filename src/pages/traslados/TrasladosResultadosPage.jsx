@@ -162,7 +162,6 @@ export default function TrasladosResultadosPage() {
       <div><h1>Bandimóviles</h1><p>Resultados del mes</p></div>
       <button type="button" className="resultados-refresh" disabled={loading || busy} onClick={load} aria-label="Actualizar resultados"><span aria-hidden="true">↻</span> Actualizar</button>
     </header>
-    <nav className="resultados-nav" aria-label="Secciones de Bandimóviles"><Link to="/traslados/dia">Hoja de ruta</Link><Link to="/traslados/rendiciones">Rendiciones</Link><Link to="/traslados/configuracion">Configuración</Link></nav>
     <div className="resultados-filtros">
       <label className="form-field">Mes<input type="month" required value={mes} disabled={busy} onChange={(e) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(e.target.value)) { setMes(e.target.value); setMessage(""); } }} /></label>
       <label className="form-field">Móvil<select value={vehicle} onChange={(e) => setVehicle(e.target.value)} disabled={busy}><option value="">Todos los móviles</option>{catalogs.vehicles.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}<option value="sin_asignar">Sin distribuir</option></select></label>

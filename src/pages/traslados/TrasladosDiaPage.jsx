@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { apiRequest } from "../../services/apiClient";
 import { avanzarTramo, getHojaDeRuta, ordenarRuta } from "../../services/trasladosApi";
@@ -9,6 +10,7 @@ import { todayISO, addDaysISO } from "../../utils/dates";
 import "../../styles/traslados.css";
 import RevisionHistoricos from "../../components/traslados/RevisionHistoricos";
 import TrasladoHistoricoDetalle from "../../components/traslados/TrasladoHistoricoDetalle";
+import { NUEVO_TRASLADO } from "../../lib/bandimovilesInicio";
 
 export default function TrasladosDiaPage() {
   const { user } = useAuth();
@@ -68,9 +70,9 @@ export default function TrasladosDiaPage() {
 
   return <div className="page-content traslados-dia">
     <header className="page-header"><div>
-      <h1>{driver ? "Mis traslados" : "Traslados del día"}</h1>
+      <h1>{driver ? "Mis traslados" : "Recorrido del día"}</h1>
       <p>{driver ? "Tu recorrido y el estado de cada búsqueda o entrega." : "Organizá las búsquedas y entregas por chofer y móvil."}</p>
-    </div></header>
+    </div>{!driver && <Link className="btn-primary" to={NUEVO_TRASLADO}>Agendar un traslado</Link>}</header>
     <section className="card" aria-label="Filtros de la hoja de ruta">
       <fieldset disabled={busy} className="traslados-filtros">
         <div className="traslados-fecha">
@@ -89,7 +91,7 @@ export default function TrasladosDiaPage() {
       : loading ? <p role="status">Cargando hoja de ruta...</p> : <>
         {!driver && data.historicos_pendientes > 0 && <p className="card">Hay {data.historicos_pendientes} turno(s) con traslados del formato anterior. Su importación está pendiente de revisión; todavía no tienen una ruta asignada.</p>}
         <p>{data.items.length} paradas · {done} completadas · {data.items.length - done} pendientes</p>
-        {!data.items.length && !error && <div className="card">{driver ? "No tenés traslados asignados para este día." : "No hay paradas operativas para esta fecha y estos filtros."}</div>}
+        {!data.items.length && !error && <div className="card">{driver ? "No tenés traslados asignados para este día." : <><h2>No hay búsquedas ni entregas para mostrar</h2><p>Revisá la fecha y los filtros. Para agregar un viaje, creá un turno con Traslado activado en Agenda.</p><Link to={NUEVO_TRASLADO}>Agendar un traslado →</Link></>}</div>}
         {groups.map((group) => <section className="traslados-ruta" key={group.key} aria-label={`Ruta de ${group.chofer} · ${group.vehiculo}`}>
           <h2>{group.chofer} · {group.vehiculo}</h2>
           {(!group.chofer_id || !group.vehiculo_id) && <p>Asignación pendiente. Completala desde Agenda antes de salir.</p>}
