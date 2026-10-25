@@ -8,9 +8,9 @@ const LS_KEY = "bandidos_vio_recordatorios";
 
 const PAGE_TITLES = {
   "/traslados": "Bandimóviles",
-  "/traslados/dia": "Traslados del día",
+  "/traslados/dia": "Recorrido del día",
   "/traslados/resultados": "Resultados de traslados",
-  "/traslados/rendiciones": "Rendiciones de traslados",
+  "/traslados/rendiciones": "Rendiciones",
   "/traslados/configuracion": "Bandimóviles",
   "/":                        "Inicio",
   "/agenda":                  "Agenda",
@@ -74,7 +74,7 @@ export default function MainLayout({ children }) {
           >
             ☰
           </button>
-          <h1 className="app-header__page-title">{pageTitle}</h1>
+          <h1 className="app-header__page-title">{user?.chofer_id && pathname === "/traslados/dia" ? "Mis traslados" : pageTitle}</h1>
         </header>
 
         <main className="app-main-content">{children}</main>
