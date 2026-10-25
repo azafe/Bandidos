@@ -47,6 +47,35 @@ test("ida y vuelta comparte un precio: no se duplica ni se reparte en los tramos
   assert.equal(solicitudPayload({ traslado_amount: "8000", traslado_bonificado: true }, [], "2026-10-16").precio_total, 0);
 });
 
+test("el borrador comparte dirección y asignación, conservando fecha, hora, zona y notas de cada tramo", async () => {
+  const { compartirTramo, patchTramosDraft } = await import("./trasladoDraft.js");
+  const busqueda = { tipo: "busqueda", direccion: "Casa", chofer_id: "ana", vehiculo_id: "uno", hora_programada: "09:00", fecha_programada: "2026-10-25", zona_id: "centro" };
+  const entrega = { tipo: "entrega", direccion: "Otra casa", chofer_id: "juan", vehiculo_id: "dos", hora_programada: "12:30", fecha_programada: "2026-10-26", zona_id: "norte", notas: "Llamar antes", estado: "pendiente" };
+  const shared = compartirTramo(busqueda, entrega);
+  assert.equal(shared.direccion, "Casa");
+  assert.equal(shared.chofer_id, "ana");
+  assert.equal(shared.vehiculo_id, "uno");
+  for (const key of ["tipo", "hora_programada", "fecha_programada", "zona_id", "notas", "estado"]) assert.equal(shared[key], entrega[key]);
+  const rows = patchTramosDraft([busqueda, entrega], "busqueda", { direccion: "Nueva casa" }, true);
+  assert.ok(rows.every((t) => t.direccion === "Nueva casa"));
+  assert.equal(rows[1].hora_programada, "12:30");
+  assert.deepEqual(patchTramosDraft(rows, "entrega", { direccion: "Entrega especial" }, false).map((t) => t.direccion), ["Nueva casa", "Entrega especial"]);
+  assert.equal(entrega.direccion, "Otra casa");
+});
+
+test("cambiar el tipo de viaje recupera horarios y datos específicos sin duplicar el importe", async () => {
+  const { seleccionarTramos } = await import("./trasladoDraft.js");
+  const initial = [{ tipo: "busqueda", direccion: "Casa", hora_programada: "09:00", fecha_programada: "2026-10-25" }, { tipo: "entrega", direccion: "Casa", hora_programada: "12:30", fecha_programada: "2026-10-26" }];
+  const cache = Object.fromEntries(initial.map((t) => [t.tipo, t]));
+  const soloEntrega = [{ ...seleccionarTramos(initial, cache, "entrega", false)[0], direccion: "Dirección corregida" }];
+  const restored = seleccionarTramos(soloEntrega, cache, "ambos", false);
+  assert.deepEqual(restored.map((t) => t.hora_programada), ["09:00", "12:30"]);
+  assert.deepEqual(restored.map((t) => t.direccion), ["Dirección corregida", "Dirección corregida"]);
+  assert.equal(restored[1].fecha_programada, "2026-10-26");
+  assert.equal(seleccionarTramos(soloEntrega, cache, "ambos", true)[0].direccion, "Casa");
+  assert.ok(restored.every((t) => !Object.hasOwn(t, "precio_total") && !Object.hasOwn(t, "monto")));
+});
+
 test("chofer socio no se ofrece como groomer; conserva asignaciones históricas y función doble", async () => {
   const { groomerOptions } = await import("./traslados.js");
   const employees = [{ id: "a", name: "Jorge", role: "Socio", is_driver: true, status: "active" }, { id: "b", role: "Groomer", is_driver: true, status: "active" }, { id: "c", role: "Groomer", is_driver: false, status: "inactive" }];

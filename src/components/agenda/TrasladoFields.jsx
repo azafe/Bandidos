@@ -5,7 +5,7 @@ export default function TrasladoFields({ value, onChange, id, required = false, 
   return (
     <div className="agenda-traslado-fields">
       <label className="form-field" htmlFor={`${id}-amount`}>
-        <span>Precio total ida y vuelta{required && !bonificado ? " *" : ""}</span>
+        <span>Precio total del traslado{required && !bonificado ? " *" : ""}</span>
         <div className="agenda-input-currency">
           <span>$</span>
           <input
@@ -32,9 +32,9 @@ export default function TrasladoFields({ value, onChange, id, required = false, 
             traslado_amount: event.target.checked ? "0" : "",
           })}
         />
-        <span>Bonificado</span>
+        <span>Sin cargo</span>
       </label>
-      <small className="agenda-helper">{bonificado ? "Traslado sin cargo. No se registra un cobro." : "Al finalizar, cargá el monto o marcá Bonificado si fue sin cargo."}</small>
+      <small className="agenda-helper">{bonificado ? "Traslado sin cargo. No se registra un cobro." : required ? "Cargá el monto o marcá Sin cargo si no se cobra." : "Un solo precio. Podés cargarlo al finalizar."}</small>
     </div>
   );
 }

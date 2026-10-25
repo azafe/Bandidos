@@ -24,6 +24,7 @@ import {
 import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
 import TrasladoFields from "../../components/agenda/TrasladoFields";
+import NuevoTurnoForm from "../../components/agenda/NuevoTurnoForm";
 import { getTrasladoError, getTrasladoPayload, newTramos, solicitudPayload, groomerOptions } from "../../lib/traslados";
 import TramosFields from "../../components/traslados/TramosFields";
 import TurnoTrasladoPanel from "../../components/traslados/TurnoTrasladoPanel";
@@ -86,6 +87,7 @@ const FORM_FIELD_IDS = {
   time: "agenda-time",
   duration: "agenda-duration",
   pet_name: "agenda-pet",
+  owner_name: "agenda-owner",
   service_type_id: "agenda-service",
   deposit_amount: "agenda-deposit",
   status: "agenda-status",
@@ -95,6 +97,7 @@ const FORM_FIELD_ORDER = [
   "time",
   "duration",
   "pet_name",
+  "owner_name",
   "service_type_id",
   "deposit_amount",
   "status",
@@ -461,7 +464,7 @@ export default function AgendaPage() {
   const { items: serviceTypes } = useApiResource("/v2/service-types");
   const { items: paymentMethods } = useApiResource("/v2/payment-methods");
   const { items: employees } = useApiResource("/v2/employees");
-  const { items: pets } = useApiResource("/v2/pets");
+  const { items: pets, loading: petsLoading, error: petsError, refresh: refreshPets } = useApiResource("/v2/pets");
   const {
     items,
     loading,
@@ -650,11 +653,6 @@ export default function AgendaPage() {
     []
   );
 
-  const dailySummaryItems = useMemo(
-    () => [...items].sort((a, b) => (a.time || "").localeCompare(b.time || "")),
-    [items]
-  );
-  const nextTurno = dailySummaryItems[0] || null;
   const employeesById = useMemo(
     () =>
       new Map(
@@ -1038,6 +1036,7 @@ export default function AgendaPage() {
   }
 
   function closeForm() {
+    if (formLoading) return;
     setIsCreating(false);
     setIsEditing(false);
     setIsPetOpen(false);
@@ -1235,11 +1234,13 @@ export default function AgendaPage() {
     if (shouldValidate("time")) {
       if (!form.time) {
         errors.time = "Ingresá la hora.";
+      } else if (!/^\d{2}:\d{2}$/.test(form.time)) {
+        errors.time = "Completá la hora en formato HH:MM.";
       } else {
         const [hour, minute] = form.time.split(":").map(Number);
         if (
-          Number.isNaN(hour) ||
-          Number.isNaN(minute) ||
+          !Number.isInteger(hour) ||
+          !Number.isInteger(minute) ||
           hour < 7 ||
           hour > 22 ||
           minute > 59 ||
@@ -1345,6 +1346,29 @@ export default function AgendaPage() {
     }
     setFormError("");
     setFormStep(nextStep);
+  }
+
+  function patchNewTurno(patch) {
+    setForm((prev) => ({ ...prev, ...patch }));
+    setFormError("");
+    setFieldErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => !Object.hasOwn(patch, key))));
+  }
+
+  function toggleNewPet(value) {
+    setIsNewPet(value);
+    patchNewTurno({ pet_id: "", pet_name: "", breed: "", owner_name: "", owner_phone: "" });
+  }
+
+  function validateNewTurno() {
+    const errors = validateForm();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setFormError("Completá los campos marcados antes de continuar.");
+      focusInvalidField(getFirstInvalidField(errors));
+      return false;
+    }
+    setFormError("");
+    return true;
   }
 
   async function handleSubmit() {
@@ -2754,8 +2778,16 @@ export default function AgendaPage() {
         isOpen={isCreating}
         onClose={closeForm}
         title={isEditing ? "Editar turno" : "Nuevo turno"}
+        className={isEditing ? "" : "nuevo-turno-modal"}
       >
-        <div className="agenda-form">
+        {!isEditing ? <NuevoTurnoForm
+          form={form} onPatch={patchNewTurno} pets={pets} petsLoading={petsLoading} petsError={petsError} onRetryPets={refreshPets}
+          onPetSelect={handlePetSelect} isNewPet={isNewPet} onNewPet={toggleNewPet} fieldErrors={fieldErrors} error={formError}
+          onValidate={validateNewTurno} onSave={handleSubmit} onCancel={closeForm} saving={formLoading} tramos={tramosForm} onTramosChange={setTramosForm}
+          duration={{ mode: durationMode, customValue: customDuration, onPreset: handleDurationPillClick, onSelect: handleDurationModeChange, onCustomChange: handleCustomDurationChange, onCustomBlur: handleCustomDurationBlur }}
+          timeHandlers={{ onChange: handleTimeInputChange, onBlur: handleTimeInputBlur }}
+          endTime={form.time && durationPreview ? getEndTime(form.time, durationPreview) : ""} serviceTypes={serviceTypes} paymentMethods={paymentMethods}
+        /> : <div className="agenda-form">
           {isEditing ? (
             <div className="agenda-form__steps" role="tablist" aria-label="Pasos del turno">
               {FORM_STEPS.map((step) => (
@@ -3318,7 +3350,7 @@ export default function AgendaPage() {
               </button>
             )}
           </div>
-        </div>
+        </div>}
       </Modal>
 
       <Modal

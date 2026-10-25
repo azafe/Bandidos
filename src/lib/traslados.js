@@ -11,9 +11,9 @@ export function getTrasladoError(turno) {
   if (!Number.isFinite(amount) || amount < 0)
     return "Cargá un monto válido para el traslado.";
   if (turno.traslado_bonificado === true) {
-    return amount === 0 ? "" : "Un traslado bonificado debe tener monto cero.";
+    return amount === 0 ? "" : "Un traslado sin cargo debe tener monto cero.";
   }
-  return amount > 0 ? "" : "Cargá el monto del traslado o marcá Bonificado.";
+  return amount > 0 ? "" : "Cargá el monto del traslado o marcá Sin cargo.";
 }
 
 export function getTrasladoPayload(form, previous) {
