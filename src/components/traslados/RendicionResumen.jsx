@@ -9,6 +9,7 @@ export function RendicionSaldo({ saldo, label, note, anulada = false, neto = fal
     <strong className="rendicion-balance__amount">{anulada ? "Anulada" : pendiente ? "Por revisar" : fmt(Math.abs(saldo))}</strong>
     <span className="rendicion-balance__direction">{sentido}</span>
     {note && <p>{note}</p>}
+    {neto && saldo === 0 && <p>Consultá las rendiciones: puede haber entregas y pagos que se compensan en el neto.</p>}
   </div>;
 }
 

@@ -11,17 +11,22 @@ function MovimientoForm({ data, medios, busy, mutate }) {
   const [medio, setMedio] = useState(""), [referencia, setReferencia] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const entrega = data.saldo_pendiente > 0;
+  const importe = Number(monto);
+  const importeValido = Number.isFinite(importe) && importe > 0 && importe <= Math.abs(data.saldo_pendiente);
   return <form className="traslados-tramo rendicion-money-form" onSubmit={(e) => { e.preventDefault(); mutate(() => registrarMovimientoRendicion(data.id, { id, tipo: entrega ? "entrega_local" : "pago_persona", fecha, monto: Number(monto), payment_method_id: medio, referencia }), "Movimiento registrado."); }}>
     <fieldset disabled={busy}><legend className="rendicion-sr-only">{entrega ? "Registrar entrega al local" : "Registrar pago a la persona"}</legend>
-      <p className="rendicion-caption">Podés registrar un importe parcial, hasta completar el saldo.</p>
+      <div className="rendicion-money-context"><strong>{entrega ? `${data.persona_nombre} entrega al local` : `El local paga a ${data.persona_nombre}`}</strong><span>Saldo de esta rendición: {formatoRendicion(Math.abs(data.saldo_pendiente))}</span><p>Registrá lo que efectivamente se movió. Puede ser un importe parcial.</p></div>
       <div className="form-grid">
         <label className="form-field">Fecha del movimiento<input required type="date" value={fecha} max={todayISO()} onChange={(e) => setFecha(e.target.value)} /></label>
         <label className="form-field">Importe del movimiento ($)<input required type="number" min="0.01" step="0.01" max={Math.abs(data.saldo_pendiente).toFixed(2)} value={monto} onChange={(e) => setMonto(e.target.value)} /></label>
         <label className="form-field">Medio de pago<select required value={medio} onChange={(e) => setMedio(e.target.value)}><option value="">Elegí un medio</option>{medios.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
         <label className="form-field">Referencia o comprobante<input maxLength="200" value={referencia} onChange={(e) => setReferencia(e.target.value)} /></label>
       </div>
+      <button type="button" className="rendicion-fill-amount" onClick={() => setMonto(Math.abs(data.saldo_pendiente).toFixed(2))}>Usar saldo completo · {formatoRendicion(Math.abs(data.saldo_pendiente))}</button>
+      {importeValido && <p className="rendicion-money-preview" role="status">Vas a registrar {formatoRendicion(importe)} {entrega ? "recibidos por el local" : `pagados a ${data.persona_nombre}`}.</p>}
+      {monto !== "" && !importeValido && <p className="rendicion-notice" role="alert">Ingresá un importe mayor a cero y hasta {formatoRendicion(Math.abs(data.saldo_pendiente))}.</p>}
       <label className="traslados-check"><input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />Confirmo que el dinero se entregó o pagó</label>
-      <button type="submit" className="btn-primary" disabled={!confirmed}>{entrega ? "Registrar entrega" : "Registrar pago"}</button>
+      <button type="submit" className="btn-primary" disabled={!confirmed || !importeValido}>{entrega ? "Registrar entrega" : "Registrar pago"}</button>
     </fieldset>
   </form>;
 }
@@ -75,14 +80,15 @@ export default function RendicionDetalle({ id, refresh, medios, busy, mutate, on
     async function load() { setLoading(true); setError(""); try { const d = await obtenerRendicion(id); if (active) setData(d); } catch (e) { if (active) { setError(e.message); setData(null); } } finally { if (active) setLoading(false); } }
     load(); return () => { active = false; };
   }, [id, refresh]);
+  const puedeRegistrar = data && !data.anulada && Number.isFinite(data.saldo_pendiente) && data.saldo_pendiente !== 0;
   return <section id="rendicion-detalle" className="card rendicion-detalle" aria-label="Detalle de rendición confirmada">
     <div className="rendicion-titulo"><h2 ref={headingRef} tabIndex={-1}>Detalle de rendición</h2><button className="btn-secondary" disabled={busy} type="button" onClick={onClose}>Cerrar detalle</button></div>
     {loading ? <p role="status">Cargando rendición…</p> : error ? <p role="alert">{error}</p> : data && <>
       <div className="rendicion-detail-person"><h3>{data.persona_nombre}</h3><span className="rendicion-status">{data.anulada ? "Anulada" : "Confirmada"}</span><p className="rendicion-caption">{fechaRendicion(data.desde)} al {fechaRendicion(data.hasta)} · Rendición #{data.id.slice(0, 8)}</p></div>
       <RendicionSaldo saldo={data.saldo_pendiente} label="Saldo pendiente de esta rendición" anulada={data.anulada} note={data.anulada ? "Se conserva el detalle como antecedente." : "Incluye las entregas, pagos y reversiones registrados."} />
-      {!data.anulada && data.saldo_pendiente !== 0 && !panels["rendicion-movimiento"] && <button className="btn-primary rendicion-money-action" type="button" disabled={busy} onClick={prepareMovement}>{data.saldo_pendiente > 0 ? "Registrar entrega al local" : "Registrar pago a la persona"}</button>}
+      {puedeRegistrar && !panels["rendicion-movimiento"] && <button className="btn-primary rendicion-money-action" type="button" disabled={busy} onClick={prepareMovement}>{data.saldo_pendiente > 0 ? "Registrar entrega al local" : "Registrar pago a la persona"}</button>}
       {data.anulada && <p className="rendicion-notice">Motivo de anulación: {data.motivo_anulacion}</p>}
-      {!data.anulada && data.saldo_pendiente !== 0 && <RendicionPanel id="rendicion-movimiento" title={data.saldo_pendiente > 0 ? "Entrega al local" : "Pago a la persona"} description="Registrá únicamente el dinero que efectivamente se movió." open={!!panels["rendicion-movimiento"]} onToggle={togglePanel}>
+      {puedeRegistrar && <RendicionPanel id="rendicion-movimiento" title={data.saldo_pendiente > 0 ? "Entrega al local" : "Pago a la persona"} description="Registrá únicamente el dinero que efectivamente se movió." open={!!panels["rendicion-movimiento"]} onToggle={togglePanel}>
         <MovimientoForm key={`${data.id}-${data.movimientos.length}`} data={data} medios={medios} busy={busy} mutate={mutate} />
       </RendicionPanel>}
       <RendicionPanel id="rendicion-desglose" title="Cómo se formó el saldo" description="Cobros, remuneración y reintegros al confirmar." open={!!panels["rendicion-desglose"]} onToggle={togglePanel}>

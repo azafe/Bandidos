@@ -10,7 +10,7 @@
 .rendicion-eyebrow { color: #774b92; font-size: .78rem; font-weight: 600; }
 .rendiciones-nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .rendiciones-nav a, .rendicion-pendientes__actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6deed; background: #fbf9fe; color: #70468c; font-size: .82rem; text-decoration: none; }
-.rendiciones-page .rendiciones-filtros { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr); gap: 12px; border: 1px solid #e7e4ed; background: #fff; padding: 12px 16px 16px; margin: 0; border-radius: 16px; }
+.rendiciones-page .rendiciones-filtros { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; border: 1px solid #e7e4ed; background: #fff; padding: 12px 16px 16px; margin: 0; border-radius: 16px; }
 .rendiciones-filtros legend { padding-inline: 5px; font-size: .8rem; color: #676170; }
 .rendiciones-page .form-field { min-width: 0; margin: 0; font-size: .85rem; }
 .rendiciones-page input:not([type=checkbox]), .rendiciones-page select, .rendiciones-page textarea { width: 100%; max-width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; font-size: 1rem; }
@@ -95,12 +95,51 @@
 .rendicion-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .rendiciones-page [id], .rendiciones-page h2 { scroll-margin-top: calc(90px + env(safe-area-inset-top, 0px)); }
 .rendiciones-page a:focus-visible, .rendiciones-page button:focus-visible, .rendiciones-page summary:focus-visible, .rendiciones-page h2:focus-visible { outline: 2px solid #8055c3; outline-offset: 3px; border-radius: 5px; }
+.rendiciones-heading__actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.rendiciones-heading__actions a { color: #795196; font-size: .8rem; min-height: 44px; display: flex; align-items: center; text-decoration: none; }
+.rendicion-vistas { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.rendicion-vistas button { display: grid; grid-template-columns: 26px minmax(0,1fr); align-items: flex-start; gap: 10px; text-align: left; border: 1px solid #e5dfed; border-radius: 16px; padding: 18px; background: #fff; color: #6c6176; cursor: pointer; font: inherit; min-width: 0; }
+.rendicion-vistas button[aria-pressed=true] { border-color: #c7a8e1; background: linear-gradient(125deg,#f2eafa,#fdfbff); box-shadow: 0 2px 10px #65408108; }
+.rendicion-vistas__numero { display: grid; place-items: center; height: 26px; width: 26px; border-radius: 8px; background: #f1edf7; color: #997fae; font-size: .78rem; flex-shrink: 0; }
+.rendicion-vistas [aria-pressed=true] .rendicion-vistas__numero { background: #8452ad; color: #fff; }
+.rendicion-vistas__text { display: grid; gap: 6px; flex: 1; min-width: 0; }
+.rendicion-vistas__text strong { font-size: .88rem; color: #67417e; font-weight: 600; }
+.rendicion-vistas__text > span { font-size: .76rem; line-height: 1.6; }
+.rendicion-vistas__count { font-size: .71rem; grid-column: 2; justify-self: start; color: #805594; background: #f3eef8; padding: 3px 8px; border-radius: 6px; }
+.rendiciones-page .rendicion-scope { font-size: .76rem; color: #7a7084; margin: -2px 4px 0; line-height: 1.7; }
+.rendicion-view { display: grid; gap: 16px; min-width: 0; }
+.rendicion-view[hidden] { display: none; }
+.rendicion-view .rendicion-section-heading { margin-bottom: 0; }
+.rendicion-view .rendicion-section-heading h2 { font-size: 1.1rem; }
+.rendicion-view .rendicion-section-heading p { margin: 5px 0 0; }
+.rendicion-cuenta-filtros { display: flex; flex-wrap: wrap; gap: 8px; }
+.rendicion-cuenta-filtros button { display: inline-flex; gap: 9px; align-items: center; min-height: 44px; border: 1px solid #e3deeb; background: #fff; color: #6f627a; border-radius: 10px; padding: 8px 12px; font: inherit; font-size: .78rem; cursor: pointer; }
+.rendicion-cuenta-filtros button[aria-pressed=true] { background: #eee5fa; border-color: #d9c6eb; color: #6b3e8c; font-weight: 600; }
+.rendicion-cuenta-filtros button span { background: #f2eef8; border-radius: 5px; padding: 2px 5px; font-size: .72rem; }
+.rendicion-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; background: #f2ecf9; color: #8c63a4; font-size: 1rem; }
+.rendicion-persona__name > div { flex: 1; min-width: 0; }
+.rendicion-persona__name .rendicion-caption { display: block; margin-top: 4px; font-size: .72rem; }
+.rendicion-persona__review { padding: 14px 0; border-top: 1px solid #eee9f3; border-bottom: 1px solid #eee9f3; }
+.rendicion-persona__review > span { font-size: .75rem; }
+.rendicion-persona__review small { line-height: 1.6; }
+.rendicion-persona__sin-nuevos { text-align: center; padding-top: 7px; }
+.rendicion-preparar-intro { border: 1px solid #e4d9ef; border-radius: 16px; background: linear-gradient(120deg,#f6f0fc,#fff); padding: 20px; }
+.rendicion-preparar-intro h2 { margin: 8px 0; }
+.rendicion-preparar-intro p { color: #75657d; margin: 0; }
+.rendicion-history-view { padding: 22px; border: 1px solid #e7e0ef; border-radius: 18px; background: #fff; }
+.rendiciones-page .rendicion-history-note { border-left: 3px solid #ceb4e2; padding: 8px 14px; font-size: .8rem; color: #7b668a; background: #fbf8ff; margin: 0; line-height: 1.7; }
+.rendicion-money-context { display: grid; gap: 7px; background: #f7f2fc; border: 1px solid #e4d9ef; border-radius: 12px; padding: 16px; margin-bottom: 18px; }
+.rendicion-money-context strong { font-size: .92rem; color: #673d84; }
+.rendicion-money-context span { font-size: .8rem; color: #7a628b; }
+.rendicion-money-context p { margin: 0; font-size: .8rem !important; color: #766a7c; }
+.rendiciones-page .rendicion-fill-amount { width: auto; display: inline-flex; align-items: center; min-height: 44px; border: 0; background: transparent; color: #785092; padding: 10px 0; cursor: pointer; font: inherit; font-size: .8rem; text-decoration: underline; text-underline-offset: 3px; }
+.rendiciones-page .rendicion-money-preview { background: #eef8f1; color: #37734f; padding: 12px 14px; border-radius: 9px; font-size: .8rem; }
 @media (max-width: 640px) {
   .rendiciones-page { gap: 14px; }
   .rendiciones-heading { align-items: flex-start; }
   .rendiciones-heading h1 { font-size: 1.45rem; }
   .rendiciones-heading p { font-size: .8rem; }
-  .rendiciones-page .rendiciones-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 12px 12px; gap: 10px; }
+  .rendiciones-page .rendiciones-filtros { grid-template-columns: minmax(0,1fr); padding: 10px 12px 12px; gap: 10px; }
   .rendiciones-filtros > label:last-child { grid-column: 1 / -1; }
   .rendicion-persona { padding: 16px; }
   .rendicion-resumen-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
@@ -113,4 +152,24 @@
   .rendicion-money-action { justify-self: stretch; }
   .rendiciones-page fieldset > button, .rendicion-confirmacion > button { width: 100%; }
   .rendicion-titulo { align-items: flex-start; }
+  .rendiciones-heading { flex-wrap: wrap; gap: 14px; }
+  .rendiciones-heading__actions { width: 100%; justify-content: space-between; }
+  .rendicion-vistas { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+  .rendicion-vistas button { display: flex; flex-direction: column; align-items: flex-start; padding: 12px 10px; gap: 8px; }
+  .rendicion-vistas__text { gap: 3px; }
+  .rendicion-vistas__text strong { font-size: .73rem; line-height: 1.5; }
+  .rendicion-vistas__text > span { display: none; }
+  .rendicion-vistas__count { margin-top: auto; max-width: 100%; text-align: left; font-size: .63rem; }
+  .rendicion-cuenta-filtros { gap: 6px; }
+  .rendicion-cuenta-filtros button { flex: 1 0 calc(50% - 6px); justify-content: space-between; font-size: .73rem; padding-inline: 10px; }
+  .rendicion-history-view { padding: 16px; }
 }
+
+.rendicion-periodo { min-width: 0; border: 0; }
+.rendiciones-page .rendicion-periodo > summary { display: grid; gap: 6px; padding: 0; font-weight: 400; cursor: pointer; list-style: none; }
+.rendicion-periodo > summary::-webkit-details-marker { display: none; }
+.rendicion-periodo summary > span { font-size: .76rem; color: #7b6d85; }
+.rendicion-periodo summary > strong { font-size: .8rem; font-weight: 500; color: #685179; padding: 12px; background: #f8f5fc; border: 1px solid #eee7f5; border-radius: 10px; }
+.rendicion-periodo summary > strong > span { float: right; margin-left: 8px; }
+.rendicion-periodo__fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 14px; }
+.rendicion-periodo[open] > summary { margin-bottom: 10px; }

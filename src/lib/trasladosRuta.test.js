@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { gruposDeRuta, moverParada, SIGUIENTE_ESTADO } from "./trasladosRuta.js";
+import { gruposDeRuta, moverParada, SIGUIENTE_ESTADO, resumenRuta, coincideVistaRuta, faltantesParada } from "./trasladosRuta.js";
 import { bandimovilWhatsAppLink, buildMensajeBandimovil } from "../utils/whatsapp.js";
 import { mapsLink } from "./booking/format.js";
 
@@ -21,6 +21,26 @@ test("la hoja de ruta conserva el orden del servidor y separa choferes y móvile
   assert.deepEqual(groups[0].items.map((t) => t.id), ["a", "d"]);
   assert.equal(moverParada(items, 0, -1), items);
   assert.equal(SIGUIENTE_ESTADO.entregado, undefined);
+});
+
+test("el avance excluye cancelaciones y diferencia paradas por salir, en viaje y completadas", () => {
+  const ready = { direccion: "San Martín 100", chofer_id: "jorge", vehiculo_id: "uno" };
+  const items = [
+    { id: "a", estado: "pendiente", ...ready },
+    { id: "b", estado: "en_camino", ...ready },
+    { id: "c", estado: "retirado", ...ready },
+    { id: "d", estado: "entregado" },
+    { id: "e", estado: "cancelado" },
+    { id: "f", estado: "pendiente", direccion: "  " },
+  ];
+  assert.deepEqual(resumenRuta(items), { total: 5, pendientes: 2, enViaje: 2, completadas: 1, porPreparar: 1 });
+  assert.deepEqual(items.filter((t) => coincideVistaRuta(t, "enViaje")).map((t) => t.id), ["b", "c"]);
+  assert.deepEqual(items.filter((t) => coincideVistaRuta(t, "completadas")).map((t) => t.id), ["d"]);
+  assert.deepEqual(items.filter((t) => coincideVistaRuta(t, "pendientes")).map((t) => t.id), ["a", "f"]);
+  assert.deepEqual(items.filter((t) => coincideVistaRuta(t, "todas")).map((t) => t.id), ["a", "b", "c", "d", "f"]);
+  assert.deepEqual(resumenRuta([]), { total: 0, pendientes: 0, enViaje: 0, completadas: 0, porPreparar: 0 });
+  assert.deepEqual(faltantesParada(items[5]), ["dirección", "chofer", "móvil"]);
+  assert.deepEqual(faltantesParada(ready), []);
 });
 
 test("Maps y WhatsApp usan el destino del tramo, validan teléfonos y preparan el aviso", () => {

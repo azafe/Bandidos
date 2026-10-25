@@ -6,6 +6,7 @@ import { fechaRendicion, formatoRendicion as fmt } from "../../lib/rendiciones";
 import { todayISO } from "../../utils/dates";
 import RendicionDetalle from "../../components/traslados/RendicionDetalle";
 import RendicionPanel from "../../components/traslados/RendicionPanel";
+import RendicionCuenta from "../../components/traslados/RendicionCuenta";
 import { RendicionConceptos, RendicionImportes, RendicionSaldo } from "../../components/traslados/RendicionResumen";
 import "../../styles/traslados.css";
 import "../../styles/traslados-rendiciones.css";
@@ -61,6 +62,8 @@ export default function TrasladosRendicionesPage() {
   const [loadedSelection, setLoadedSelection] = useState(null);
   const [error, setError] = useState(""), [message, setMessage] = useState("");
   const [panels, setPanels] = useState({}), [target, setTarget] = useState(""), [registrar, setRegistrar] = useState(false);
+  const [vista, setVista] = useState("cuentas");
+  const [cuentaFiltro, setCuentaFiltro] = useState("todas");
   const returnFocus = useRef(null);
   const validRange = from && to && from <= to;
   useEffect(() => {
@@ -83,14 +86,22 @@ export default function TrasladosRendicionesPage() {
     finally { setBusy(false); }
   }
   const visible = !loading && data?.from === from && data?.to === to && loadedSelection?.persona === persona && loadedSelection?.offset === offset && loadedSelection?.refresh === refresh;
-  const shownPeople = visible ? data.personas.filter((p) => (!persona || p.id === persona) && (p.cantidad > 0 || p.saldo_confirmado_pendiente !== 0 || p.id === persona)) : [];
+  const people = visible ? data.personas.filter((p) => (!persona || p.id === persona) && (p.cantidad > 0 || p.saldo_confirmado_pendiente !== 0 || p.id === persona)) : [];
+  const accountFilters = [
+    ["todas", "Todas", people.length],
+    ["entregas", "Deben entregar", people.filter((p) => p.saldo_confirmado_pendiente > 0).length],
+    ["pagos", "Deben recibir", people.filter((p) => p.saldo_confirmado_pendiente < 0).length],
+    ["nuevas", "Con conceptos nuevos", people.filter((p) => p.cantidad > 0).length],
+  ];
+  const shownPeople = people.filter((p) => cuentaFiltro === "entregas" ? p.saldo_confirmado_pendiente > 0 : cuentaFiltro === "pagos" ? p.saldo_confirmado_pendiente < 0 : cuentaFiltro === "nuevas" ? p.cantidad > 0 : true);
   useEffect(() => {
     if (!target || !visible) return;
     const frame = requestAnimationFrame(() => {
       if (target === "rendicion-return") {
         const origin = returnFocus.current;
         const canRestore = origin?.isConnected && origin !== document.body && origin !== document.documentElement && !origin.disabled && origin.getClientRects().length > 0;
-        const destination = canRestore ? origin : document.getElementById("rendicion-personas-title");
+        const fallback = vista === "cuentas" ? document.getElementById("rendicion-personas-title") : vista === "historial" ? document.querySelector("#rendicion-historial h2") : document.getElementById("rendicion-preparar-title");
+        const destination = canRestore ? origin : fallback;
         destination?.focus();
         setTarget("");
         return;
@@ -102,9 +113,10 @@ export default function TrasladosRendicionesPage() {
       setTarget("");
     });
     return () => cancelAnimationFrame(frame);
-  }, [target, visible]);
+  }, [target, visible, vista, activeId]);
   const togglePanel = (id, open) => setPanels((p) => p[id] === open ? p : { ...p, [id]: open });
   function goTo(id, person = persona) {
+    setVista(id === "rendicion-historial" ? "historial" : "preparar");
     setPersona(person); setOffset(0); setActiveId(""); setMessage("");
     setPanels((p) => ({ ...p, [id]: true })); setTarget(id);
   }
@@ -119,44 +131,53 @@ export default function TrasladosRendicionesPage() {
   const pendientesGastos = visible ? data.gastos.filter((g) => !g.revisado).length : 0;
   const pendientesRepartos = visible ? data.viajes.filter((t) => !t.repartido).length : 0;
   return <div className="page-content traslados-resultados rendiciones-page">
-    <header className="rendiciones-heading"><div><span className="rendicion-eyebrow">Bandimóviles</span><h1>Rendiciones</h1><p>Las cuentas de cada chofer y socio, en un solo lugar.</p></div><button className="btn-secondary" type="button" disabled={busy || loading || !validRange} onClick={() => setRefresh((v) => v + 1)}>Actualizar</button></header>
-    <nav className="rendiciones-nav" aria-label="Caja"><Link to="/expenses/daily-incomes">Movimientos en Caja</Link></nav>
-    <fieldset className="rendiciones-filtros" disabled={busy}><legend>Conceptos por revisar</legend>
-      <label className="form-field">Desde<input required type="date" value={from} max={to || todayISO()} onChange={(e) => { setFrom(e.target.value); setMessage(""); }} /></label>
-      <label className="form-field">Hasta<input required type="date" value={to} min={from} max={todayISO()} onChange={(e) => { setTo(e.target.value); setMessage(""); }} /></label>
-      <label className="form-field">Filtrar persona<select value={persona} onChange={(e) => { setPersona(e.target.value); setOffset(0); setActiveId(""); setMessage(""); }}><option value="">Todas las personas</option>{data?.personas.map((p) => <option key={p.id} value={p.id}>{p.name}{p.status !== "active" ? " (inactiva)" : ""}</option>)}</select></label>
+    <header className="rendiciones-heading"><div><span className="rendicion-eyebrow">Bandimóviles · Cuentas del equipo</span><h1>Rendiciones</h1><p>Quién entrega, quién recibe y qué falta confirmar.</p></div><div className="rendiciones-heading__actions"><Link to="/expenses/daily-incomes">Ver Caja →</Link><button className="btn-secondary" type="button" disabled={busy || loading || !validRange} onClick={() => setRefresh((v) => v + 1)}>↻ Actualizar</button></div></header>
+    <nav className="rendicion-vistas" aria-label="Tareas de rendiciones">{[
+      ["cuentas", "Cuentas por persona", "Consultá quién entrega o recibe.", visible ? people.length : "—"],
+      ["preparar", "Preparar rendiciones", "Revisá los conceptos y confirmá.", visible ? data.pendientes.length ? `${data.pendientes.length} por revisar` : "Listo para revisar" : "—"],
+      ["historial", "Entregas y pagos", "Registrá el dinero que se movió.", visible ? history.total : "—"],
+    ].map(([id, title, description, count], index) => <button key={id} type="button" aria-pressed={vista === id && !activeId} disabled={busy || loading} onClick={() => { setVista(id); setActiveId(""); setMessage(""); }}><span className="rendicion-vistas__numero" aria-hidden="true">{index + 1}</span><span className="rendicion-vistas__text"><strong>{title}</strong><span>{description}</span></span><span className="rendicion-vistas__count">{count}</span></button>)}</nav>
+    <fieldset className="rendiciones-filtros" disabled={busy}><legend>Consultar cuentas</legend>
+      <label className="form-field">Filtrar persona<select value={persona} onChange={(e) => { setPersona(e.target.value); setCuentaFiltro("todas"); setOffset(0); setActiveId(""); setMessage(""); }}><option value="">Todas las personas</option>{data?.personas.map((p) => <option key={p.id} value={p.id}>{p.name}{p.status !== "active" ? " (inactiva)" : ""}</option>)}</select></label>
+      <details className="rendicion-periodo"><summary><span>Período de conceptos nuevos</span><strong>{fechaRendicion(from)} al {fechaRendicion(to)} <span aria-hidden="true">⌄</span></strong></summary><div className="rendicion-periodo__fields">
+        <label className="form-field">Desde<input required type="date" value={from} max={to || todayISO()} onChange={(e) => { setFrom(e.target.value); setMessage(""); }} /></label>
+        <label className="form-field">Hasta<input required type="date" value={to} min={from} max={todayISO()} onChange={(e) => { setTo(e.target.value); setMessage(""); }} /></label>
+      </div><p className="rendicion-caption">El período filtra los conceptos nuevos. Los saldos confirmados y las entregas o pagos incluyen todos los períodos.</p></details>
     </fieldset>
     {!validRange && <p role="alert">Elegí un período válido.</p>}{!activeId && feedback}
     {loading && <p role="status">Cargando rendiciones…</p>}
     {visible && <>
-      <section aria-labelledby="rendicion-personas-title"><div className="rendicion-section-heading"><h2 id="rendicion-personas-title" tabIndex={-1}>Saldos por persona</h2><span className="rendicion-caption">Confirmados · todos los períodos</span></div>
-        <div className="rendicion-personas">{shownPeople.map((p) => <article className="rendicion-persona" key={p.id} aria-label={`Cuenta de ${p.name}`}>
-          <div className="rendicion-persona__name"><h3>{p.name}</h3>{p.status !== "active" && <span className="rendicion-status">Inactiva</span>}</div>
-          <RendicionSaldo saldo={p.saldo_confirmado_pendiente} label="Saldo neto confirmado" neto />
-          <div className="rendicion-persona__review"><span>Por confirmar en este período</span><strong>{p.saldo_por_confirmar === null ? "Por revisar" : fmt(Math.abs(p.saldo_por_confirmar))}</strong><small>{p.saldo_por_confirmar === null ? "Faltan datos para calcularlo" : p.saldo_por_confirmar > 0 ? "A entregar al local" : p.saldo_por_confirmar < 0 ? "A recibir del local" : `${p.cantidad} conceptos nuevos · saldo en cero`}</small></div>
-          <div className="rendicion-persona__actions"><button type="button" className={p.saldo_confirmado_pendiente !== 0 ? "btn-primary" : "btn-secondary"} disabled={busy} onClick={() => goTo("rendicion-historial", p.id)}>{p.saldo_confirmado_pendiente !== 0 ? "Ver entregas y pagos" : "Ver rendiciones"}<span className="rendicion-sr-only"> de {p.name}</span></button><button type="button" className={p.saldo_confirmado_pendiente === 0 && p.cantidad > 0 ? "btn-primary" : "btn-secondary"} disabled={busy} onClick={() => goTo("rendicion-preparar", p.id)}>Preparar rendición<span className="rendicion-sr-only"> de {p.name}</span></button></div>
-        </article>)}</div>
-        {!shownPeople.length && <p className="rendicion-empty">No hay conceptos ni saldos pendientes para mostrar. Podés elegir una persona para consultar su historial.</p>}
+      <section className="rendicion-view" hidden={vista !== "cuentas" || !!activeId} aria-labelledby="rendicion-personas-title">
+        <div className="rendicion-section-heading"><div><h2 id="rendicion-personas-title" tabIndex={-1}>¿Cómo están las cuentas?</h2><p className="rendicion-caption">Saldos netos confirmados · todos los períodos</p></div></div>
+        <nav className="rendicion-cuenta-filtros" aria-label="Filtrar cuentas por situación">{accountFilters.map(([id, label, count]) => <button key={id} type="button" aria-pressed={cuentaFiltro === id} disabled={busy} onClick={() => setCuentaFiltro(id)}>{label}<span>{count}</span></button>)}</nav>
+        <div className="rendicion-personas">{shownPeople.map((p) => <RendicionCuenta key={p.id} persona={p} busy={busy} onHistory={() => goTo("rendicion-historial", p.id)} onPrepare={() => goTo("rendicion-preparar", p.id)} />)}</div>
+        {!shownPeople.length && <p className="rendicion-empty">No hay cuentas para esta selección. Probá con otra situación o elegí una persona para consultar sus rendiciones.</p>}
         <p className="rendicion-caption">El saldo neto reúne las rendiciones confirmadas de todos los períodos. Cada entrega o pago se registra en su rendición.</p>
       </section>
     </>}
     {activeId && <>{feedback}<RendicionDetalle key={activeId} id={activeId} refresh={refresh} medios={medios} busy={busy} mutate={mutate} registrar={registrar} onClose={closeDetail} /></>}
     {visible && <>
+      <div className="rendicion-view" hidden={vista !== "preparar" || !!activeId}>
+      <div className="rendicion-preparar-intro"><span className="rendicion-eyebrow">Antes de registrar dinero</span><h2 id="rendicion-preparar-title" tabIndex={-1}>Revisá y confirmá los conceptos</h2><p>Confirmar una rendición guarda lo que corresponde entregar o recibir. La entrega o el pago se registra después, cuando ocurre.</p></div>
       {data.pendientes.length > 0 && <section className="rendicion-pendientes" aria-label="Pendientes del período"><h2>Antes de confirmar</h2><p>{data.pendientes.length} {data.pendientes.length === 1 ? "pendiente del período" : "pendientes del período"}. La revisión abarca todas las personas.</p><div className="rendicion-pendientes__actions">
         {pendientesGastos > 0 && <button className="btn-secondary" type="button" disabled={busy} onClick={() => goTo("rendicion-gastos")}>Revisar {pendientesGastos} {pendientesGastos === 1 ? "gasto" : "gastos"}</button>}
         {pendientesRepartos > 0 && <button className="btn-secondary" type="button" disabled={busy} onClick={() => goTo("rendicion-repartos")}>Repartir {pendientesRepartos} {pendientesRepartos === 1 ? "remuneración" : "remuneraciones"}</button>}
         {data.pendientes.some((p) => p.tipo === "condiciones" || p.tipo === "jornal") && <Link to="/traslados/resultados">Revisar condiciones y jornales</Link>}
       </div><details><summary>Ver detalle de pendientes</summary><ul>{data.pendientes.map((p) => <li key={`${p.tipo}-${p.id}-${p.descripcion}`}>{p.descripcion}</li>)}</ul></details></section>}
-      {persona ? <Confirmacion key={`${persona}-${data.revision}`} data={data} persona={persona} busy={busy} mutate={mutate} onConfirmed={(id) => openDetail(id, true)} /> : <p className="rendicion-caption">Elegí “Preparar rendición” en una persona para revisar sus conceptos nuevos.</p>}
-      <RendicionPanel id="rendicion-historial" title="Historial de rendiciones" description={`Confirmadas de ${persona ? data.personas.find((p) => p.id === persona)?.name : "todas las personas"} · todos los períodos`} badge={history.total} open={!!panels["rendicion-historial"]} onToggle={togglePanel}>
+      {persona ? <Confirmacion key={`${persona}-${data.revision}`} data={data} persona={persona} busy={busy} mutate={mutate} onConfirmed={(id) => openDetail(id, true)} /> : <label className="form-field rendicion-preparar-persona">Preparar rendición para<select aria-label="Preparar rendición para" value="" onChange={(e) => { if (e.target.value) goTo("rendicion-preparar", e.target.value); }}><option value="">Elegí una persona con conceptos nuevos</option>{data.personas.filter((p) => p.cantidad > 0).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+      </div>
+      <section id="rendicion-historial" className="rendicion-view rendicion-history-view" hidden={vista !== "historial" || !!activeId} aria-label="Entregas y pagos confirmados">
+        <div className="rendicion-section-heading"><div><h2 tabIndex={-1}>Entregas y pagos</h2><p className="rendicion-caption">{persona ? data.personas.find((p) => p.id === persona)?.name : "Todas las personas"} · {history.total} rendiciones · todos los períodos</p></div></div>
+        <p className="rendicion-history-note">Abrí una rendición para registrar una entrega al local o un pago a la persona. Podés registrar importes parciales.</p>
         <div className="rendicion-historial">{history.items.map((r) => <article className="rendicion-historial__item" key={r.id}>
           <div><h3>{r.persona_nombre}</h3><p className="rendicion-caption">{fechaRendicion(r.desde)} al {fechaRendicion(r.hasta)} · #{r.id.slice(0, 8)}</p></div>
           <RendicionSaldo saldo={r.saldo_pendiente} label="Saldo pendiente de esta rendición" anulada={r.anulada} />
-          <div className="traslados-actions"><button className="btn-secondary" type="button" disabled={busy} onClick={() => openDetail(r.id)}>Ver rendición {r.id.slice(0, 8)}</button>{!r.anulada && r.saldo_pendiente !== 0 && <button type="button" className="btn-primary" disabled={busy} onClick={() => openDetail(r.id, true)}>{r.saldo_pendiente > 0 ? "Registrar entrega" : "Registrar pago"}<span className="rendicion-sr-only"> de {r.persona_nombre} · {r.id.slice(0, 8)}</span></button>}</div>
+          <div className="traslados-actions"><button className="btn-secondary" type="button" disabled={busy} onClick={() => openDetail(r.id)}>Ver detalle<span className="rendicion-sr-only"> de la rendición {r.id.slice(0, 8)}</span></button>{!r.anulada && Number.isFinite(r.saldo_pendiente) && r.saldo_pendiente !== 0 && <button type="button" className="btn-primary" disabled={busy} onClick={() => openDetail(r.id, true)}>{r.saldo_pendiente > 0 ? "Registrar entrega" : "Registrar pago"}<span className="rendicion-sr-only"> de {r.persona_nombre} · {r.id.slice(0, 8)}</span></button>}</div>
         </article>)}</div>
         {!history.items.length && <p className="rendicion-empty">No hay rendiciones confirmadas para esta selección.</p>}
         {history.total > 20 && <div className="traslados-actions rendicion-pagination"><button className="btn-secondary" type="button" disabled={busy || offset === 0} onClick={() => { setOffset((v) => Math.max(0, v - 20)); setTarget("rendicion-historial"); }}>Anteriores</button><span className="rendicion-caption">{offset + 1}–{Math.min(offset + 20, history.total)} de {history.total}</span><button className="btn-secondary" type="button" disabled={busy || offset + 20 >= history.total} onClick={() => { setOffset((v) => v + 20); setTarget("rendicion-historial"); }}>Más rendiciones</button></div>}
-      </RendicionPanel>
+      </section>
+      <div className="rendicion-view" hidden={vista !== "preparar" || !!activeId}>
       <h2 className="rendicion-section-label">Revisión del período · todas las personas</h2>
       <RendicionPanel id="rendicion-gastos" title="Gastos y reintegros" description="Identificá quién pagó y si corresponde devolverle el dinero." badge={pendientesGastos ? `${pendientesGastos} por revisar` : `${data.gastos.length} ${data.gastos.length === 1 ? "revisado" : "revisados"}`} open={!!panels["rendicion-gastos"]} onToggle={togglePanel}>
         <p className="rendicion-caption">El nombre escrito anteriormente se conserva como referencia. Esta revisión abarca el período completo, aunque filtres una persona.</p>{data.gastos.map((g) => <GastoRevision key={`${g.id}-${g.revision}`} gasto={g} people={data.personas} busy={busy} mutate={mutate} />)}{!data.gastos.length && <p className="rendicion-empty">No hay gastos externos activos en este período.</p>}
@@ -164,6 +185,7 @@ export default function TrasladosRendicionesPage() {
       <RendicionPanel id="rendicion-repartos" title="Remuneración por viaje" description="Repartí el pago pactado entre quienes participaron." badge={pendientesRepartos ? `${pendientesRepartos} por repartir` : `${data.viajes.length} ${data.viajes.length === 1 ? "revisado" : "revisados"}`} open={!!panels["rendicion-repartos"]} onToggle={togglePanel}>
         <p className="rendicion-caption">Es independiente del reparto entre vehículos. Un jornal ya identifica a su chofer y se cuenta una sola vez.</p>{data.viajes.map((t) => <RepartoPersonas key={`${t.cobro_id}-${t.revision}`} trip={t} people={data.personas} busy={busy} mutate={mutate} />)}{!data.viajes.length && <p className="rendicion-empty">No hay remuneraciones porcentuales para repartir en este período.</p>}
       </RendicionPanel>
+      </div>
       <details className="rendicion-ayuda"><summary>Cómo se calcula y qué incluye</summary><p>Saldo inicial = cobrado a clientes − remuneración − reintegros aprobados. Después se descuentan las entregas al local y se suman los pagos a la persona.</p><p>Se usan cobros explícitos y conceptos identificados. Los históricos sin cobrador conocido conservan su revisión aparte.</p><p>Confirmar una rendición guarda el saldo; registrar una entrega o un pago deja constancia del dinero que efectivamente se movió.</p></details>
     </>}
   </div>;
