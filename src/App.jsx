@@ -34,6 +34,7 @@ import SuperAdminPage from "./pages/admin/SuperAdminPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 import BookingSettingsPage from "./pages/booking/BookingSettingsPage";
+import NuevaSucursalPage from "./pages/sucursal/NuevaSucursalPage";
 import PublicBookingPage from "./pages/public/PublicBookingPage";
 import ReservationManagePage from "./pages/public/ReservationManagePage";
 
@@ -102,6 +103,7 @@ function App() {
                     <Route path="configuracion" element={<AdminGuard><TrasladosSettingsPage /></AdminGuard>} />
                   </Route>
                   <Route path="/reservas-online" element={<AdminGuard><BookingSettingsPage /></AdminGuard>} />
+                  <Route path="/nueva-sucursal" element={<AdminGuard><NuevaSucursalPage /></AdminGuard>} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
                   <Route path="/pets/:id" element={<PetDetailPage />} />

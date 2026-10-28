@@ -10,7 +10,7 @@ import PhotoUpload from "../../components/ui/PhotoUpload";
 import { todayISO } from "../../utils/dates";
 import PetForm from "./components/PetForm";
 import ServiceDetail from "./components/ServiceDetail";
-import { Icon, Pill, PetAvatar, StatusPill, Toast } from "./components/PetBits";
+import { BehaviorCallout, Icon, Pill, PetAvatar, StatusPill, Toast } from "./components/PetBits";
 import { usePetActions } from "./components/usePetActions";
 import {
   completionRatio,
@@ -333,14 +333,7 @@ export default function PetDetailPage() {
 
         {(pet.behavior || pet.notes) && (
           <div className="pv-profile__notes">
-            {pet.behavior && (
-              <div className="pv-callout pv-callout--warn">
-                <span className="pv-callout__label">
-                  <Icon name="alert" size={14} /> Comportamiento · antes de atender
-                </span>
-                <p>{displayText(pet.behavior)}</p>
-              </div>
-            )}
+            {pet.behavior && <BehaviorCallout behavior={pet.behavior} label="Comportamiento · antes de atender" />}
             {pet.notes && (
               <div className="pv-callout">
                 <span className="pv-callout__label">Observaciones</span>

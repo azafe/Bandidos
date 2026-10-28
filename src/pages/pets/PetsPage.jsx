@@ -7,11 +7,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import PetForm from "./components/PetForm";
 import PetQuickView from "./components/PetQuickView";
-import { Icon, Pill, PetAvatar, Toast } from "./components/PetBits";
+import { BehaviorCallout, Icon, Pill, PetAvatar, Toast } from "./components/PetBits";
 import { usePetActions } from "./components/usePetActions";
 import {
   displayName,
-  displayText,
   formatShortDate,
   getPetStats,
   isIncomplete,
@@ -392,11 +391,7 @@ function PetCard({ pet, onOpen, fichaState }) {
         </div>
       )}
 
-      {pet.behavior && (
-        <div className="pv-card__behavior">
-          <p>{displayText(pet.behavior)}</p>
-        </div>
-      )}
+      {pet.behavior && <BehaviorCallout behavior={pet.behavior} variant="compact" />}
 
       <div className="pv-card__pills">
         <Pill tone={pet.neutered ? "ok" : "muted"}>{pet.neutered ? "Castrado" : "Sin castrar"}</Pill>
