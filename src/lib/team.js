@@ -137,3 +137,33 @@ export function formatDay(value) {
   const [y, m, d] = String(value ?? "").slice(0, 10).split("-");
   return y && m && d ? `${d}/${m}/${y}` : "";
 }
+
+// Las asignaciones se guardan por puesto (quiénes lo ocupan), así que cambiar
+// los puestos de una persona es rehacer la lista de cada puesto que la ganó o
+// la perdió. Las personas dadas de baja que sigan asignadas se limpian: el
+// backend solo acepta activas. Devuelve [{ positionId, employeeIds }].
+export function assignmentChanges(team, employeeId, selectedPositionIds) {
+  const id = String(employeeId);
+  const selected = new Set(selectedPositionIds.map(String));
+  const activeIds = new Set(team.employees.filter(isActiveEmployee).map((e) => String(e.id)));
+  const { byPosition } = indexAssignments(team.assignments);
+  const changes = [];
+  for (const position of team.positions) {
+    const pid = String(position.id);
+    const current = byPosition.get(pid) ?? [];
+    const had = current.includes(id);
+    const wants = selected.has(pid);
+    if (had === wants) continue;
+    const others = current.filter((x) => x !== id && activeIds.has(x));
+    changes.push({ positionId: pid, employeeIds: wants ? [...others, id] : others });
+  }
+  return changes;
+}
+
+export function positionsOfEmployee(team, employeeId) {
+  const { byEmployee } = indexAssignments(team?.assignments);
+  return byEmployee.get(String(employeeId)) ?? [];
+}
+
+// Roles del personal (los mismos que usaba el formulario anterior).
+export const EMPLOYEE_ROLES = ["Groomer", "Recepción", "Ayudante", "Administración", "Socio", "Chofer", "Otro"];

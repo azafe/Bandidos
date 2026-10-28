@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { areaOf, buildTree, descendants, formatDay, initials, positionPath, teamStats } from "./team.js";
+import { areaOf, assignmentChanges, buildTree, descendants, formatDay, initials, positionPath, positionsOfEmployee, teamStats } from "./team.js";
 
 const positions = [
   { id: "dir", name: "Dirección", parent_id: null, sort_order: 0, area: "direccion" },
@@ -60,4 +60,19 @@ test("ruta, área, iniciales y resumen", () => {
 test("fechas sin correr el día", () => {
   assert.equal(formatDay("2024-03-01"), "01/03/2024");
   assert.equal(formatDay(null), "");
+});
+
+test("cambiar los puestos de una persona rehace solo los puestos tocados", () => {
+  const team = { positions: positions.slice(0, 4), employees, assignments };
+  assert.deepEqual(positionsOfEmployee(team, "lu").sort(), ["pel", "rec"]);
+  // Lucía deja Recepción y entra a Administración; Peluquería no se toca.
+  assert.deepEqual(assignmentChanges(team, "lu", ["pel", "adm"]), [
+    { positionId: "rec", employeeIds: [] },
+    { positionId: "adm", employeeIds: ["lu"] },
+  ]);
+  // Sacarla de Peluquería limpia también al dado de baja que seguía asignado.
+  assert.deepEqual(assignmentChanges(team, "lu", ["rec"]), [{ positionId: "pel", employeeIds: ["ana"] }]);
+  // Dar de baja: ningún puesto.
+  assert.deepEqual(assignmentChanges(team, "sofi", []), [{ positionId: "dir", employeeIds: [] }]);
+  assert.deepEqual(assignmentChanges(team, "nueva", []), []);
 });

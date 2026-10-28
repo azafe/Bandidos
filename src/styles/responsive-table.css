@@ -1,0 +1,39 @@
+/* ResponsiveTable: tabla en escritorio, tarjetas en el teléfono. */
+
+.rt-empty { margin: 0; padding: 32px 8px; text-align: center; font-size: 0.9rem; color: var(--text-faint); }
+.rt-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.rt-cards { display: none; flex-direction: column; gap: 8px; }
+.rt-card { padding: 12px; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--bg-card); }
+.rt-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.rt-card__title { flex: 1 1 auto; min-width: 0; }
+.rt-card__highlight { flex: 0 0 auto; text-align: right; }
+.rt-card__detail { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; }
+.rt-card__detail div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rt-card__detail dt { flex: 0 0 auto; font-size: 0.75rem; color: var(--text-faint); }
+.rt-card__detail dd { margin: 0; min-width: 0; text-align: right; }
+.rt-card__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.rt-table-wrap { overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid var(--border-soft); border-radius: 16px; }
+.rt-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.rt-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+.rt-table td { padding: 12px 16px; vertical-align: middle; border-top: 1px solid var(--border-soft); }
+.rt-table tbody tr:first-child td { border-top: none; }
+.rt-table tbody tr:hover { background: #fafbfd; }
+.rt-table .is-right { text-align: right; }
+
+@media (max-width: 767px) {
+  .rt-cards { display: flex; }
+  .rt-table-wrap { display: none; }
+}

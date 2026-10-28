@@ -1,7 +1,94 @@
 /* Equipo: pestañas, organigrama y formulario de puesto. */
 
-.team-tabs { display: flex; gap: 4px; padding: 6px; margin-bottom: 16px; }
-.team-tabs .tab { flex: 1 1 0; min-height: 44px; }
+/* Panel único con pestañas y acciones arriba, como el Equipo de la ONG. */
+.team-panel { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.team-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.team-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--bg-subtle); }
+.team-tabs .tab { min-height: 40px; padding: 0 16px; }
+.team-toolbar__actions { display: flex; gap: 8px; }
+.team-toolbar__actions button { min-height: 40px; white-space: nowrap; }
+
+/* Personal */
+.team-staff { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.staff-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.staff-name__avatar { width: 32px; height: 32px; font-size: 0.72rem; }
+.staff-name__text { display: flex; flex-direction: column; min-width: 0; }
+.staff-name__name { font-weight: 500; color: var(--text-strong); overflow-wrap: anywhere; }
+.staff-muted { font-size: 0.78rem; color: var(--text-faint); }
+em.staff-muted { font-style: italic; }
+.staff-role { font-size: 0.86rem; color: var(--text-strong); }
+.staff-phone { display: inline-flex; align-items: center; gap: 6px; color: var(--brand-magenta); text-decoration: none; white-space: nowrap; }
+.staff-phone:hover { text-decoration: underline; }
+.staff-open {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.staff-open:hover { background: var(--bg-subtle); color: var(--text-strong); }
+.staff-row--discharged .staff-name__name { color: var(--text-muted); }
+.staff-toggle {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--brand-magenta);
+  cursor: pointer;
+}
+.staff-toggle:hover { text-decoration: underline; }
+.team-pills.team-pills--inline { margin-top: 0; }
+
+/* Ficha lateral de la persona */
+.person-sheet__title { display: flex; flex-direction: column; gap: 2px; }
+.person-sheet__kicker { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); }
+.person-sheet { display: flex; flex-direction: column; gap: 14px; padding-top: 8px; }
+.person-sheet input, .person-sheet select { min-height: 44px; }
+.person-sheet__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.person-sheet__check { display: flex; align-items: center; gap: 8px; min-height: 44px; align-self: end; font-size: 0.85rem; color: var(--text-strong); cursor: pointer; }
+.person-sheet__check input { width: 18px; height: 18px; min-height: 0; accent-color: var(--brand-magenta); }
+.person-sheet__positions { margin: 0; padding: 0; border: none; min-width: 0; }
+.person-sheet__positions legend { margin-bottom: 8px; font-size: 0.85rem; font-weight: 500; color: var(--text-strong); }
+.person-sheet__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.person-chip {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  font: inherit;
+  font-size: 0.84rem;
+  color: var(--text-strong);
+  cursor: pointer;
+}
+.person-chip.is-active {
+  border-color: var(--area);
+  background: color-mix(in srgb, var(--area) 12%, white);
+  color: var(--area);
+  font-weight: 600;
+}
+.person-chip:focus-visible, .staff-open:focus-visible, .staff-toggle:focus-visible {
+  outline: 2px solid var(--brand-magenta);
+  outline-offset: 2px;
+}
+.person-sheet__more { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.person-sheet__more button { min-height: 44px; }
+.person-sheet__link { font-size: 0.88rem; font-weight: 500; color: var(--brand-magenta); text-decoration: none; }
+.person-sheet__danger { padding: 0; border: none; background: none; font: inherit; font-size: 0.88rem; font-weight: 500; color: var(--bad); cursor: pointer; }
+.person-sheet__danger:disabled { opacity: 0.5; cursor: not-allowed; }
+.person-sheet__footer { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.person-sheet__buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.person-sheet__buttons button { min-height: 44px; }
 
 .team-org { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .team-org__state { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0; color: var(--text-muted); }
@@ -224,6 +311,12 @@
 
 @media (max-width: 760px) {
   .team-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .team-toolbar { flex-direction: column; align-items: stretch; }
+  .team-tabs { display: flex; }
+  .team-tabs .tab { flex: 1 1 0; }
+  .team-toolbar__actions button { flex: 1 1 0; }
+  .person-sheet__grid { grid-template-columns: minmax(0, 1fr); }
+  .person-sheet__buttons button { flex: 1 1 0; }
   .org-form__grid { grid-template-columns: minmax(0, 1fr); }
   .org-form__spacer { display: none; }
   .org-form__actions button { flex: 1 1 auto; }
