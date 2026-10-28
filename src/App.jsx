@@ -32,6 +32,7 @@ import ExpenseCategoriesPage from "./pages/catalog/ExpenseCategoriesPage";
 import UsersPage from "./pages/admin/UsersPage";
 import SuperAdminPage from "./pages/admin/SuperAdminPage";
 import PetShopPage from "./pages/petshop/PetShopPage";
+import PetshopStockPage from "./pages/petshop/stock/PetshopStockPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 import BookingSettingsPage from "./pages/booking/BookingSettingsPage";
 import NuevaSucursalPage from "./pages/sucursal/NuevaSucursalPage";
@@ -129,6 +130,7 @@ function App() {
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/admin/super" element={<SuperAdminPage />} />
                   <Route path="/petshop" element={<PetShopPage />} />
+                  <Route path="/petshop/stock" element={<PetshopStockPage />} />
                   <Route path="/comunicaciones" element={<ComunicacionesPage />} />
                   <Route path="/recordatorios" element={<Navigate to="/comunicaciones" replace />} />
                 </Routes>

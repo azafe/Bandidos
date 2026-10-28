@@ -1,5 +1,6 @@
 // src/pages/petshop/PetShopPage.jsx
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import { apiRequest } from "../../services/apiClient";
 import Modal from "../../components/ui/Modal";
@@ -562,6 +563,9 @@ export default function PetShopPage() {
             Ventas y productos del local, en un flujo operativo directo.
           </p>
         </div>
+        <Link to="/petshop/stock" className="btn-secondary petshop-stock-link">
+          Stock y conteo →
+        </Link>
       </header>
 
       <div className="card petshop-tabs">
