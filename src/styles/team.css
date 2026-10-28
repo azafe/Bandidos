@@ -1,0 +1,230 @@
+/* Equipo: pestañas, organigrama y formulario de puesto. */
+
+.team-tabs { display: flex; gap: 4px; padding: 6px; margin-bottom: 16px; }
+.team-tabs .tab { flex: 1 1 0; min-height: 44px; }
+
+.team-org { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.team-org__state { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0; color: var(--text-muted); }
+.team-org__empty { display: flex; flex-direction: column; gap: 8px; max-width: 620px; }
+.team-org__empty .card-title, .team-org__empty .card-subtitle { margin: 0; }
+.team-org__empty-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.team-org__empty-actions button { min-height: 44px; }
+
+.team-stats { margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.team-stats div { padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; }
+.team-stats dt { font-size: 0.78rem; color: var(--text-muted); }
+.team-stats dd { margin: 2px 0 0; font-size: 1.3rem; font-weight: 600; color: var(--text-strong); }
+.team-stats .is-warn dd { color: var(--warn); }
+
+/* Árbol (escritorio). Las líneas salen de ::before/::after de cada <li>. */
+.org-scroll { overflow-x: auto; padding-bottom: 8px; }
+.org-tree { width: max-content; min-width: 100%; display: flex; justify-content: center; }
+.org-tree ul {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: 28px 0 0;
+  list-style: none;
+}
+.org-tree > ul { padding-top: 0; }
+.org-tree li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 10px 0;
+}
+.org-tree > ul > li { padding-top: 0; }
+/* Línea horizontal entre hermanos y vertical hacia cada caja. */
+.org-tree li::before,
+.org-tree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 28px;
+  border-top: 2px solid var(--border);
+}
+.org-tree li::after { right: auto; left: 50%; border-left: 2px solid var(--border); }
+.org-tree li:only-child::before, .org-tree li:only-child::after { display: none; }
+.org-tree li:only-child { padding-top: 28px; }
+.org-tree > ul > li:only-child { padding-top: 0; }
+.org-tree li:only-child > .org-box-wrap::before {
+  content: "";
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  height: 28px;
+  border-left: 2px solid var(--border);
+}
+.org-tree > ul > li:only-child > .org-box-wrap::before { display: none; }
+.org-tree li:first-child::before, .org-tree li:last-child::after { border: 0 none; }
+.org-tree li:last-child::before { border-right: 2px solid var(--border); border-radius: 0 10px 0 0; }
+.org-tree li:first-child::after { border-radius: 10px 0 0 0; }
+/* Vertical desde el jefe hacia sus puestos. */
+.org-tree ul ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 28px;
+  border-left: 2px solid var(--border);
+}
+.org-tree > ul > li > .org-box-wrap::before { display: none; }
+
+.org-box-wrap { position: relative; }
+.org-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 210px;
+  padding: 12px;
+  border: 2px solid color-mix(in srgb, var(--area) 45%, white);
+  border-top: 5px solid var(--area);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.org-box:hover { transform: translateY(-2px); }
+.org-box:focus-visible, .org-add:focus-visible, .org-list__item:focus-visible {
+  outline: 2px solid var(--brand-magenta);
+  outline-offset: 2px;
+}
+.org-box__name { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--area); }
+.org-box__desc {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.org-box__vacant { margin-top: 4px; font-size: 0.85rem; font-style: italic; color: var(--text-faint); }
+.org-box__people { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; width: 100%; }
+.org-person { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.org-person__name { font-size: 0.86rem; font-weight: 500; color: var(--text-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-avatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+.org-add {
+  position: absolute;
+  left: 50%;
+  bottom: -13px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.org-box-wrap:hover .org-add, .org-add:focus-visible { opacity: 1; }
+.org-add:hover { color: var(--brand-magenta); border-color: var(--brand-magenta); }
+
+/* Lista con sangría (celular y pantallas angostas). */
+.org-list { display: flex; flex-direction: column; gap: 8px; }
+.org-list__children { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.org-list__nested { margin-left: 12px; padding-left: 12px; border-left: 2px solid var(--border); }
+.org-list__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.org-list__dot { flex: 0 0 auto; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; }
+.org-list__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.org-list__name { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.org-list__people { font-size: 0.9rem; color: var(--text-strong); }
+.org-list__people em { color: var(--text-faint); }
+
+/* Formulario de puesto */
+.org-modal { max-width: 560px; width: calc(100vw - 32px); }
+.org-form { display: flex; flex-direction: column; gap: 12px; }
+.org-form input, .org-form select { min-height: 44px; }
+.org-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.org-people { margin: 0; padding: 0; border: none; min-width: 0; }
+.org-people legend { margin-bottom: 6px; font-size: 0.85rem; font-weight: 500; color: var(--text-strong); }
+.org-people__list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.org-people__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.org-people__item.is-active { border-color: var(--brand-magenta); background: #fdf4ff; }
+.org-people__item input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand-magenta); }
+.org-people__item > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.org-people__item strong { font-size: 0.9rem; color: var(--text-strong); }
+.org-muted { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.org-error { margin: 0; color: var(--bad); font-size: 0.88rem; }
+.org-form__actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.org-form__actions button { min-height: 44px; }
+.org-form__spacer { flex: 1 1 auto; }
+.org-danger { color: var(--bad) !important; }
+.org-danger:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Puestos en la tarjeta del personal */
+.team-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.team-pill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--area);
+  background: color-mix(in srgb, var(--area) 12%, white);
+}
+
+.team-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--text-strong);
+  color: #fff;
+  font-size: 0.9rem;
+  z-index: 60;
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 760px) {
+  .team-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .org-form__grid { grid-template-columns: minmax(0, 1fr); }
+  .org-form__spacer { display: none; }
+  .org-form__actions button { flex: 1 1 auto; }
+}

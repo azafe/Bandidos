@@ -1,10 +1,20 @@
 // src/pages/employees/EmployeesPage.jsx
-import { useState } from "react";
-import { Link } from "react-router-dom";
+// Equipo: personal y organigrama. El organigrama está adaptado del módulo
+// Equipo de la ONG: el puesto es la caja, la persona es el empleado y el
+// permiso sigue en el usuario.
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { colorForName as employeeColor } from "../../utils/colorPalette";
 import { showApiError } from "../../utils/errorDialog";
+import { createTemplate, getTeam } from "../../services/teamApi";
+import { areaOf, buildTree, formatDay, indexAssignments, teamStats } from "../../lib/team";
+import OrgChart from "./OrgChart";
+import PositionForm from "./PositionForm";
+import "../../styles/team.css";
+
+const EMPTY_FORM = { name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false, dni: "", hire_date: "" };
 
 const ROLE_COLORS = {
   "Groomer":        "#ff4fa8",
@@ -26,12 +36,70 @@ export default function EmployeesPage() {
   const { items: employees, loading, error, createItem, updateItem, deleteItem } =
     useApiResource("/v2/employees");
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get("vista") === "organigrama" ? "organigrama" : "personal";
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isEditingModal, setIsEditingModal] = useState(false);
-  const [modalForm, setModalForm] = useState({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false });
+  const [modalForm, setModalForm] = useState(EMPTY_FORM);
+
+  // ── Organigrama ─────────────────────────────────────────────────────────
+  const [team, setTeam] = useState(null);
+  const [teamError, setTeamError] = useState("");
+  const [teamReload, setTeamReload] = useState(0);
+  const [positionMode, setPositionMode] = useState(null);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getTeam()
+      .then((data) => {
+        if (cancelled) return;
+        setTeam(data);
+        setTeamError("");
+      })
+      .catch((err) => !cancelled && setTeamError(err?.message || "No se pudo cargar el organigrama."));
+    return () => {
+      cancelled = true;
+    };
+  }, [teamReload]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const id = setTimeout(() => setToast(""), 3000);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const reloadTeam = useCallback(() => setTeamReload((n) => n + 1), []);
+  const tree = useMemo(() => (team ? buildTree(team) : []), [team]);
+  const stats = useMemo(() => (team ? teamStats(team) : null), [team]);
+  const positionsByEmployee = useMemo(() => {
+    if (!team) return new Map();
+    const byId = new Map(team.positions.map((p) => [String(p.id), p]));
+    const { byEmployee } = indexAssignments(team.assignments);
+    return new Map(
+      [...byEmployee.entries()].map(([id, positionIds]) => [id, positionIds.map((pid) => byId.get(pid)).filter(Boolean)])
+    );
+  }, [team]);
+
+  function setView(next) {
+    setSearchParams(next === "organigrama" ? { vista: "organigrama" } : {});
+  }
+
+  async function handleTemplate() {
+    setCreatingTemplate(true);
+    try {
+      setTeam(await createTemplate());
+      setToast("Organigrama sugerido creado. Tocá cada puesto para ajustarlo.");
+    } catch (err) {
+      showApiError(err, "No se pudo crear el organigrama sugerido.");
+    } finally {
+      setCreatingTemplate(false);
+    }
+  }
 
   // ── Cálculos ──────────────────────────────────────────────────────────────
   const activeEmployees  = employees.filter(isActive);
@@ -45,6 +113,9 @@ export default function EmployeesPage() {
       role:   source.role,
       status: source.status,
       is_driver: source.is_driver === true,
+      // Vacío borra el dato: el backend lo guarda como null.
+      dni: source.dni.trim(),
+      hire_date: source.hire_date || "",
       ...(source.phone.trim() ? { phone: source.phone.trim() } : {}),
       ...(source.email.trim() ? { email: source.email.trim() } : {}),
       ...(source.notes.trim() ? { notes: source.notes.trim() } : {}),
@@ -52,7 +123,7 @@ export default function EmployeesPage() {
   }
 
   function resetForm() {
-    setForm({ name: "", role: "Groomer", phone: "", email: "", status: "active", notes: "", is_driver: false });
+    setForm(EMPTY_FORM);
     setEditingId(null);
   }
 
@@ -67,6 +138,7 @@ export default function EmployeesPage() {
     try {
       if (editingId) { await updateItem(editingId, buildPayload(form)); }
       else           { await createItem(buildPayload(form)); }
+      reloadTeam();
       resetForm();
       setFormOpen(false);
     } catch (err) {
@@ -76,12 +148,12 @@ export default function EmployeesPage() {
 
   async function handleDelete(id) {
     if (!window.confirm("¿Eliminar este empleado?")) return false;
-    try { await deleteItem(id); return true; }
+    try { await deleteItem(id); reloadTeam(); return true; }
     catch (err) { showApiError(err, "No se pudo eliminar el empleado."); return false; }
   }
 
   function openModalEdit(emp) {
-    setModalForm({ name: emp.name || "", role: emp.role || "Groomer", phone: emp.phone || "", email: emp.email || "", status: emp.status || "active", notes: emp.notes || "", is_driver: emp.is_driver === true });
+    setModalForm({ name: emp.name || "", role: emp.role || "Groomer", phone: emp.phone || "", email: emp.email || "", status: emp.status || "active", notes: emp.notes || "", is_driver: emp.is_driver === true, dni: emp.dni || "", hire_date: emp.hire_date ? String(emp.hire_date).slice(0, 10) : "" });
     setIsEditingModal(true);
   }
 
@@ -91,7 +163,8 @@ export default function EmployeesPage() {
     try {
       const payload = buildPayload(modalForm);
       await updateItem(selectedEmployee.id, payload);
-      setSelectedEmployee((prev) => prev ? { ...prev, ...payload } : prev);
+      setSelectedEmployee((prev) => prev ? { ...prev, ...payload, dni: payload.dni || null, hire_date: payload.hire_date || null } : prev);
+      reloadTeam();
       setIsEditingModal(false);
     } catch (err) {
       showApiError(err, "No se pudo guardar el empleado.");
@@ -108,17 +181,89 @@ export default function EmployeesPage() {
       <header className="page-header">
         <div>
           <h1 className="page-title">Equipo</h1>
-          <p className="page-subtitle">Equipo de Bandidos: roles, contacto y estado.</p>
+          <p className="page-subtitle">
+            {view === "organigrama"
+              ? "Quién hace qué y de quién depende. Tocá un puesto para editarlo."
+              : "Equipo de Bandidos: roles, contacto y estado."}
+          </p>
         </div>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => { resetForm(); setFormOpen((v) => !v); }}
-        >
-          {formOpen ? "Cancelar" : "+ Nuevo integrante"}
-        </button>
+        {view === "organigrama" ? (
+          team && team.positions.length > 0 && (
+            <button type="button" className="btn-primary" onClick={() => setPositionMode({ type: "new", parentId: null })}>
+              + Nuevo puesto
+            </button>
+          )
+        ) : (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => { resetForm(); setFormOpen((v) => !v); }}
+          >
+            {formOpen ? "Cancelar" : "+ Nuevo integrante"}
+          </button>
+        )}
       </header>
 
+      <nav className="card team-tabs" aria-label="Secciones de Equipo">
+        {[
+          { id: "personal", label: "Personal" },
+          { id: "organigrama", label: "Organigrama" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={view === tab.id ? "tab tab--active" : "tab"}
+            aria-current={view === tab.id ? "page" : undefined}
+            onClick={() => setView(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {view === "organigrama" ? (
+        <section className="card team-org" aria-label="Organigrama">
+          {teamError ? (
+            <div className="team-org__state" role="alert">
+              <p>{teamError}</p>
+              <button type="button" className="btn-secondary" onClick={reloadTeam}>Reintentar</button>
+            </div>
+          ) : !team ? (
+            <p className="team-org__state">Cargando organigrama…</p>
+          ) : team.positions.length === 0 ? (
+            <div className="team-org__empty">
+              <h2 className="card-title">Todavía no hay organigrama</h2>
+              <p className="card-subtitle">
+                Podés empezar con uno sugerido para una peluquería (Dirección, Administración, Recepción,
+                Peluquería, Bandimóviles y PetShop) con cada integrante ubicado según su rol, y después ajustarlo.
+              </p>
+              <div className="team-org__empty-actions">
+                <button type="button" className="btn-primary" onClick={handleTemplate} disabled={creatingTemplate}>
+                  {creatingTemplate ? "Armando…" : "Usar el organigrama sugerido"}
+                </button>
+                <button type="button" className="btn-secondary" onClick={() => setPositionMode({ type: "new", parentId: null })}>
+                  Empezar de cero
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <dl className="team-stats">
+                <div><dt>Puestos</dt><dd>{stats.positions}</dd></div>
+                <div className={stats.vacant ? "is-warn" : undefined}><dt>Vacantes</dt><dd>{stats.vacant}</dd></div>
+                <div><dt>Personas activas</dt><dd>{stats.active}</dd></div>
+                <div className={stats.withoutPosition ? "is-warn" : undefined}><dt>Sin puesto</dt><dd>{stats.withoutPosition}</dd></div>
+              </dl>
+              <OrgChart
+                tree={tree}
+                onSelect={(id) => setPositionMode({ type: "edit", positionId: id })}
+                onAddBelow={(id) => setPositionMode({ type: "new", parentId: id })}
+              />
+            </>
+          )}
+        </section>
+      ) : (
+      <>
       {error && <div className="card" style={{ color: "#f37b7b" }}>{error}</div>}
 
       {/* KPIs */}
@@ -179,6 +324,14 @@ export default function EmployeesPage() {
                 <option value="active">Activo</option>
                 <option value="inactive">Inactivo</option>
               </select>
+            </div>
+            <div className="form-field">
+              <label htmlFor="dni">DNI</label>
+              <input id="dni" name="dni" type="text" inputMode="numeric" placeholder="Opcional" value={form.dni} onChange={handleChange} />
+            </div>
+            <div className="form-field">
+              <label htmlFor="hire_date">Fecha de ingreso</label>
+              <input id="hire_date" name="hire_date" type="date" value={form.hire_date} onChange={handleChange} />
             </div>
             <label className="agenda-traslado-toggle"><input type="checkbox" name="is_driver" checked={form.is_driver} onChange={handleChange} />También realiza traslados (chofer)</label>
             <div className="form-field form-field--full">
@@ -254,6 +407,17 @@ export default function EmployeesPage() {
                     )}
                   </div>
 
+                  {active && (positionsByEmployee.get(String(emp.id)) ?? []).length > 0 && (
+                    <div className="team-pills">
+                      {positionsByEmployee.get(String(emp.id)).map((position) => (
+                        <span key={position.id} className="team-pill" style={{ "--area": areaOf(position.area).color }}>
+                          {position.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {!active && emp.end_date && <p className="employee-card__notes">Baja {formatDay(emp.end_date)}</p>}
+
                   {emp.notes && (
                     <p className="employee-card__notes">{emp.notes.length > 60 ? emp.notes.slice(0, 60) + "…" : emp.notes}</p>
                   )}
@@ -271,6 +435,26 @@ export default function EmployeesPage() {
           })}
         </div>
       </div>
+
+      </>
+      )}
+
+      {positionMode && team && (
+        <PositionForm
+          key={JSON.stringify(positionMode)}
+          team={team}
+          mode={positionMode}
+          onClose={() => setPositionMode(null)}
+          onAddBelow={(id) => setPositionMode({ type: "new", parentId: id })}
+          onSaved={(message) => {
+            setPositionMode(null);
+            setToast(message);
+            reloadTeam();
+          }}
+        />
+      )}
+
+      {toast && <div className="team-toast" role="status">{toast}</div>}
 
       {/* Modal detalle / edición */}
       <Modal isOpen={Boolean(selectedEmployee)} onClose={closeModal} title="Estilista">
@@ -303,6 +487,12 @@ export default function EmployeesPage() {
                     <option value="active">Activo</option>
                     <option value="inactive">Inactivo</option>
                   </select>
+                </label>
+                <label className="form-field"><span>DNI</span>
+                  <input type="text" inputMode="numeric" value={modalForm.dni} onChange={(e) => setModalForm((p) => ({ ...p, dni: e.target.value }))} />
+                </label>
+                <label className="form-field"><span>Fecha de ingreso</span>
+                  <input type="date" value={modalForm.hire_date} onChange={(e) => setModalForm((p) => ({ ...p, hire_date: e.target.value }))} />
                 </label>
                 <label className="agenda-traslado-toggle"><input type="checkbox" checked={modalForm.is_driver} onChange={(e) => setModalForm((prev) => ({ ...prev, is_driver: e.target.checked }))} />También realiza traslados (chofer)</label>
                 <label className="form-field"><span>Notas</span>
@@ -337,6 +527,16 @@ export default function EmployeesPage() {
                   </div>
                   <div><strong>Teléfono</strong><span>{selectedEmployee.phone || "-"}</span></div>
                   <div><strong>Email</strong><span>{selectedEmployee.email || "-"}</span></div>
+                  {selectedEmployee.dni && <div><strong>DNI</strong><span>{selectedEmployee.dni}</span></div>}
+                  {selectedEmployee.hire_date && <div><strong>Ingreso</strong><span>{formatDay(selectedEmployee.hire_date)}</span></div>}
+                  {!isActive(selectedEmployee) && selectedEmployee.end_date && (
+                    <div><strong>Baja</strong><span>{formatDay(selectedEmployee.end_date)}</span></div>
+                  )}
+                  <div><strong>Puestos</strong>
+                    <span>
+                      {(positionsByEmployee.get(String(selectedEmployee.id)) ?? []).map((p) => p.name).join(", ") || "Sin puesto en el organigrama"}
+                    </span>
+                  </div>
                   {selectedEmployee.notes && (
                     <div style={{ flexDirection: "column", alignItems: "flex-start" }}>
                       <strong>Notas</strong>
