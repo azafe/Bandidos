@@ -1,3 +1,4 @@
+import { groomerShare, groomerPayout } from "../../lib/sharedGroomer";
 // src/pages/employees/EmployeeDetailPage.jsx
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -49,11 +50,12 @@ function resolvePrice(s) {
   return Number(s.price || s.service_type?.default_price || s.service_price || s.amount || 0) || 0;
 }
 
-const COMMISSION_RATE = 0.40;
+
 
 export default function EmployeeDetailPage() {
   const { id } = useParams();
   const [employee, setEmployee] = useState(null);
+  const [employees, setEmployees] = useState([]);
   const [services, setServices]  = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [loading, setLoading]    = useState(true);
@@ -87,17 +89,18 @@ export default function EmployeeDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const [empData, agendaData] = await Promise.all([
+        const [empData, agendaData, allEmployees] = await Promise.all([
           apiRequest(`/v2/employees/${id}`),
           apiRequest("/agenda", { params: { from: range.from, to: range.to } }),
+          apiRequest("/v2/employees"),
         ]);
         if (!active) return;
         setEmployee(empData);
+        setEmployees(Array.isArray(allEmployees) ? allEmployees : allEmployees?.items || []);
         const all = Array.isArray(agendaData) ? agendaData : agendaData?.items || [];
         setServices(
           all.filter((s) =>
-            String(s.groomer_id) === String(id) ||
-            String(s.groomer?.id) === String(id)
+            groomerShare(s, id) > 0
           )
         );
       } catch (err) {
@@ -125,8 +128,9 @@ export default function EmployeeDetailPage() {
   }
 
   // Métricas
-  const totalRevenue     = services.reduce((s, srv) => s + resolvePrice(srv), 0);
-  const commission       = totalRevenue * COMMISSION_RATE;
+  const totalRevenue     = services.reduce((s, srv) => s + resolvePrice(srv) * groomerShare(srv, id), 0);
+  const commission = services.filter((service) => service.status === "finished")
+    .reduce((sum, service) => sum + groomerPayout(service, resolvePrice(service), employees, id), 0);
   const avgTicket        = services.length > 0 ? totalRevenue / services.length : 0;
   const sorted           = [...services].sort((a, b) => {
     const da = new Date(a.date || 0), db = new Date(b.date || 0);

@@ -1,3 +1,4 @@
+import { groomerShares, groomerShare, employeeCommissionRate } from "../../lib/sharedGroomer";
 // src/pages/services/ServicesListPage.jsx
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -8,7 +9,7 @@ import GroomerChart from "../../components/dashboard/GroomerChart";
 import ServiceTypeChart from "../../components/dashboard/ServiceTypeChart";
 import { toISO } from "../../utils/dates";
 
-const COMMISSION_RATE = 0.40;
+
 
 /**
  * Convierte el string de fecha de Google Sheets
@@ -212,11 +213,9 @@ export default function ServicesListPage() {
     service.payment_method?.name ||
     getNameById(paymentMethods, service.payment_method_id) ||
     "-";
-  const resolveGroomerName = (service) =>
-    service.groomer?.name ||
-    service.groomer ||
-    getNameById(employees, service.groomer_id) ||
-    "-";
+  const resolveGroomerName = (service) => groomerShares(service)
+    .map(({ groomerId }) => getNameById(employees, groomerId) || service.groomer?.name || "Sin groomer")
+    .join(" + ");
 
   function getServicePrice(service) {
     const fromCatalog = serviceTypes.find(
@@ -270,7 +269,7 @@ export default function ServicesListPage() {
     }
     if (filters.groomer_id) {
       const groomerName = getNameById(employees, filters.groomer_id).toLowerCase();
-      const matchesId = String(service.groomer_id) === String(filters.groomer_id);
+      const matchesId = groomerShare(service, filters.groomer_id) > 0;
       const matchesName = resolveGroomerName(service).toLowerCase() === groomerName;
       if (!matchesId && !matchesName) return false;
     }
@@ -449,11 +448,14 @@ export default function ServicesListPage() {
 
   function buildByGroomer(svcList) {
     const map = new Map();
-    svcList.forEach((s) => {
-      const name = resolveGroomerName(s) || "Sin groomer";
-      const prev = map.get(name) || { name, total: 0, services: 0 };
-      map.set(name, { name, total: prev.total + getServicePrice(s), services: prev.services + 1 });
-    });
+    svcList.forEach((service) => groomerShares(service).forEach(({ groomerId, share }) => {
+      if (filters.groomer_id && String(groomerId) !== String(filters.groomer_id)) return;
+      const name = getNameById(employees, groomerId) || "Sin groomer";
+      const row = map.get(String(groomerId)) || { name, total: 0, services: 0 };
+      row.total += getServicePrice(service) * share;
+      row.services += share;
+      map.set(String(groomerId), row);
+    }));
     return Array.from(map.values()).sort((a, b) => b.total - a.total);
   }
 
@@ -472,7 +474,11 @@ export default function ServicesListPage() {
   );
   const finishedCount = finishedServices.length;
   const totalBilled = finishedServices.reduce((acc, s) => acc + getServicePrice(s), 0);
-  const commissions = totalBilled * COMMISSION_RATE;
+  const commissions = finishedServices.reduce((sum, service) => {
+    const primary = employees.find((emp) => String(emp.id) === String(service.groomer_id));
+    const share = filters.groomer_id ? groomerShare(service, filters.groomer_id) : 1;
+    return sum + getServicePrice(service) * employeeCommissionRate(primary) * share;
+  }, 0);
   const bandidosMargin = totalBilled - commissions;
   const avgTicket = finishedCount > 0 ? totalBilled / finishedCount : 0;
   const byGroomer = buildByGroomer(finishedServices);
