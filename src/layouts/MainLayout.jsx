@@ -28,6 +28,8 @@ const PAGE_TITLES = {
   "/catalog/expense-categories": "Categorías de Gastos",
   "/admin/users":             "Usuarios",
   "/petshop":                 "PetShop",
+  "/petshop/stock":           "Stock y conteo",
+  "/nueva-sucursal":          "Nueva sucursal",
   "/comunicaciones":          "Comunicaciones",
 };
 
