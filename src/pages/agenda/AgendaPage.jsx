@@ -1,3 +1,4 @@
+import { groomerShares, groomerShare } from "../../lib/sharedGroomer";
 // src/pages/agenda/AgendaPage.jsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -334,12 +335,14 @@ function getTurnoGroomerId(turno) {
 }
 
 function getGroomerName(turno, employeesById) {
-  return (
+  const primary = (
     turno?.groomer?.name ||
     (typeof turno?.groomer === "string" ? turno.groomer : "") ||
     employeesById?.get(String(getTurnoGroomerId(turno) || ""))?.name ||
     ""
   );
+  const second = employeesById?.get(String(turno.second_groomer_id))?.name;
+  return second ? `${primary} + ${second} (50/50)` : primary;
 }
 
 function getEmployeeCommissionRate(employee) {
@@ -431,6 +434,8 @@ export default function AgendaPage() {
   const [customDuration, setCustomDuration] = useState("");
   const [finishForm, setFinishForm] = useState({
     groomer_id: "",
+    shared: false,
+    second_groomer_id: "",
     service_type_id: "",
     price: "",
     payment_method_id: "",
@@ -600,6 +605,8 @@ export default function AgendaPage() {
     setShowFinishForm(false);
     setFinishForm({
       groomer_id: selectedTurno.groomer_id || "",
+      shared: Boolean(selectedTurno.second_groomer_id),
+      second_groomer_id: selectedTurno.second_groomer_id || "",
       service_type_id: selectedTurno.service_type_id || "",
       price:
         selectedTurno.price !== null && selectedTurno.price !== undefined
@@ -699,7 +706,7 @@ export default function AgendaPage() {
   const closeFilteredTurnos = useMemo(() => {
     if (!closeGroomerId) return items;
     return items.filter(
-      (turno) => String(getTurnoGroomerId(turno) || "") === String(closeGroomerId)
+      (turno) => groomerShare(turno, closeGroomerId) > 0
     );
   }, [items, closeGroomerId]);
 
@@ -762,48 +769,53 @@ export default function AgendaPage() {
     const grouped = new Map();
 
     closeFilteredTurnos.forEach((turno) => {
-      const rawGroomerId = getTurnoGroomerId(turno);
-      const hasGroomerId = rawGroomerId !== null && rawGroomerId !== undefined && rawGroomerId !== "";
-      const groomerKey = hasGroomerId ? String(rawGroomerId) : "unassigned";
-      const employee = hasGroomerId ? employeesById.get(groomerKey) : null;
-      const groomerName =
-        turno.groomer?.name ||
-        employee?.name ||
-        (hasGroomerId ? `Groomer #${groomerKey}` : "Sin groomer asignado");
-      const commissionRate = hasGroomerId ? getEmployeeCommissionRate(employee) : 0;
+      const primaryId = getTurnoGroomerId(turno);
+      const primaryRate = primaryId ? getEmployeeCommissionRate(employeesById.get(String(primaryId))) : 0;
+      groomerShares(turno).forEach(({ groomerId: rawGroomerId, share }) => {
+        if (closeGroomerId && String(rawGroomerId) !== String(closeGroomerId)) return;
+        const hasGroomerId = rawGroomerId !== null && rawGroomerId !== undefined && rawGroomerId !== "";
+        const groomerKey = hasGroomerId ? String(rawGroomerId) : "unassigned";
+        const employee = hasGroomerId ? employeesById.get(groomerKey) : null;
+        const groomerName =
+          employee?.name ||
+          (hasGroomerId ? `Groomer #${groomerKey}` : "Sin groomer asignado");
+        const commissionRate = hasGroomerId ? getEmployeeCommissionRate(employee) : 0;
 
-      if (!grouped.has(groomerKey)) {
-        grouped.set(groomerKey, {
-          groomerId: groomerKey,
-          groomerName,
-          commissionRate,
-          scheduledCount: 0,
-          finishedCount: 0,
-          estimatedIncome: 0,
-          finishedIncome: 0,
-        });
-      }
+        if (!grouped.has(groomerKey)) {
+          grouped.set(groomerKey, {
+            groomerId: groomerKey,
+            groomerName,
+            commissionRate,
+            scheduledCount: 0,
+            finishedCount: 0,
+            estimatedIncome: 0,
+            finishedIncome: 0,
+            payout: 0,
+          });
+        }
 
-      const row = grouped.get(groomerKey);
-      const amount = getServicePrice(turno);
-      row.scheduledCount += 1;
-      row.estimatedIncome += amount;
-      if (normalizeStatus(turno.status) === "finished") {
-        row.finishedCount += 1;
-        row.finishedIncome += amount;
-      }
+        const row = grouped.get(groomerKey);
+        const amount = getServicePrice(turno) * share;
+        row.scheduledCount += share;
+        row.estimatedIncome += amount;
+        if (normalizeStatus(turno.status) === "finished") {
+          row.finishedCount += share;
+          row.finishedIncome += amount;
+          row.payout += amount * primaryRate;
+        }
+      });
     });
 
     return Array.from(grouped.values())
       .map((row) => ({
         ...row,
+        commissionRate: row.finishedIncome ? row.payout / row.finishedIncome : row.commissionRate,
         completionRate: row.scheduledCount
           ? Math.round((row.finishedCount / row.scheduledCount) * 100)
           : 0,
-        payout: row.finishedIncome * row.commissionRate,
       }))
       .sort((a, b) => b.payout - a.payout || b.finishedIncome - a.finishedIncome);
-  }, [closeFilteredTurnos, employeesById, getServicePrice]);
+  }, [closeFilteredTurnos, employeesById, getServicePrice, closeGroomerId]);
 
   const closeLiquidationTotals = useMemo(
     () =>
@@ -1515,6 +1527,7 @@ export default function AgendaPage() {
         price,
         payment_method_id: normalizeId(turno.payment_method_id),
         groomer_id: normalizeId(turno.groomer_id),
+        second_groomer_id: normalizeId(turno.second_groomer_id),
         notes: (turno.notes || "").trim(),
       };
       await apiRequest("/v2/services", { method: "POST", body: payload });
@@ -1591,6 +1604,11 @@ export default function AgendaPage() {
   async function handleFinishSubmit() {
     if (!selectedTurno) return;
     const groomerId = normalizeId(finishForm.groomer_id);
+    const secondGroomerId = finishForm.shared ? normalizeId(finishForm.second_groomer_id) : null;
+    if (finishForm.shared && (!secondGroomerId || secondGroomerId === groomerId)) {
+      alert("Seleccioná un segundo peluquero distinto del principal.");
+      return;
+    }
     const serviceTypeId = normalizeId(finishForm.service_type_id);
     const price = Number(finishForm.price || 0);
     const deposit = Number(selectedTurno.deposit_amount || 0);
@@ -1623,6 +1641,7 @@ export default function AgendaPage() {
     }
     await updateStatusWithDetails(selectedTurno, "finished", {
       groomer_id: groomerId,
+      second_groomer_id: secondGroomerId,
       service_type_id: serviceTypeId,
       price,
       ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
@@ -2365,9 +2384,8 @@ export default function AgendaPage() {
               <div className="agenda-close-formula">
                 <strong>{selectedCloseRow.groomerName}</strong>
                 <span>
-                  {formatCurrency(selectedCloseRow.finishedIncome)} ×{" "}
-                  {formatCommissionRate(selectedCloseRow.commissionRate)} ={" "}
-                  {formatCurrency(selectedCloseRow.payout)}
+                  Paga a liquidar: {formatCurrency(selectedCloseRow.payout)}
+                  <small> Los servicios compartidos reparten la comisión del principal en partes iguales.</small>
                 </span>
               </div>
             ) : (
@@ -2626,6 +2644,21 @@ export default function AgendaPage() {
                         ))}
                       </select>
                     </label>
+                    <label className="form-field">
+                      <span><input type="checkbox" checked={finishForm.shared}
+                        onChange={(e) => setFinishForm((prev) => ({ ...prev, shared: e.target.checked, second_groomer_id: "" }))} /> Trabajaron dos peluqueros</span>
+                    </label>
+                    {finishForm.shared && <label className="form-field">
+                      <span>Segundo peluquero</span>
+                      <select value={finishForm.second_groomer_id}
+                        onChange={(e) => setFinishForm((prev) => ({ ...prev, second_groomer_id: e.target.value }))}>
+                        <option value="">Seleccioná</option>
+                        {groomerOptions(employees, finishForm.second_groomer_id)
+                          .filter((emp) => String(emp.id) !== String(finishForm.groomer_id))
+                          .map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                      </select>
+                      <small className="agenda-helper">La comisión del peluquero principal se divide en partes iguales: 50% para cada uno. El precio al cliente no cambia.</small>
+                    </label>}
                     <label className="form-field">
                       <span>Tipo de servicio</span>
                       <select
