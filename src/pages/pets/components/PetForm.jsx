@@ -10,6 +10,7 @@ import { apiRequest } from "../../../services/apiClient";
 import { showApiError } from "../../../utils/errorDialog";
 import { todayISO } from "../../../utils/dates";
 import { PET_SIZES, sizeLabel } from "../../../utils/pets";
+import { BEHAVIOR_GROUPS, BEHAVIOR_TAGS, parseBehavior, serializeBehavior } from "../../../lib/petBehavior";
 
 const EMPTY = {
   name: "",
@@ -20,7 +21,8 @@ const EMPTY = {
   neutered: false,
   birth_date: "",
   age: "",
-  behavior: "",
+  behavior_tags: [],
+  behavior_note: "",
   address: "",
   notes: "",
 };
@@ -29,10 +31,14 @@ function toForm(pet, initialName) {
   if (!pet) return { ...EMPTY, name: initialName || "" };
   const form = { ...EMPTY };
   for (const key of Object.keys(EMPTY)) {
+    if (key === "behavior_tags" || key === "behavior_note") continue;
     if (key === "neutered") form.neutered = Boolean(pet.neutered);
     else if (key === "birth_date") form.birth_date = pet.birth_date ? String(pet.birth_date).split("T")[0] : "";
     else form[key] = pet[key] ?? "";
   }
+  const behavior = parseBehavior(pet.behavior);
+  form.behavior_tags = behavior.tags;
+  form.behavior_note = behavior.note;
   return form;
 }
 
@@ -50,7 +56,7 @@ function toPayload(form) {
     neutered: Boolean(form.neutered),
     birth_date: form.birth_date || null,
     age: text(form.age),
-    behavior: text(form.behavior),
+    behavior: text(serializeBehavior(form.behavior_tags, form.behavior_note)),
     address: text(form.address),
     notes: text(form.notes),
   };
@@ -81,6 +87,15 @@ export default function PetForm({ open, pet, initialName = "", onClose, onSaved 
   function set(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: null }));
+  }
+
+  function toggleBehaviorTag(label) {
+    setForm((prev) => ({
+      ...prev,
+      behavior_tags: prev.behavior_tags.includes(label)
+        ? prev.behavior_tags.filter((tag) => tag !== label)
+        : [...prev.behavior_tags, label],
+    }));
   }
 
   // Tamaños viejos que no están en la lista ("pequeño") se muestran como una
@@ -266,12 +281,39 @@ export default function PetForm({ open, pet, initialName = "", onClose, onSaved 
                 Si no sabés la fecha, dejala vacía y cargá la edad. Con fecha, la edad se calcula sola.
               </p>
             </div>
-            <Field label="Comportamiento" full>
+            <div className="pv-field pv-field--full">
+              <span className="pv-field__label" id="pv-behavior-label">Comportamiento</span>
+              <p className="pv-hint">Marcá lo que tiene que saber quien la atiende. Se muestra como aviso en la ficha.</p>
+              <div className="pv-behavior-picker" role="group" aria-labelledby="pv-behavior-label">
+                {BEHAVIOR_GROUPS.map((group) => (
+                  <div key={group.tone} className="pv-behavior-picker__group">
+                    <span className="pv-behavior-picker__title">{group.label}</span>
+                    <div className="pv-choice">
+                      {BEHAVIOR_TAGS.filter((tag) => tag.tone === group.tone).map((tag) => {
+                        const active = form.behavior_tags.includes(tag.label);
+                        return (
+                          <button
+                            key={tag.label}
+                            type="button"
+                            aria-pressed={active}
+                            className={`pv-choice__item pv-choice__item--${tag.tone}${active ? " is-active" : ""}`}
+                            onClick={() => toggleBehaviorTag(tag.label)}
+                          >
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Field label="Nota de comportamiento" full>
               <input
                 type="text"
-                value={form.behavior}
-                onChange={(e) => set("behavior", e.target.value)}
-                placeholder="Ej: Nervioso con el secador"
+                value={form.behavior_note}
+                onChange={(e) => set("behavior_note", e.target.value)}
+                placeholder="Ej: Se calma con premios. Cortarle las uñas entre dos."
               />
             </Field>
           </div>

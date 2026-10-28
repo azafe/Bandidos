@@ -1,6 +1,7 @@
 // Piezas chicas compartidas por las pantallas de Mascotas.
 import { useEffect } from "react";
-import { petColor, petInitial, TURNO_STATUS } from "../../../utils/pets";
+import { displayText, petColor, petInitial, TURNO_STATUS } from "../../../utils/pets";
+import { behaviorLevel, behaviorTagTone, parseBehavior } from "../../../lib/petBehavior";
 
 export function PetAvatar({ pet, size = 44, onClick, className = "" }) {
   const color = petColor(pet?.name);
@@ -30,6 +31,41 @@ export function Pill({ tone = "muted", children, title }) {
     <span className={`pv-pill pv-pill--${tone}`} title={title}>
       {children}
     </span>
+  );
+}
+
+const BEHAVIOR_PILL_TONE = { danger: "err", warn: "warn", ok: "ok" };
+
+// Comportamiento guardado en `pet.behavior`: etiquetas como píldoras con su
+// color y la nota libre debajo. variant "callout" es el aviso de la ficha y la
+// vista rápida; "compact" es el de la tarjeta de la lista.
+export function BehaviorCallout({ behavior, label = "Comportamiento", variant = "callout" }) {
+  const parsed = parseBehavior(behavior);
+  const level = behaviorLevel(parsed);
+  if (!level) return null;
+  const pills = parsed.tags.length > 0 && (
+    <span className="pv-behavior__tags">
+      {parsed.tags.map((tag) => (
+        <Pill key={tag} tone={BEHAVIOR_PILL_TONE[behaviorTagTone(tag)]}>{tag}</Pill>
+      ))}
+    </span>
+  );
+  if (variant === "compact") {
+    return (
+      <div className={`pv-card__behavior pv-card__behavior--${level}`}>
+        {pills}
+        {parsed.note && <p>{displayText(parsed.note)}</p>}
+      </div>
+    );
+  }
+  return (
+    <div className={`pv-callout pv-callout--${level}`}>
+      <span className="pv-callout__label">
+        {level !== "ok" && <Icon name="alert" size={14} />} {label}
+      </span>
+      {pills}
+      {parsed.note && <p>{displayText(parsed.note)}</p>}
+    </div>
   );
 }
 

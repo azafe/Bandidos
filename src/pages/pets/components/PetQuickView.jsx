@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Sheet from "./Sheet";
-import { Icon, PetAvatar } from "./PetBits";
+import { BehaviorCallout, Icon, PetAvatar } from "./PetBits";
 import {
   birthdayLabel,
   displayName,
@@ -81,12 +81,7 @@ export default function PetQuickView({ pet, onClose, onEdit, onArchive, onRestor
             </button>
           </div>
 
-          {pet.behavior && (
-            <div className="pv-callout pv-callout--warn">
-              <span className="pv-callout__label">Comportamiento</span>
-              <p>{displayText(pet.behavior)}</p>
-            </div>
-          )}
+          {pet.behavior && <BehaviorCallout behavior={pet.behavior} />}
 
           {rows.length > 0 && (
             <dl className="pv-rows">
