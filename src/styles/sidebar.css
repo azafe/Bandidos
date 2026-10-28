@@ -3,10 +3,11 @@
 .sidebar {
   width: 260px;
   height: 100vh;
+  height: 100dvh;
   background: var(--bg-sidebar);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 4px 0 24px rgba(0,0,0,0.12);
-  padding: calc(24px + env(safe-area-inset-top, 0px)) 18px 24px calc(18px + env(safe-area-inset-left, 0px));
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -16,6 +17,7 @@
 
 /* Marca Bandidos dentro del sidebar */
 .sidebar__brand {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -80,20 +82,29 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 nav.sidebar__nav {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  scrollbar-width: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(230, 233, 245, 0.4) transparent;
 }
 
 nav.sidebar__nav::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+}
+
+nav.sidebar__nav::-webkit-scrollbar-thumb {
+  background: rgba(230, 233, 245, 0.4);
+  border-radius: 999px;
 }
 
 .sidebar__nav-link {
+  flex-shrink: 0;
   padding: 10px 12px;
   border-radius: var(--radius-pill);
   font-size: 0.9rem;
