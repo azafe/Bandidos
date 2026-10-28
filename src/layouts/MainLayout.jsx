@@ -27,6 +27,8 @@ const PAGE_TITLES = {
   "/catalog/payment-methods": "Métodos de Pago",
   "/catalog/expense-categories": "Categorías de Gastos",
   "/admin/users":             "Usuarios",
+  "/admin/permisos":          "Permisos",
+  "/sin-acceso":              "Bandidos",
   "/petshop":                 "PetShop",
   "/petshop/stock":           "Stock y conteo",
   "/nueva-sucursal":          "Nueva sucursal",

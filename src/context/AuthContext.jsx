@@ -9,17 +9,33 @@ import {
   setSuspendedHandler,
 } from "../services/apiClient";
 import { disableLocalPush } from "../services/pushNotifications";
+import { canAccess, fallbackModules } from "../lib/permissions";
+
+// Qué módulos abre el usuario (Usuarios › Permisos). Si no se pueden leer, se
+// usan los de su rol por defecto: el menú se arma igual y lo que no
+// corresponda lo frena el backend.
+async function loadPermissions(me, token) {
+  const role = me?.role;
+  if (!role || role === "super_admin") return { role, is_admin: false, modules: [] };
+  try {
+    return await apiRequest("/me/permissions", { token });
+  } catch {
+    return { role, is_admin: role === "admin", modules: role === "admin" ? [] : fallbackModules(role) };
+  }
+}
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(getStoredToken());
   const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    setPermissions(null);
     setStoredToken(null);
   }, []);
 
@@ -58,7 +74,11 @@ export function AuthProvider({ children }) {
         }
       }
       if (requestIdRef.current !== requestId) return;
-      setUser(me?.user || me);
+      const loaded = me?.user || me;
+      const perms = await loadPermissions(loaded, token);
+      if (requestIdRef.current !== requestId) return;
+      setPermissions(perms);
+      setUser(loaded);
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
       console.error("[AuthContext] Error cargando /me:", err);
@@ -121,6 +141,8 @@ export function AuthProvider({ children }) {
         register,
         logout,
         refreshMe: loadMe,
+        permissions,
+        can: (module) => canAccess(permissions, module),
       }}
     >
       {children}

@@ -38,38 +38,40 @@ import BookingSettingsPage from "./pages/booking/BookingSettingsPage";
 import NuevaSucursalPage from "./pages/sucursal/NuevaSucursalPage";
 import PublicBookingPage from "./pages/public/PublicBookingPage";
 import ReservationManagePage from "./pages/public/ReservationManagePage";
+import PermissionsPage from "./pages/admin/PermissionsPage";
+import NoAccessPage from "./pages/auth/NoAccessPage";
+import { ADMIN_ONLY, landingPath } from "./lib/permissions";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ThemeApplier from "./components/ui/ThemeApplier";
 import ErrorDialog from "./components/ui/ErrorDialog";
 
+// Inicio, o la primera pantalla que el rol puede abrir.
 function DashboardHomeWrapper() {
-  const { user } = useAuth();
+  const { user, permissions, can } = useAuth();
   if (user?.role === "super_admin") {
     return <Navigate to="/admin/super" replace />;
   }
-  if (user?.role === "staff") {
-    return <Navigate to="/agenda" replace />;
-  }
-  return <DashboardHome />;
+  if (!permissions) return null;
+  if (can("inicio") && user?.enabled_modules?.dashboard !== false) return <DashboardHome />;
+  const landing = landingPath(permissions, user?.enabled_modules);
+  return <Navigate to={landing && landing !== "/" ? landing : "/sin-acceso"} replace />;
 }
 
-function StaffGuard({ children, redirectTo = "/agenda" }) {
-  const { user } = useAuth();
-  if (user?.role === "staff") {
-    return <Navigate to={redirectTo} replace />;
-  }
+// La puerta de cada pantalla (Usuarios › Permisos): sin el módulo, vuelve al
+// inicio, que lo manda a la primera pantalla que sí tiene. El backend frena
+// lo mismo; esto es para no mostrar una pantalla que se va a llenar de 403.
+function RequireModule({ module, children }) {
+  const { permissions, can } = useAuth();
+  if (!permissions) return null;
+  if (!can(module)) return <Navigate to="/" replace />;
   return children;
 }
 
-// Pantallas de configuración que solo ve el admin del local.
+// Lo que no se delega: finanzas de Bandimóviles, usuarios y permisos.
 function AdminGuard({ children }) {
-  const { user } = useAuth();
-  if (user?.role !== "admin") {
-    return <Navigate to="/agenda" replace />;
-  }
-  return children;
+  return <RequireModule module={ADMIN_ONLY}>{children}</RequireModule>;
 }
 
 function App() {
@@ -92,46 +94,48 @@ function App() {
               <MainLayout>
                 <Routes>
                   <Route path="/" element={<DashboardHomeWrapper />} />
-                  <Route path="/services" element={<StaffGuard><ServicesListPage /></StaffGuard>} />
-                  <Route path="/services/new" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
-                  <Route path="/services/:id" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
-                  <Route path="/agenda" element={<AgendaPage />} />
-                  <Route path="/traslados" element={<BandimovilesLayout />}>
+                  <Route path="/services" element={<RequireModule module="servicios"><ServicesListPage /></RequireModule>} />
+                  <Route path="/services/new" element={<RequireModule module="servicios"><ServiceFormPage /></RequireModule>} />
+                  <Route path="/services/:id" element={<RequireModule module="servicios"><ServiceFormPage /></RequireModule>} />
+                  <Route path="/agenda" element={<RequireModule module="agenda"><AgendaPage /></RequireModule>} />
+                  <Route path="/traslados" element={<RequireModule module="bandimoviles"><BandimovilesLayout /></RequireModule>}>
                     <Route index element={<BandimovilesInicioPage />} />
                     <Route path="dia" element={<TrasladosDiaPage />} />
                     <Route path="resultados" element={<AdminGuard><TrasladosResultadosPage /></AdminGuard>} />
                     <Route path="rendiciones" element={<AdminGuard><TrasladosRendicionesPage /></AdminGuard>} />
                     <Route path="configuracion" element={<AdminGuard><TrasladosSettingsPage /></AdminGuard>} />
                   </Route>
-                  <Route path="/reservas-online" element={<AdminGuard><BookingSettingsPage /></AdminGuard>} />
-                  <Route path="/nueva-sucursal" element={<AdminGuard><NuevaSucursalPage /></AdminGuard>} />
-                  <Route path="/customers" element={<CustomersPage />} />
-                  <Route path="/pets" element={<PetsPage />} />
-                  <Route path="/pets/:id" element={<PetDetailPage />} />
-                  <Route path="/expenses/daily-incomes" element={<DailyIncomesPage />} />
-                  <Route path="/expenses/daily" element={<DailyExpensesPage />} />
-                  <Route path="/expenses/fixed" element={<StaffGuard><FixedExpensesPage /></StaffGuard>} />
-                  <Route path="/employees" element={<StaffGuard><EmployeesPage /></StaffGuard>} />
-                  <Route path="/employees/:id" element={<StaffGuard><EmployeeDetailPage /></StaffGuard>} />
-                  <Route path="/suppliers" element={<StaffGuard><SuppliersPage /></StaffGuard>} />
-                  <Route path="/suppliers/:id" element={<StaffGuard><SupplierDetailPage /></StaffGuard>} />
+                  <Route path="/reservas-online" element={<RequireModule module="reservas"><BookingSettingsPage /></RequireModule>} />
+                  <Route path="/nueva-sucursal" element={<RequireModule module="inicio"><NuevaSucursalPage /></RequireModule>} />
+                  <Route path="/customers" element={<RequireModule module="mascotas"><CustomersPage /></RequireModule>} />
+                  <Route path="/pets" element={<RequireModule module="mascotas"><PetsPage /></RequireModule>} />
+                  <Route path="/pets/:id" element={<RequireModule module="mascotas"><PetDetailPage /></RequireModule>} />
+                  <Route path="/expenses/daily-incomes" element={<RequireModule module="caja"><DailyIncomesPage /></RequireModule>} />
+                  <Route path="/expenses/daily" element={<RequireModule module="gastos"><DailyExpensesPage /></RequireModule>} />
+                  <Route path="/expenses/fixed" element={<RequireModule module="gastos_fijos"><FixedExpensesPage /></RequireModule>} />
+                  <Route path="/employees" element={<RequireModule module="equipo"><EmployeesPage /></RequireModule>} />
+                  <Route path="/employees/:id" element={<RequireModule module="equipo"><EmployeeDetailPage /></RequireModule>} />
+                  <Route path="/suppliers" element={<RequireModule module="proveedores"><SuppliersPage /></RequireModule>} />
+                  <Route path="/suppliers/:id" element={<RequireModule module="proveedores"><SupplierDetailPage /></RequireModule>} />
                   <Route
                     path="/catalog/service-types"
-                    element={<ServiceTypesPage />}
+                    element={<RequireModule module="tipos_servicio"><ServiceTypesPage /></RequireModule>}
                   />
                   <Route
                     path="/catalog/payment-methods"
-                    element={<StaffGuard><PaymentMethodsPage /></StaffGuard>}
+                    element={<RequireModule module="configuracion"><PaymentMethodsPage /></RequireModule>}
                   />
                   <Route
                     path="/catalog/expense-categories"
-                    element={<StaffGuard><ExpenseCategoriesPage /></StaffGuard>}
+                    element={<RequireModule module="configuracion"><ExpenseCategoriesPage /></RequireModule>}
                   />
-                  <Route path="/admin/users" element={<UsersPage />} />
+                  <Route path="/admin/users" element={<AdminGuard><UsersPage /></AdminGuard>} />
+                  <Route path="/admin/permisos" element={<AdminGuard><PermissionsPage /></AdminGuard>} />
+                  <Route path="/sin-acceso" element={<NoAccessPage />} />
                   <Route path="/admin/super" element={<SuperAdminPage />} />
-                  <Route path="/petshop" element={<PetShopPage />} />
-                  <Route path="/petshop/stock" element={<PetshopStockPage />} />
-                  <Route path="/comunicaciones" element={<ComunicacionesPage />} />
+                  <Route path="/petshop" element={<RequireModule module="petshop"><PetShopPage /></RequireModule>} />
+                  <Route path="/petshop/stock" element={<RequireModule module="petshop"><PetshopStockPage /></RequireModule>} />
+                  <Route path="/comunicaciones" element={<RequireModule module="comunicaciones"><ComunicacionesPage /></RequireModule>} />
                   <Route path="/recordatorios" element={<Navigate to="/comunicaciones" replace />} />
                 </Routes>
               </MainLayout>

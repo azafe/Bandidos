@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { showApiError } from "../../utils/errorDialog";
 import ChoferAccessEditor from "../../components/traslados/ChoferAccessEditor";
 import "../../styles/traslados.css";
+import { ROLE_OPTIONS, roleLabel } from "../../lib/permissions";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -191,8 +192,9 @@ export default function UsersPage() {
               disabled={!!form.chofer_id}
               onChange={handleChange}
             >
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>{roleLabel(role)}</option>
+              ))}
             </select>
           </div>
           <label className="form-field">
@@ -246,7 +248,7 @@ export default function UsersPage() {
                   <div className="list-item__title">{item.email}</div>
                 </div>
                 <div className="list-item__meta">
-                  <span>Rol: {item.role || "-"}</span>
+                  <span>Rol: {roleLabel(item.role)}</span>
                   {item.chofer_id && <span> · Solo traslados de {employees.items.find((e) => e.id === item.chofer_id)?.name || "su chofer vinculado"}</span>}
                 </div>
               </div>
@@ -303,8 +305,10 @@ export default function UsersPage() {
                       }))
                     }
                   >
-                    <option value="admin">Admin</option>
-                    <option value="staff">Staff</option>
+                    {!ROLE_OPTIONS.includes(modalForm.role) && <option value={modalForm.role}>{roleLabel(modalForm.role)}</option>}
+                    {ROLE_OPTIONS.map((role) => (
+                      <option key={role} value={role}>{roleLabel(role)}</option>
+                    ))}
                   </select>
                 </label>
               </>
@@ -314,7 +318,7 @@ export default function UsersPage() {
                   <strong>Email:</strong> {selectedUser.email || "-"}
                 </div>
                 <div>
-                  <strong>Rol:</strong> {selectedUser.role || "-"}
+                  <strong>Rol:</strong> {roleLabel(selectedUser.role)}
                 </div>
               </>
             )}
