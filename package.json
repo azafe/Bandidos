@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test src/lib/booking/booking.test.js src/lib/traslados.test.js src/lib/trasladosRuta.test.js src/lib/trasladosResultados.test.js src/lib/dashboardMetrics.test.js src/lib/petBehavior.test.js src/lib/sucursal.test.js"
+    "test": "node --test src/lib/booking/booking.test.js src/lib/traslados.test.js src/lib/trasladosRuta.test.js src/lib/trasladosResultados.test.js src/lib/dashboardMetrics.test.js src/lib/petBehavior.test.js src/lib/sucursal.test.js src/lib/team.test.js"
   },
   "dependencies": {
     "papaparse": "^5.5.3",
