@@ -8,7 +8,8 @@ Ambos participantes quedan guardados en el turno y en el servicio generado. La l
 
 ## Puesta en producción
 
-1. Aplicar `Bandidos-backend/db/migrations/030_shared_groomer.sql` en la base de datos antes de desplegar el backend.
+1. Aplicar `Bandidos-backend/db/migrations/033_shared_groomer.sql` en la base de datos antes de desplegar el backend.
+   Si ya se aplicó el SQL compartido originalmente como migración 030, no repetirlo: crea las mismas columnas y restricciones. El archivo se renumeró por una migración de stock existente en el remoto.
 2. Desplegar el backend actualizado y luego el frontend. El frontend anterior sigue funcionando con el backend actualizado.
 3. Verificar un cierre compartido y su reparto en la liquidación diaria.
 
