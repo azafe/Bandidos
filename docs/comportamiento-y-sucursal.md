@@ -21,9 +21,30 @@ precaución, naranja si hay de cuidado o solo nota, verde si todo es tranquiliza
    crecimiento contra los 3 meses anteriores (≥+5% / ≥−5%) y meses de ganancia
    para juntar el capital necesario (≤12 / ≤24). Un dato faltante queda «Sin
    datos» y nunca cuenta como aprobado.
+   - El veredicto dice qué puntos lo causan («Lo que frena» / «Para mirar»), con
+     enlace a cada uno.
+   - La capacidad sale de la agenda: cuentan como peluqueros los que trabajaron
+     al menos un cuarto de los días abiertos, y los turnos por peluquero son lo
+     que hacen en sus días más cargados (percentil 90 de turnos por peluquero por
+     día; un turno compartido cuenta para los dos). Los campos para cambiarlos y
+     el detalle por peluquero están dentro del punto «Agenda llena». Lo que se
+     cambia a mano se recuerda y se puede volver a lo de la agenda.
+   - Si los gastos fijos de hoy (devengado del mes en curso) difieren de los del
+     período, la ganancia y el margen se muestran con los de hoy, con una nota
+     que dice cuánto fueron en el período.
 2. **La sucursal nueva.** Arranca con los números del local y se editan:
-   inversión, fijos, ticket, comisión, insumos por servicio, servicios esperados,
-   arranque gradual y capacidad. Se recuerda por navegador.
+   inversión, fijos (los de hoy), ticket, comisión, insumos por servicio,
+   servicios esperados, arranque gradual y capacidad. Se recuerda por navegador.
+   Los insumos por servicio salen de las categorías de insumos y afilado; si el
+   local no las usa, de todos los gastos diarios (que pueden incluir mercadería
+   del PetShop o personal).
+   - Inversión y gastos fijos se pueden cargar como total o «por partes» (obra,
+     equipamiento, depósito, habilitación…; alquiler, sueldos fijos, servicios,
+     impuestos…); en partes manda la suma y el total cargado pasa a «otros».
+   - Debajo de los fijos se ve la lista de gastos fijos del mes en curso del
+     local, para saber qué incluye el número de partida.
+   - Los campos son de texto numérico: se pueden vaciar, muestran separador de
+     miles y aceptan «4,5» donde hay decimales (antes el 0 no se podía borrar).
 3. **Resultado.** Punto de equilibrio, ganancia mensual ya arrancada, plata
    necesaria (inversión + pérdidas del arranque), mes de recupero, caja
    acumulada a 36 meses y escenarios −30% / +20%. Avisa si la demanda supera la

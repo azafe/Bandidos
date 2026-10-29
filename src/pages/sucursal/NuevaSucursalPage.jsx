@@ -2,6 +2,9 @@
 // Cálculo para abrir otra sucursal: diagnóstico del local actual con sus
 // números reales (promedio de los últimos 3 meses cerrados) y simulador de la
 // sucursal nueva. Las cuentas están en lib/sucursal.js.
+// La capacidad del local sale de la agenda (quién trabajó y cuántos turnos
+// hace en sus días más cargados) y la ganancia se muestra con los gastos fijos
+// de hoy, que pueden ser distintos a los del período.
 import { useEffect, useMemo, useState } from "react";
 import {
   LineChart,
@@ -15,18 +18,30 @@ import {
   CartesianGrid,
 } from "recharts";
 import { fetchDashboardData } from "../../lib/dashboardApi";
+import { apiRequest } from "../../services/apiClient";
 import { buildDashboardMetrics } from "../../lib/dashboardMetrics";
 import {
   branchCapacity,
+  DEFAULT_TURNOS,
   defaultBranchInputs,
   diagnoseLocal,
+  FIJOS_PARTES,
+  groomerLoad,
   HORIZON_MONTHS,
+  INVERSION_PARTES,
+  parseNumberInput,
+  partsFromTotal,
+  resolveBranchInputs,
   simulateScenarios,
+  sumParts,
+  supplyExpenses,
 } from "../../lib/sucursal";
 import { addDaysISO, addMonthsISO, monthBoundsISO, todayISO } from "../../utils/dates";
 import "../../styles/sucursal.css";
 
-const STORAGE_KEY = "bandidos:sucursal:simulador";
+// v2: los peluqueros y turnos del local salen de la agenda; lo guardado antes
+// era el 6 fijo y taparía el dato real.
+const STORAGE_KEY = "bandidos:sucursal:simulador:v2";
 const MONTHS_BACK = 3;
 const MONTH_NAMES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -46,7 +61,12 @@ function lastClosedMonths() {
   const to = addDaysISO(firstOfThisMonth, -1);
   const prevFrom = addMonthsISO(from, -MONTHS_BACK);
   const prevTo = addDaysISO(from, -1);
-  return { current: { from, to }, previous: { from: prevFrom, to: prevTo } };
+  const { first, last } = monthBoundsISO(todayISO());
+  return {
+    current: { from, to },
+    previous: { from: prevFrom, to: prevTo },
+    today: { from: first, to: last, period: first.slice(0, 7) },
+  };
 }
 
 function rangeLabel({ from, to }) {
@@ -61,12 +81,23 @@ function isGroomer(employee) {
   return active && /groom|peluq|estilis/i.test(String(employee.role || ""));
 }
 
+const inRange = (date, { from, to }) => Boolean(date) && date.slice(0, 10) >= from && date.slice(0, 10) <= to;
+
 // Promedios mensuales del local a partir de las mismas métricas del Inicio.
 function summarizeLocal(range, data) {
   const { kpis, series } = buildDashboardMetrics({ range, current: data, categories: data.categories });
   const monthsWithData = new Set(series.byDay.filter((d) => d.income > 0).map((d) => d.date.slice(0, 7))).size;
   const months = Math.max(1, monthsWithData);
   const workedDays = series.byDay.filter((d) => d.servicesIncome > 0).length;
+  const turnos = data.services
+    .filter((s) => s.status === "finished" && inRange(s.date, range))
+    .map((s) => ({
+      date: s.date.slice(0, 10),
+      groomerId: s.groomer_id ?? s.groomerId ?? null,
+      secondGroomerId: s.second_groomer_id ?? s.secondGroomerId ?? null,
+    }));
+  const load = groomerLoad(turnos, data.employees.filter(isGroomer), { diasAbiertos: workedDays });
+  const insumos = supplyExpenses(data.dailyExpenses.filter((e) => inRange(e.date, range)), data.categories);
   return {
     months: monthsWithData,
     ingresosMes: kpis.income / months,
@@ -76,9 +107,33 @@ function summarizeLocal(range, data) {
     ticket: kpis.avgTicket,
     comision: kpis.servicesIncome > 0 ? kpis.groomerCommissions / kpis.servicesIncome : 0.4,
     gastosDiariosMes: kpis.dailyExpenseTotal / months,
+    insumosMes: insumos.total / months,
+    insumosCategorias: insumos.categorias,
     fijosMes: kpis.fixedMonthlyRunRate,
+    fijosPeriodoMes: kpis.fixedExpenseTotal / months,
     diasMes: workedDays / months,
-    groomers: data.employees.filter(isGroomer).length,
+    load,
+    groomers: load.peluqueros || data.employees.filter(isGroomer).length,
+    turnosPorGroomer: load.turnosTope || DEFAULT_TURNOS,
+  };
+}
+
+// Si los gastos fijos de hoy difieren de los del período, la ganancia se
+// recalcula con los de hoy: es la que el local va a tener mientras arranca la
+// sucursal nueva.
+function withTodayFixed(summary, fijosHoy) {
+  const hoy = Number(fijosHoy);
+  if (!Number.isFinite(hoy) || hoy <= 0) return { ...summary, fijosHoy: null };
+  const gananciaPeriodoMes = summary.gananciaMes;
+  const gananciaMes = gananciaPeriodoMes + summary.fijosPeriodoMes - hoy;
+  const cambio = Math.abs(hoy - summary.fijosPeriodoMes) >= 0.01 * Math.max(1, summary.ingresosMes);
+  return {
+    ...summary,
+    fijosMes: hoy,
+    fijosHoy: cambio ? hoy : null,
+    gananciaPeriodoMes,
+    gananciaMes: cambio ? gananciaMes : gananciaPeriodoMes,
+    margen: cambio && summary.ingresosMes > 0 ? gananciaMes / summary.ingresosMes : summary.margen,
   };
 }
 
@@ -119,19 +174,25 @@ export default function NuevaSucursalPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
-  const [localTurnos, setLocalTurnos] = useState(() => readSaved()?.localTurnos ?? 6);
+  // null = usar lo que dice la agenda; un número = lo cambió la persona.
+  const [localTurnos, setLocalTurnos] = useState(() => readSaved()?.localTurnos ?? null);
   const [localGroomers, setLocalGroomers] = useState(() => readSaved()?.localGroomers ?? null);
   const [inputs, setInputs] = useState(() => readSaved()?.inputs ?? null);
+  // Lista de gastos fijos del mes en curso, para mostrar qué incluye el total.
+  const [fijosHoyItems, setFijosHoyItems] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       fetchDashboardData(ranges.current),
       fetchDashboardData(ranges.previous).catch(() => null),
+      apiRequest("/v2/fixed-expenses/accrual", { params: { from: ranges.today.from, to: ranges.today.to } }).catch(() => null),
+      apiRequest(`/v2/fixed-expenses/months/${ranges.today.period}`).catch(() => null),
     ])
-      .then(([currentData, previousData]) => {
+      .then(([currentData, previousData, todayAccrual, todayMonth]) => {
         if (cancelled) return;
-        const summary = summarizeLocal(ranges.current, currentData);
+        setFijosHoyItems(Array.isArray(todayMonth?.items) ? todayMonth.items : []);
+        const summary = withTodayFixed(summarizeLocal(ranges.current, currentData), todayAccrual?.monthly_total);
         const previous = previousData ? summarizeLocal(ranges.previous, previousData) : null;
         summary.ingresosMesAnterior = previous && previous.months > 0 ? previous.ingresosMes : null;
         setLocal(summary);
@@ -153,8 +214,9 @@ export default function NuevaSucursalPage() {
   }, [inputs, localTurnos, localGroomers]);
 
   const groomersLocal = localGroomers ?? Math.max(1, local?.groomers || 0);
+  const turnosLocal = localTurnos ?? local?.turnosPorGroomer ?? DEFAULT_TURNOS;
   const branchInputs = useMemo(
-    () => (inputs ? { ...inputs, capacidadMes: branchCapacity(inputs) } : null),
+    () => (inputs ? { ...resolveBranchInputs(inputs), capacidadMes: branchCapacity(inputs) } : null),
     [inputs]
   );
   const scenarios = useMemo(() => (branchInputs ? simulateScenarios(branchInputs) : null), [branchInputs]);
@@ -163,11 +225,11 @@ export default function NuevaSucursalPage() {
     () =>
       local
         ? diagnoseLocal(
-            { ...local, groomers: groomersLocal, turnosPorGroomer: localTurnos },
-            { capitalNecesario: inputs?.inversion > 0 ? expected?.capitalNecesario : 0 }
+            { ...local, groomers: groomersLocal, turnosPorGroomer: turnosLocal },
+            { capitalNecesario: branchInputs?.inversion > 0 ? expected?.capitalNecesario : 0 }
           )
         : null,
-    [local, groomersLocal, localTurnos, inputs?.inversion, expected?.capitalNecesario]
+    [local, groomersLocal, turnosLocal, branchInputs?.inversion, expected?.capitalNecesario]
   );
 
   function retry() {
@@ -181,7 +243,14 @@ export default function NuevaSucursalPage() {
   }
 
   function resetInputs() {
-    if (local) setInputs({ ...defaultBranchInputs(local), inversion: inputs?.inversion ?? 0 });
+    // La inversión no sale del local: se conserva.
+    if (local) {
+      setInputs({
+        ...defaultBranchInputs(local),
+        inversion: inputs?.inversion ?? 0,
+        inversionPartes: inputs?.inversionPartes ?? null,
+      });
+    }
   }
 
   return (
@@ -222,45 +291,69 @@ export default function NuevaSucursalPage() {
               <div>
                 <strong>{VERDICT[diagnosis.verdict].title}</strong>
                 <p>{VERDICT[diagnosis.verdict].text}</p>
+                {diagnosis.motivos.length > 0 && (
+                  <p className="sucursal__verdict-why">
+                    {diagnosis.verdict === "bad" ? "Lo que frena: " : "Para mirar: "}
+                    {diagnosis.motivos.map((c, i) => (
+                      <span key={c.id}>
+                        {i > 0 && (i === diagnosis.motivos.length - 1 ? " y " : ", ")}
+                        <a href={`#suc-check-${c.id}`}>{c.title.toLowerCase()}</a>
+                      </span>
+                    ))}
+                    .
+                  </p>
+                )}
               </div>
             </div>
 
             <dl className="sucursal__stats">
               <Stat label="Ingresos por mes" value={money(local.ingresosMes)} />
-              <Stat label="Ganancia por mes" value={money(local.gananciaMes)} tone={local.gananciaMes < 0 ? "bad" : undefined} />
+              <Stat
+                label={local.fijosHoy ? "Ganancia por mes con los fijos de hoy" : "Ganancia por mes"}
+                value={money(local.gananciaMes)}
+                tone={local.gananciaMes < 0 ? "bad" : undefined}
+              />
               <Stat label="Servicios por mes" value={oneDecimal(local.serviciosMes)} />
               <Stat label="Ticket promedio" value={money(local.ticket)} />
             </dl>
+            {local.fijosHoy && (
+              <p className="sucursal__note">
+                Los gastos fijos de hoy son {money(local.fijosHoy)} por mes; en {rangeLabel(ranges.current)} fueron{" "}
+                {money(local.fijosPeriodoMes)} y la ganancia de esos meses, {money(local.gananciaPeriodoMes)}.
+                Se usa la de hoy porque es la que va a tener el local mientras arranca la nueva.
+              </p>
+            )}
 
             <ul className="sucursal__checks">
               {diagnosis.checks.map((c) => (
-                <li key={c.id} className={`sucursal__check sucursal__check--${c.status}`}>
+                <li key={c.id} id={`suc-check-${c.id}`} className={`sucursal__check sucursal__check--${c.status}`}>
                   <span className="sucursal__check-badge">
                     <span aria-hidden="true">{STATUS[c.status].icon}</span> {STATUS[c.status].label}
                   </span>
-                  <div>
+                  <div className="sucursal__check-body">
                     <strong>{c.title}</strong>
                     <p>{c.detail}</p>
+                    {c.id === "agenda" && (
+                      <AgendaCapacity
+                        load={local.load}
+                        groomers={groomersLocal}
+                        turnos={turnosLocal}
+                        edited={localGroomers !== null || localTurnos !== null}
+                        onGroomers={setLocalGroomers}
+                        onTurnos={setLocalTurnos}
+                        onReset={() => {
+                          setLocalGroomers(null);
+                          setLocalTurnos(null);
+                        }}
+                      />
+                    )}
+                    {c.id === "ahorro" && c.status === "unknown" && (
+                      <a className="sucursal__check-link" href="#suc-inversion">Cargar la inversión</a>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
-
-            <div className="sucursal__inline-fields">
-              <NumberField
-                label="Peluqueros en este local"
-                value={groomersLocal}
-                min={1}
-                onChange={(v) => setLocalGroomers(v)}
-              />
-              <NumberField
-                label="Turnos por peluquero por día"
-                value={localTurnos}
-                min={1}
-                onChange={(v) => setLocalTurnos(v)}
-                hint="Lo máximo que puede atender en un día normal."
-              />
-            </div>
           </section>
 
           <section className="card sucursal__section" aria-labelledby="suc-sim-title">
@@ -280,19 +373,56 @@ export default function NuevaSucursalPage() {
             <div className="sucursal__form">
               <fieldset>
                 <legend>Lo que hay que poner</legend>
-                <NumberField label="Inversión inicial" prefix="$" step={10000} value={inputs.inversion} onChange={(v) => setInput("inversion", v)}
-                  hint="Obra, mesas, secadores, bañera, depósito del alquiler, habilitación." />
-                <NumberField label="Gastos fijos por mes" prefix="$" step={10000} value={inputs.fijosMes} onChange={(v) => setInput("fijosMes", v)}
-                  hint="Alquiler, luz, agua, internet, sueldos fijos. Arranca con los de este local." />
+                <PartsField
+                  id="suc-inversion"
+                  label="Inversión inicial"
+                  hint="Todo lo que hay que poner antes de abrir: obra, mesas, secadores, bañera, depósito del alquiler, habilitación."
+                  parts={INVERSION_PARTES}
+                  total={inputs.inversion}
+                  values={inputs.inversionPartes ?? null}
+                  onTotal={(v) => setInput("inversion", v)}
+                  onParts={(v) => setInput("inversionPartes", v)}
+                />
+                <PartsField
+                  label="Gastos fijos por mes"
+                  hint="Lo que se paga todos los meses aunque no haya turnos. La comisión y los insumos van aparte. Arranca con los de hoy de este local."
+                  parts={FIJOS_PARTES}
+                  total={inputs.fijosMes}
+                  values={inputs.fijosPartes ?? null}
+                  onTotal={(v) => setInput("fijosMes", v)}
+                  onParts={(v) => setInput("fijosPartes", v)}
+                  reference={fijosHoyItems.length > 0 && (
+                    <details className="sucursal__details">
+                      <summary>Qué incluyen hoy los fijos de este local</summary>
+                      <ul className="sucursal__ref-list">
+                        {fijosHoyItems.map((item) => (
+                          <li key={item.id ?? item.name}>
+                            <span>{item.name}</span>
+                            <span>{money(item.amount)}</span>
+                          </li>
+                        ))}
+                        <li className="sucursal__ref-total">
+                          <span>Total</span>
+                          <span>{money(fijosHoyItems.reduce((t, item) => t + (Number(item.amount) || 0), 0))}</span>
+                        </li>
+                      </ul>
+                      <p className="sucursal__note">
+                        Sacá lo que la sucursal nueva no va a tener (préstamos, contador o sistema compartidos) y sumá lo que sí.
+                      </p>
+                    </details>
+                  )}
+                />
               </fieldset>
               <fieldset>
                 <legend>Lo que deja cada servicio</legend>
-                <NumberField label="Ticket promedio" prefix="$" step={500} value={inputs.ticket} onChange={(v) => setInput("ticket", v)} />
+                <NumberField label="Ticket promedio" money value={inputs.ticket} onChange={(v) => setInput("ticket", v)} />
                 <NumberField label="Comisión del peluquero" suffix="%" value={Math.round(inputs.comision * 100)} max={100}
                   onChange={(v) => setInput("comision", v / 100)} />
-                <NumberField label="Insumos y gastos por servicio" prefix="$" step={100} value={inputs.variablePorServicio}
+                <NumberField label="Insumos y gastos por servicio" money value={inputs.variablePorServicio}
                   onChange={(v) => setInput("variablePorServicio", v)}
-                  hint="Sale de los gastos diarios de este local divididos por sus servicios. Revisalo si incluye compras del PetShop." />
+                  hint={local.insumosCategorias.length > 0
+                    ? `Sale de los gastos de ${local.insumosCategorias.join(", ")} de este local divididos por sus servicios.`
+                    : "Sale de todos los gastos diarios de este local divididos por sus servicios. Revisalo si incluye compras del PetShop."} />
               </fieldset>
               <fieldset>
                 <legend>Cuánto trabajo esperás</legend>
@@ -304,13 +434,13 @@ export default function NuevaSucursalPage() {
               <fieldset>
                 <legend>Capacidad</legend>
                 <NumberField label="Peluqueros" min={1} value={inputs.groomers} onChange={(v) => setInput("groomers", v)} />
-                <NumberField label="Turnos por peluquero por día" min={1} value={inputs.turnosPorGroomer} onChange={(v) => setInput("turnosPorGroomer", v)} />
+                <NumberField label="Turnos por peluquero por día" min={1} decimal value={inputs.turnosPorGroomer} onChange={(v) => setInput("turnosPorGroomer", v)} />
                 <NumberField label="Días que abre por mes" min={1} max={31} value={inputs.diasMes} onChange={(v) => setInput("diasMes", v)} />
               </fieldset>
             </div>
           </section>
 
-          <BranchResults inputs={inputs} expected={expected} scenarios={scenarios} local={local} />
+          <BranchResults inputs={branchInputs} expected={expected} scenarios={scenarios} local={local} />
         </>
       )}
     </div>
@@ -326,23 +456,148 @@ function Stat({ label, value, tone }) {
   );
 }
 
-function NumberField({ label, value, onChange, hint, prefix, suffix, min = 0, max, step = 1 }) {
+// Capacidad del local: los campos que mueven el punto «Agenda llena», con el
+// detalle de cada peluquero para que se entienda de dónde salen.
+function AgendaCapacity({ load, groomers, turnos, edited, onGroomers, onTurnos, onReset }) {
+  const fueraDeCuenta = load.detalle.filter((p) => !p.cuenta);
   return (
-    <label className="form-field sucursal__field">
+    <div className="sucursal__capacity">
+      <div className="sucursal__inline-fields">
+        <NumberField
+          label="Peluqueros en este local"
+          value={groomers}
+          min={1}
+          onChange={onGroomers}
+          hint={load.peluqueros > 0 ? `Según la agenda: los que trabajaron al menos ${load.minDias} días en el período.` : undefined}
+        />
+        <NumberField
+          label="Turnos por peluquero por día"
+          value={turnos}
+          min={1}
+          decimal
+          onChange={onTurnos}
+          hint={load.turnosTope
+            ? `Lo que hacen en sus días más cargados según la agenda (${load.turnosTope}). Cambialo si pueden hacer más.`
+            : "Lo máximo que puede atender en un día normal."}
+        />
+      </div>
+      {edited && (
+        <button type="button" className="btn-secondary sucursal__reset" onClick={onReset}>
+          Volver a lo que dice la agenda
+        </button>
+      )}
+      {load.detalle.length > 0 && (
+        <details className="sucursal__details">
+          <summary>Cómo trabajó cada peluquero</summary>
+          <div className="sucursal__table-wrap">
+            <table className="sucursal__table">
+              <thead>
+                <tr><th>Peluquero</th><th>Días</th><th>Turnos/día</th><th>Máximo</th></tr>
+              </thead>
+              <tbody>
+                {load.detalle.map((p) => (
+                  <tr key={p.id} className={p.cuenta ? undefined : "is-muted"}>
+                    <td>{p.name}</td>
+                    <td>{p.dias}</td>
+                    <td>{oneDecimal(p.promedio)}</td>
+                    <td>{p.maximo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {fueraDeCuenta.length > 0 && (
+            <p className="sucursal__note">
+              {fueraDeCuenta.map((p) => p.name).join(", ")} {fueraDeCuenta.length === 1 ? "trabajó" : "trabajaron"} menos
+              de {load.minDias} días y no se {fueraDeCuenta.length === 1 ? "cuenta" : "cuentan"} como peluquero del local.
+            </p>
+          )}
+          <p className="sucursal__note">Un turno compartido cuenta para los dos peluqueros.</p>
+        </details>
+      )}
+    </div>
+  );
+}
+
+// Total o partes: con «Armar por partes» se cargan los ítems y el total es la
+// suma; con «Poner solo el total» se vuelve a un número.
+function PartsField({ id, label, hint, parts, total, values, onTotal, onParts, reference }) {
+  const byParts = values !== null;
+  return (
+    <div id={id} className="sucursal__parts">
+      {byParts ? (
+        <>
+          <div className="sucursal__parts-head">
+            <span>{label}</span>
+            <strong>{money(sumParts(values))}</strong>
+          </div>
+          {hint && <small className="form-hint">{hint}</small>}
+          <div className="sucursal__parts-list">
+            {parts.map((part) => (
+              <NumberField
+                key={part.id}
+                label={part.label}
+                hint={part.hint}
+                money
+                value={values[part.id] ?? 0}
+                onChange={(v) => onParts({ ...values, [part.id]: v })}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="sucursal__link-button"
+            onClick={() => {
+              onTotal(sumParts(values));
+              onParts(null);
+            }}
+          >
+            Poner solo el total
+          </button>
+        </>
+      ) : (
+        <>
+          <NumberField label={label} hint={hint} money value={total} onChange={onTotal} />
+          <button type="button" className="sucursal__link-button" onClick={() => onParts(partsFromTotal(parts, total))}>
+            Armar por partes
+          </button>
+        </>
+      )}
+      {reference}
+    </div>
+  );
+}
+
+const formatNumber = (value, money) =>
+  money
+    ? Math.round(Number(value) || 0).toLocaleString("es-AR")
+    : Number(value || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+
+// Campo de texto para números: mientras se escribe se respeta lo tipeado
+// (se puede borrar todo, no queda un 0 adelante); fuera del foco se muestra
+// con separador de miles. `money` ignora puntos y comas; `decimal` acepta
+// «4,5».
+function NumberField({ id, label, value, onChange, hint, prefix, suffix, min = 0, max, money = false, decimal = false }) {
+  const [draft, setDraft] = useState(null);
+  const clamp = (n) => Math.max(min, max === undefined ? n : Math.min(max, n));
+  const shown = draft ?? (Number.isFinite(value) ? formatNumber(value, money) : "");
+  return (
+    <label id={id} className="form-field sucursal__field">
       <span>{label}</span>
       <span className="sucursal__input">
-        {prefix && <span className="sucursal__affix">{prefix}</span>}
+        {(prefix || money) && <span className="sucursal__affix">{prefix || "$"}</span>}
         <input
-          type="number"
-          inputMode="decimal"
-          min={min}
-          max={max}
-          step={step}
-          value={Number.isFinite(value) ? value : ""}
+          type="text"
+          inputMode={decimal ? "decimal" : "numeric"}
+          autoComplete="off"
+          value={shown}
+          onFocus={() => setDraft(value ? formatNumber(value, money) : "")}
+          onBlur={() => setDraft(null)}
           onChange={(e) => {
-            const n = e.target.value === "" ? 0 : Number(e.target.value);
-            if (!Number.isFinite(n)) return;
-            onChange(Math.max(min, max === undefined ? n : Math.min(max, n)));
+            const text = e.target.value;
+            setDraft(text);
+            const n = parseNumberInput(text, { money });
+            onChange(clamp(n === null ? 0 : decimal ? n : Math.round(n)));
           }}
         />
         {suffix && <span className="sucursal__affix">{suffix}</span>}
