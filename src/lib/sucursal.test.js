@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultBranchInputs, diagnoseLocal, rampFactor, simulateBranch, simulateScenarios } from "./sucursal.js";
+import { defaultBranchInputs, diagnoseLocal, groomerLoad, rampFactor, simulateBranch, simulateScenarios, supplyExpenses } from "./sucursal.js";
 
 const base = {
   inversion: 3_000_000,
@@ -83,4 +83,38 @@ test("los datos faltantes no se cuentan como aprobados", () => {
   assert.equal(d.checks.find((c) => c.id === "ahorro").status, "unknown");
   assert.equal(d.verdict, "warn");
   assert.equal(diagnoseLocal({ ingresosMes: 0 }).verdict, "unknown");
+});
+
+test("la capacidad sale de la agenda y deja afuera a quien casi no trabajó", () => {
+  const turnos = [];
+  for (let d = 1; d <= 20; d += 1) {
+    const date = `2026-09-${String(d).padStart(2, "0")}`;
+    for (let n = 0; n < (d % 5 === 0 ? 6 : 4); n += 1) turnos.push({ date, groomerId: "a" });
+    for (let n = 0; n < 3; n += 1) turnos.push({ date, groomerId: "b" });
+  }
+  turnos.push({ date: "2026-09-01", groomerId: "c" });
+  // Compartido: ocupa a los dos.
+  turnos.push({ date: "2026-09-02", groomerId: "a", secondGroomerId: "b" });
+  const load = groomerLoad(turnos, [{ id: "a", name: "Ana" }, { id: "b", name: "Bea" }, { id: "c", name: "Ceci" }], { diasAbiertos: 20 });
+  assert.equal(load.peluqueros, 2);
+  assert.equal(load.minDias, 5);
+  assert.deepEqual(load.detalle.map((p) => [p.name, p.dias, p.cuenta]), [["Ana", 20, true], ["Bea", 20, true], ["Ceci", 1, false]]);
+  assert.equal(load.detalle[1].maximo, 4);
+  assert.equal(load.turnosTope, 5);
+});
+
+test("los insumos por servicio usan solo las categorías de insumos si existen", () => {
+  const categories = [{ id: 1, name: "Insumos" }, { id: 2, name: "Afilado de Cuchillas" }, { id: 3, name: "Personal" }];
+  const expenses = [{ category_id: 1, amount: 1000 }, { category_id: 2, amount: 200 }, { category_id: 3, amount: 5000 }];
+  assert.deepEqual(supplyExpenses(expenses, categories), { total: 1200, categorias: ["Insumos", "Afilado de Cuchillas"], separado: true });
+  assert.equal(supplyExpenses([{ category_id: 3, amount: 5000 }], categories).total, 5000);
+  const d = defaultBranchInputs({ serviciosMes: 100, gastosDiariosMes: 900_000, insumosMes: 400_000 });
+  assert.equal(d.variablePorServicio, 4_000);
+});
+
+test("el diagnóstico dice qué punto lo frena y muestra la cuenta de la agenda", () => {
+  const d = diagnoseLocal({ ...local, serviciosMes: 100 }, { capitalNecesario: 1 });
+  assert.deepEqual(d.motivos.map((c) => c.id), ["agenda"]);
+  assert.match(d.checks.find((c) => c.id === "agenda").detail, /Hacen 100 turnos por mes y entran 288 \(2 peluqueros × 6 turnos × 24 días\)/);
+  assert.deepEqual(diagnoseLocal(local, { capitalNecesario: 4_000_000 }).motivos, []);
 });

@@ -100,6 +100,16 @@
 .sucursal__check--warn .sucursal__check-badge { background: var(--warn-bg); color: #b45309; }
 .sucursal__check--bad .sucursal__check-badge { background: var(--bad-bg); color: var(--bad); }
 
+.sucursal__verdict p.sucursal__verdict-why { color: var(--text-strong); font-weight: 500; }
+.sucursal__verdict-why a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.sucursal__check { scroll-margin-top: 80px; }
+.sucursal__check-body { flex: 1 1 auto; align-self: stretch; min-width: 0; }
+.sucursal__check-link { display: inline-block; margin-top: 6px; font-size: 0.85rem; font-weight: 500; color: var(--brand-magenta); }
+.sucursal__capacity { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.sucursal__reset { align-self: flex-start; }
+.sucursal__table tr.is-muted td { color: var(--text-faint); }
+#suc-inversion { scroll-margin-top: 80px; }
+
 /* Formularios */
 .sucursal__inline-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .sucursal__form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -153,7 +163,8 @@
   .sucursal__stat dd { font-size: 1rem; }
   .sucursal__form,
   .sucursal__inline-fields { grid-template-columns: minmax(0, 1fr); }
-  .sucursal__section-head .btn-secondary { width: 100%; }
+  .sucursal__section-head .btn-secondary,
+  .sucursal__reset { width: 100%; }
 }
 @media (max-width: 420px) {
   .sucursal__check { flex-direction: column; gap: 6px; }
