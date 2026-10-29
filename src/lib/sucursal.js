@@ -8,6 +8,14 @@
 
 export const HORIZON_MONTHS = 36;
 
+// Sin agenda para medir, lo que suele atender un peluquero en un día.
+export const DEFAULT_TURNOS = 6;
+// Quien trabajó menos de esta parte de los días abiertos no cuenta como
+// peluquero del local (reemplazos, pruebas, alguien que se fue).
+const MIN_PARTE_DIAS = 0.25;
+
+const SUPPLY_CATEGORY = /insumo|afilad|cuchill/i;
+
 export const SCENARIOS = [
   { id: "pesimista", label: "Si va peor", factor: 0.7 },
   { id: "esperado", label: "Esperado", factor: 1 },
@@ -88,13 +96,72 @@ export function defaultBranchInputs(local) {
     fijosMes: Math.round(num(local?.fijosMes)),
     ticket: Math.round(num(local?.ticket)),
     comision: local?.comision ?? 0.4,
-    variablePorServicio: servicios > 0 ? Math.round(num(local?.gastosDiariosMes) / servicios) : 0,
+    // Solo insumos de peluquería cuando se pueden separar: los gastos diarios
+    // también traen mercadería del PetShop y personal.
+    variablePorServicio: servicios > 0 ? Math.round(num(local?.insumosMes ?? local?.gastosDiariosMes) / servicios) : 0,
     serviciosMes: Math.round(servicios),
     arranquePct: 0.4,
     mesesRampa: 6,
     groomers: Math.max(1, Math.round(num(local?.groomers)) || 1),
-    turnosPorGroomer: num(local?.turnosPorGroomer) || 6,
+    turnosPorGroomer: num(local?.turnosPorGroomer) || DEFAULT_TURNOS,
     diasMes: Math.round(num(local?.diasMes)) || 24,
+  };
+}
+
+// Gastos que dependen de cada servicio: las categorías de insumos y afilado.
+// Si el local no usa esas categorías, se toman todos los gastos diarios.
+export function supplyExpenses(expenses, categories) {
+  const names = new Map((categories || []).map((c) => [String(c.id), c.name || ""]));
+  const nameOf = (e) => e.category?.name || e.category_name || names.get(String(e.category_id ?? e.category?.id)) || "";
+  const matched = (expenses || []).filter((e) => SUPPLY_CATEGORY.test(nameOf(e)));
+  if (matched.length === 0) {
+    return { total: (expenses || []).reduce((t, e) => t + num(e.amount), 0), categorias: [], separado: false };
+  }
+  return {
+    total: matched.reduce((t, e) => t + num(e.amount), 0),
+    categorias: [...new Set(matched.map(nameOf))],
+    separado: true,
+  };
+}
+
+// Cómo trabajó cada peluquero en el período, a partir de los turnos hechos.
+// turnos: [{ date, groomerId, secondGroomerId }]; un turno compartido ocupa a los dos.
+// people: [{ id, name }]. diasAbiertos: días con turnos en el período.
+// turnosTope: lo que hacen en sus días más cargados (percentil 90 de turnos
+// por peluquero por día), para usar como capacidad realista.
+export function groomerLoad(turnos, people, { diasAbiertos }) {
+  const byPerson = new Map((people || []).map((p) => [String(p.id), { id: String(p.id), name: p.name, porDia: new Map() }]));
+  (turnos || []).forEach((t) => {
+    [t.groomerId, t.secondGroomerId].forEach((id) => {
+      const person = id === null || id === undefined ? null : byPerson.get(String(id));
+      if (person) person.porDia.set(t.date, (person.porDia.get(t.date) || 0) + 1);
+    });
+  });
+
+  const minDias = Math.max(1, Math.ceil(num(diasAbiertos) * MIN_PARTE_DIAS));
+  const detalle = [...byPerson.values()]
+    .filter((p) => p.porDia.size > 0)
+    .map((p) => {
+      const counts = [...p.porDia.values()];
+      return {
+        id: p.id,
+        name: p.name,
+        dias: counts.length,
+        promedio: counts.reduce((a, b) => a + b, 0) / counts.length,
+        maximo: Math.max(...counts),
+        cuenta: counts.length >= minDias,
+      };
+    })
+    .sort((a, b) => b.dias - a.dias);
+
+  const activos = detalle.filter((p) => p.cuenta);
+  const dias = activos.flatMap((p) => [...byPerson.get(p.id).porDia.values()]).sort((a, b) => a - b);
+  const turnosTope = dias.length > 0 ? dias[Math.ceil(dias.length * 0.9) - 1] : null;
+  return {
+    detalle,
+    peluqueros: activos.length,
+    turnosTope,
+    minDias,
   };
 }
 
@@ -139,10 +206,13 @@ export function diagnoseLocal(local, { capitalNecesario = 0 } = {}) {
     checks.push(check("agenda", "Agenda llena", "unknown", "Cargá peluqueros y turnos por día para calcular la ocupación."));
   } else {
     const status = ocupacion >= 0.8 ? "ok" : ocupacion >= 0.6 ? "warn" : "bad";
+    const g = Math.round(num(local.groomers));
+    const cuenta = `Hacen ${Math.round(num(local.serviciosMes))} turnos por mes y entran ${Math.round(capacidad)} `
+      + `(${g} ${g === 1 ? "peluquero" : "peluqueros"} × ${Number(num(local.turnosPorGroomer).toFixed(1))} turnos × ${Math.round(num(local.diasMes))} días).`;
     const detail = {
-      ok: `La agenda está al ${pctText(ocupacion)}. Probablemente hay clientes que no entran.`,
-      warn: `La agenda está al ${pctText(ocupacion)}. Todavía hay lugar para crecer en este local.`,
-      bad: `La agenda está al ${pctText(ocupacion)}. Antes de abrir otro, conviene llenar este.`,
+      ok: `${cuenta} La agenda está al ${pctText(ocupacion)}: probablemente hay clientes que no entran.`,
+      warn: `${cuenta} La agenda está al ${pctText(ocupacion)}: todavía hay lugar para crecer en este local.`,
+      bad: `${cuenta} La agenda está al ${pctText(ocupacion)}: antes de abrir otro, conviene llenar este.`,
     }[status];
     checks.push(check("agenda", "Agenda llena", status, detail));
   }
@@ -183,5 +253,11 @@ export function diagnoseLocal(local, { capitalNecesario = 0 } = {}) {
   else if (known.some((c) => c.status === "warn") || known.length < checks.length) verdict = "warn";
   else verdict = "ok";
 
-  return { checks, verdict, ocupacion, crecimiento, mesesAhorro };
+  // Los puntos que explican el veredicto: los rojos si hay, si no los amarillos
+  // y los que no tienen datos.
+  const motivos = verdict === "bad"
+    ? checks.filter((c) => c.status === "bad")
+    : verdict === "warn" ? checks.filter((c) => c.status !== "ok") : [];
+
+  return { checks, verdict, motivos, ocupacion, crecimiento, mesesAhorro };
 }
