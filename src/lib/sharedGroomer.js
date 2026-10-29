@@ -1,12 +1,12 @@
 // The service is billed once. A shared service splits the principal groomer's
-// commission equally; the second groomer's own rate does not change that pool.
+// commission equally; the other groomers' own rates do not change that pool.
 export function groomerShares(record) {
   const primary = record.groomer_id ?? record.groomer?.id ?? record.groomerId ?? null;
-  const second = record.second_groomer_id ?? null;
-  if (!primary || !second || String(primary) === String(second)) {
-    return [{ groomerId: primary, share: 1 }];
-  }
-  return [{ groomerId: primary, share: 0.5 }, { groomerId: second, share: 0.5 }];
+  const participants = [primary, record.second_groomer_id, record.third_groomer_id]
+    .filter((id) => id !== null && id !== undefined && id !== "");
+  const ids = [...new Map(participants.map((id) => [String(id), id])).values()];
+  if (!primary) return [{ groomerId: primary, share: 1 }];
+  return ids.map((groomerId) => ({ groomerId, share: 1 / ids.length }));
 }
 
 export function groomerShare(record, groomerId) {
