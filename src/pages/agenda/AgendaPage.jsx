@@ -342,7 +342,8 @@ function getGroomerName(turno, employeesById) {
     ""
   );
   const second = employeesById?.get(String(turno.second_groomer_id))?.name;
-  return second ? `${primary} + ${second} (50/50)` : primary;
+  const third = employeesById?.get(String(turno.third_groomer_id))?.name;
+  return [primary, second, third].filter(Boolean).join(" + ");
 }
 
 function getEmployeeCommissionRate(employee) {
@@ -436,6 +437,7 @@ export default function AgendaPage() {
     groomer_id: "",
     shared: false,
     second_groomer_id: "",
+    third_groomer_id: "",
     service_type_id: "",
     price: "",
     payment_method_id: "",
@@ -607,6 +609,7 @@ export default function AgendaPage() {
       groomer_id: selectedTurno.groomer_id || "",
       shared: Boolean(selectedTurno.second_groomer_id),
       second_groomer_id: selectedTurno.second_groomer_id || "",
+      third_groomer_id: selectedTurno.third_groomer_id || "",
       service_type_id: selectedTurno.service_type_id || "",
       price:
         selectedTurno.price !== null && selectedTurno.price !== undefined
@@ -1528,6 +1531,7 @@ export default function AgendaPage() {
         payment_method_id: normalizeId(turno.payment_method_id),
         groomer_id: normalizeId(turno.groomer_id),
         second_groomer_id: normalizeId(turno.second_groomer_id),
+        third_groomer_id: normalizeId(turno.third_groomer_id),
         notes: (turno.notes || "").trim(),
       };
       await apiRequest("/v2/services", { method: "POST", body: payload });
@@ -1604,9 +1608,14 @@ export default function AgendaPage() {
   async function handleFinishSubmit() {
     if (!selectedTurno) return;
     const groomerId = normalizeId(finishForm.groomer_id);
+    const thirdGroomerId = finishForm.shared ? normalizeId(finishForm.third_groomer_id) : null;
     const secondGroomerId = finishForm.shared ? normalizeId(finishForm.second_groomer_id) : null;
     if (finishForm.shared && (!secondGroomerId || secondGroomerId === groomerId)) {
       alert("Seleccioná un segundo peluquero distinto del principal.");
+      return;
+    }
+    if (thirdGroomerId && [groomerId, secondGroomerId].includes(thirdGroomerId)) {
+      alert("Seleccioná tres peluqueros distintos.");
       return;
     }
     const serviceTypeId = normalizeId(finishForm.service_type_id);
@@ -1642,6 +1651,7 @@ export default function AgendaPage() {
     await updateStatusWithDetails(selectedTurno, "finished", {
       groomer_id: groomerId,
       second_groomer_id: secondGroomerId,
+      third_groomer_id: thirdGroomerId,
       service_type_id: serviceTypeId,
       price,
       ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
@@ -2385,7 +2395,7 @@ export default function AgendaPage() {
                 <strong>{selectedCloseRow.groomerName}</strong>
                 <span>
                   Paga a liquidar: {formatCurrency(selectedCloseRow.payout)}
-                  <small> Los servicios compartidos reparten la comisión del principal en partes iguales.</small>
+                  <small> Los servicios compartidos reparten la comisión del principal entre sus participantes.</small>
                 </span>
               </div>
             ) : (
@@ -2646,7 +2656,7 @@ export default function AgendaPage() {
                     </label>
                     <label className="form-field">
                       <span><input type="checkbox" checked={finishForm.shared}
-                        onChange={(e) => setFinishForm((prev) => ({ ...prev, shared: e.target.checked, second_groomer_id: "" }))} /> Trabajaron dos peluqueros</span>
+                        onChange={(e) => setFinishForm((prev) => ({ ...prev, shared: e.target.checked, second_groomer_id: "", third_groomer_id: "" }))} /> Trabajaron varios peluqueros</span>
                     </label>
                     {finishForm.shared && <label className="form-field">
                       <span>Segundo peluquero</span>
@@ -2654,10 +2664,20 @@ export default function AgendaPage() {
                         onChange={(e) => setFinishForm((prev) => ({ ...prev, second_groomer_id: e.target.value }))}>
                         <option value="">Seleccioná</option>
                         {groomerOptions(employees, finishForm.second_groomer_id)
-                          .filter((emp) => String(emp.id) !== String(finishForm.groomer_id))
+                          .filter((emp) => String(emp.id) !== String(finishForm.groomer_id) && String(emp.id) !== String(finishForm.third_groomer_id))
                           .map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
                       </select>
-                      <small className="agenda-helper">La comisión del peluquero principal se divide en partes iguales: 50% para cada uno. El precio al cliente no cambia.</small>
+                      <small className="agenda-helper">La comisión del peluquero principal se divide en partes iguales entre {finishForm.third_groomer_id ? "los tres" : "los dos"}. El precio al cliente no cambia.</small>
+                    </label>}
+                    {finishForm.shared && <label className="form-field">
+                      <span>Tercer peluquero (opcional)</span>
+                      <select value={finishForm.third_groomer_id}
+                        onChange={(e) => setFinishForm((prev) => ({ ...prev, third_groomer_id: e.target.value }))}>
+                        <option value="">Sin tercer peluquero</option>
+                        {groomerOptions(employees, finishForm.third_groomer_id)
+                          .filter((emp) => ![String(finishForm.groomer_id), String(finishForm.second_groomer_id)].includes(String(emp.id)))
+                          .map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                      </select>
                     </label>}
                     <label className="form-field">
                       <span>Tipo de servicio</span>

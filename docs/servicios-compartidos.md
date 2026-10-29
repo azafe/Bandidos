@@ -1,22 +1,20 @@
-# Finalizar un turno con dos peluqueros
+# Finalizar un turno con hasta tres peluqueros
 
-En el detalle del turno, elegí **Dar por finalizado** y marcá **Trabajaron dos peluqueros**. Seleccioná al principal y a un segundo peluquero distinto. Si no marcás la opción, el cierre sigue funcionando con una sola persona.
+En el detalle del turno, elegí **Dar por finalizado** y marcá **Trabajaron varios peluqueros**. Seleccioná al segundo y, si corresponde, al **Tercer peluquero (opcional)**. Los participantes deben ser personas distintas de la misma sucursal. Sin marcar la opción, el cierre conserva un solo peluquero.
 
-La comisión del principal se divide en partes iguales. Ejemplo: servicio de $20.000 con comisión del principal de 40% → paga total $8.000 → $4.000 para cada uno, incluso si el segundo tiene otro porcentaje configurado. El precio, la seña y el cobro al cliente no cambian.
+La comisión del principal se divide en partes iguales: la mitad para cada uno si son dos, o un tercio si son tres, aunque los otros tengan porcentajes distintos. Ejemplo: servicio de $30.000 con comisión del principal de 40% → paga total $12.000 → $4.000 para cada uno si son tres. El precio, la seña y el cobro al cliente no cambian.
 
-Ambos participantes quedan guardados en el turno y en el servicio generado. La liquidación diaria, los filtros, Servicios y la ficha del empleado incluyen al segundo participante. Los agregados por peluquero atribuyen medio servicio y la mitad de la facturación a cada uno para conservar los totales; los listados generales mantienen un solo turno.
+Los participantes se guardan en el turno y en el servicio generado. La liquidación diaria, los filtros, Servicios y las fichas de los empleados incluyen a todos. Los agregados atribuyen medio servicio o un tercio a cada uno, junto con su proporción de la facturación, para conservar los totales. Los listados generales mantienen un solo turno.
 
 ## Puesta en producción
 
-1. Aplicar `Bandidos-backend/db/migrations/033_shared_groomer.sql` en la base de datos antes de desplegar el backend.
-   Si ya se aplicó el SQL compartido originalmente como migración 030, no repetirlo: crea las mismas columnas y restricciones. El archivo se renumeró por una migración de stock existente en el remoto.
-2. Desplegar el backend actualizado y luego el frontend. El frontend anterior sigue funcionando con el backend actualizado.
-3. Verificar un cierre compartido y su reparto en la liquidación diaria.
-
-La migración agrega un campo opcional, conserva los históricos sin cambios y bloquea participantes repetidos y segundos peluqueros de otra sucursal.
+1. La migración `033_shared_groomer.sql` debe estar aplicada. Si ya se ejecutó el SQL compartido originalmente como migración 030, no repetirlo: crea las mismas columnas y restricciones.
+2. Aplicar `Bandidos-backend/db/migrations/034_third_groomer.sql` antes de desplegar esta ampliación. Es repetible y conserva los históricos con uno o dos peluqueros.
+3. Desplegar el backend actualizado y luego el frontend.
+4. Verificar un cierre con tres participantes y su reparto en la liquidación diaria.
 
 ## Verificación
 
 - Frontend: `npm test` y `npm run build`.
 - Backend: `node --test tests/shared-groomer.test.js tests/traslados-api.test.js`.
-- Flujo del formulario comprobado en Chromium a 1366×900 y 390×844, con respuestas API simuladas.
+- Pruebas del formulario en Chromium a 1366×900 y 390×844, con respuestas API simuladas.
