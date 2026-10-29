@@ -25,9 +25,15 @@ import {
   DEFAULT_TURNOS,
   defaultBranchInputs,
   diagnoseLocal,
+  FIJOS_PARTES,
   groomerLoad,
   HORIZON_MONTHS,
+  INVERSION_PARTES,
+  parseNumberInput,
+  partsFromTotal,
+  resolveBranchInputs,
   simulateScenarios,
+  sumParts,
   supplyExpenses,
 } from "../../lib/sucursal";
 import { addDaysISO, addMonthsISO, monthBoundsISO, todayISO } from "../../utils/dates";
@@ -56,7 +62,11 @@ function lastClosedMonths() {
   const prevFrom = addMonthsISO(from, -MONTHS_BACK);
   const prevTo = addDaysISO(from, -1);
   const { first, last } = monthBoundsISO(todayISO());
-  return { current: { from, to }, previous: { from: prevFrom, to: prevTo }, today: { from: first, to: last } };
+  return {
+    current: { from, to },
+    previous: { from: prevFrom, to: prevTo },
+    today: { from: first, to: last, period: first.slice(0, 7) },
+  };
 }
 
 function rangeLabel({ from, to }) {
@@ -168,16 +178,20 @@ export default function NuevaSucursalPage() {
   const [localTurnos, setLocalTurnos] = useState(() => readSaved()?.localTurnos ?? null);
   const [localGroomers, setLocalGroomers] = useState(() => readSaved()?.localGroomers ?? null);
   const [inputs, setInputs] = useState(() => readSaved()?.inputs ?? null);
+  // Lista de gastos fijos del mes en curso, para mostrar qué incluye el total.
+  const [fijosHoyItems, setFijosHoyItems] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       fetchDashboardData(ranges.current),
       fetchDashboardData(ranges.previous).catch(() => null),
-      apiRequest("/v2/fixed-expenses/accrual", { params: ranges.today }).catch(() => null),
+      apiRequest("/v2/fixed-expenses/accrual", { params: { from: ranges.today.from, to: ranges.today.to } }).catch(() => null),
+      apiRequest(`/v2/fixed-expenses/months/${ranges.today.period}`).catch(() => null),
     ])
-      .then(([currentData, previousData, todayAccrual]) => {
+      .then(([currentData, previousData, todayAccrual, todayMonth]) => {
         if (cancelled) return;
+        setFijosHoyItems(Array.isArray(todayMonth?.items) ? todayMonth.items : []);
         const summary = withTodayFixed(summarizeLocal(ranges.current, currentData), todayAccrual?.monthly_total);
         const previous = previousData ? summarizeLocal(ranges.previous, previousData) : null;
         summary.ingresosMesAnterior = previous && previous.months > 0 ? previous.ingresosMes : null;
@@ -202,7 +216,7 @@ export default function NuevaSucursalPage() {
   const groomersLocal = localGroomers ?? Math.max(1, local?.groomers || 0);
   const turnosLocal = localTurnos ?? local?.turnosPorGroomer ?? DEFAULT_TURNOS;
   const branchInputs = useMemo(
-    () => (inputs ? { ...inputs, capacidadMes: branchCapacity(inputs) } : null),
+    () => (inputs ? { ...resolveBranchInputs(inputs), capacidadMes: branchCapacity(inputs) } : null),
     [inputs]
   );
   const scenarios = useMemo(() => (branchInputs ? simulateScenarios(branchInputs) : null), [branchInputs]);
@@ -212,10 +226,10 @@ export default function NuevaSucursalPage() {
       local
         ? diagnoseLocal(
             { ...local, groomers: groomersLocal, turnosPorGroomer: turnosLocal },
-            { capitalNecesario: inputs?.inversion > 0 ? expected?.capitalNecesario : 0 }
+            { capitalNecesario: branchInputs?.inversion > 0 ? expected?.capitalNecesario : 0 }
           )
         : null,
-    [local, groomersLocal, turnosLocal, inputs?.inversion, expected?.capitalNecesario]
+    [local, groomersLocal, turnosLocal, branchInputs?.inversion, expected?.capitalNecesario]
   );
 
   function retry() {
@@ -229,7 +243,14 @@ export default function NuevaSucursalPage() {
   }
 
   function resetInputs() {
-    if (local) setInputs({ ...defaultBranchInputs(local), inversion: inputs?.inversion ?? 0 });
+    // La inversión no sale del local: se conserva.
+    if (local) {
+      setInputs({
+        ...defaultBranchInputs(local),
+        inversion: inputs?.inversion ?? 0,
+        inversionPartes: inputs?.inversionPartes ?? null,
+      });
+    }
   }
 
   return (
@@ -352,17 +373,52 @@ export default function NuevaSucursalPage() {
             <div className="sucursal__form">
               <fieldset>
                 <legend>Lo que hay que poner</legend>
-                <NumberField id="suc-inversion" label="Inversión inicial" prefix="$" step={10000} value={inputs.inversion} onChange={(v) => setInput("inversion", v)}
-                  hint="Obra, mesas, secadores, bañera, depósito del alquiler, habilitación." />
-                <NumberField label="Gastos fijos por mes" prefix="$" step={10000} value={inputs.fijosMes} onChange={(v) => setInput("fijosMes", v)}
-                  hint="Alquiler, luz, agua, internet, sueldos fijos. Arranca con los de hoy de este local." />
+                <PartsField
+                  id="suc-inversion"
+                  label="Inversión inicial"
+                  hint="Todo lo que hay que poner antes de abrir: obra, mesas, secadores, bañera, depósito del alquiler, habilitación."
+                  parts={INVERSION_PARTES}
+                  total={inputs.inversion}
+                  values={inputs.inversionPartes ?? null}
+                  onTotal={(v) => setInput("inversion", v)}
+                  onParts={(v) => setInput("inversionPartes", v)}
+                />
+                <PartsField
+                  label="Gastos fijos por mes"
+                  hint="Lo que se paga todos los meses aunque no haya turnos. La comisión y los insumos van aparte. Arranca con los de hoy de este local."
+                  parts={FIJOS_PARTES}
+                  total={inputs.fijosMes}
+                  values={inputs.fijosPartes ?? null}
+                  onTotal={(v) => setInput("fijosMes", v)}
+                  onParts={(v) => setInput("fijosPartes", v)}
+                  reference={fijosHoyItems.length > 0 && (
+                    <details className="sucursal__details">
+                      <summary>Qué incluyen hoy los fijos de este local</summary>
+                      <ul className="sucursal__ref-list">
+                        {fijosHoyItems.map((item) => (
+                          <li key={item.id ?? item.name}>
+                            <span>{item.name}</span>
+                            <span>{money(item.amount)}</span>
+                          </li>
+                        ))}
+                        <li className="sucursal__ref-total">
+                          <span>Total</span>
+                          <span>{money(fijosHoyItems.reduce((t, item) => t + (Number(item.amount) || 0), 0))}</span>
+                        </li>
+                      </ul>
+                      <p className="sucursal__note">
+                        Sacá lo que la sucursal nueva no va a tener (préstamos, contador o sistema compartidos) y sumá lo que sí.
+                      </p>
+                    </details>
+                  )}
+                />
               </fieldset>
               <fieldset>
                 <legend>Lo que deja cada servicio</legend>
-                <NumberField label="Ticket promedio" prefix="$" step={500} value={inputs.ticket} onChange={(v) => setInput("ticket", v)} />
+                <NumberField label="Ticket promedio" money value={inputs.ticket} onChange={(v) => setInput("ticket", v)} />
                 <NumberField label="Comisión del peluquero" suffix="%" value={Math.round(inputs.comision * 100)} max={100}
                   onChange={(v) => setInput("comision", v / 100)} />
-                <NumberField label="Insumos y gastos por servicio" prefix="$" step={100} value={inputs.variablePorServicio}
+                <NumberField label="Insumos y gastos por servicio" money value={inputs.variablePorServicio}
                   onChange={(v) => setInput("variablePorServicio", v)}
                   hint={local.insumosCategorias.length > 0
                     ? `Sale de los gastos de ${local.insumosCategorias.join(", ")} de este local divididos por sus servicios.`
@@ -378,13 +434,13 @@ export default function NuevaSucursalPage() {
               <fieldset>
                 <legend>Capacidad</legend>
                 <NumberField label="Peluqueros" min={1} value={inputs.groomers} onChange={(v) => setInput("groomers", v)} />
-                <NumberField label="Turnos por peluquero por día" min={1} value={inputs.turnosPorGroomer} onChange={(v) => setInput("turnosPorGroomer", v)} />
+                <NumberField label="Turnos por peluquero por día" min={1} decimal value={inputs.turnosPorGroomer} onChange={(v) => setInput("turnosPorGroomer", v)} />
                 <NumberField label="Días que abre por mes" min={1} max={31} value={inputs.diasMes} onChange={(v) => setInput("diasMes", v)} />
               </fieldset>
             </div>
           </section>
 
-          <BranchResults inputs={inputs} expected={expected} scenarios={scenarios} local={local} />
+          <BranchResults inputs={branchInputs} expected={expected} scenarios={scenarios} local={local} />
         </>
       )}
     </div>
@@ -418,7 +474,7 @@ function AgendaCapacity({ load, groomers, turnos, edited, onGroomers, onTurnos, 
           label="Turnos por peluquero por día"
           value={turnos}
           min={1}
-          step={0.5}
+          decimal
           onChange={onTurnos}
           hint={load.turnosTope
             ? `Lo que hacen en sus días más cargados según la agenda (${load.turnosTope}). Cambialo si pueden hacer más.`
@@ -463,23 +519,85 @@ function AgendaCapacity({ load, groomers, turnos, edited, onGroomers, onTurnos, 
   );
 }
 
-function NumberField({ id, label, value, onChange, hint, prefix, suffix, min = 0, max, step = 1 }) {
+// Total o partes: con «Armar por partes» se cargan los ítems y el total es la
+// suma; con «Poner solo el total» se vuelve a un número.
+function PartsField({ id, label, hint, parts, total, values, onTotal, onParts, reference }) {
+  const byParts = values !== null;
+  return (
+    <div id={id} className="sucursal__parts">
+      {byParts ? (
+        <>
+          <div className="sucursal__parts-head">
+            <span>{label}</span>
+            <strong>{money(sumParts(values))}</strong>
+          </div>
+          {hint && <small className="form-hint">{hint}</small>}
+          <div className="sucursal__parts-list">
+            {parts.map((part) => (
+              <NumberField
+                key={part.id}
+                label={part.label}
+                hint={part.hint}
+                money
+                value={values[part.id] ?? 0}
+                onChange={(v) => onParts({ ...values, [part.id]: v })}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="sucursal__link-button"
+            onClick={() => {
+              onTotal(sumParts(values));
+              onParts(null);
+            }}
+          >
+            Poner solo el total
+          </button>
+        </>
+      ) : (
+        <>
+          <NumberField label={label} hint={hint} money value={total} onChange={onTotal} />
+          <button type="button" className="sucursal__link-button" onClick={() => onParts(partsFromTotal(parts, total))}>
+            Armar por partes
+          </button>
+        </>
+      )}
+      {reference}
+    </div>
+  );
+}
+
+const formatNumber = (value, money) =>
+  money
+    ? Math.round(Number(value) || 0).toLocaleString("es-AR")
+    : Number(value || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+
+// Campo de texto para números: mientras se escribe se respeta lo tipeado
+// (se puede borrar todo, no queda un 0 adelante); fuera del foco se muestra
+// con separador de miles. `money` ignora puntos y comas; `decimal` acepta
+// «4,5».
+function NumberField({ id, label, value, onChange, hint, prefix, suffix, min = 0, max, money = false, decimal = false }) {
+  const [draft, setDraft] = useState(null);
+  const clamp = (n) => Math.max(min, max === undefined ? n : Math.min(max, n));
+  const shown = draft ?? (Number.isFinite(value) ? formatNumber(value, money) : "");
   return (
     <label id={id} className="form-field sucursal__field">
       <span>{label}</span>
       <span className="sucursal__input">
-        {prefix && <span className="sucursal__affix">{prefix}</span>}
+        {(prefix || money) && <span className="sucursal__affix">{prefix || "$"}</span>}
         <input
-          type="number"
-          inputMode="decimal"
-          min={min}
-          max={max}
-          step={step}
-          value={Number.isFinite(value) ? value : ""}
+          type="text"
+          inputMode={decimal ? "decimal" : "numeric"}
+          autoComplete="off"
+          value={shown}
+          onFocus={() => setDraft(value ? formatNumber(value, money) : "")}
+          onBlur={() => setDraft(null)}
           onChange={(e) => {
-            const n = e.target.value === "" ? 0 : Number(e.target.value);
-            if (!Number.isFinite(n)) return;
-            onChange(Math.max(min, max === undefined ? n : Math.min(max, n)));
+            const text = e.target.value;
+            setDraft(text);
+            const n = parseNumberInput(text, { money });
+            onChange(clamp(n === null ? 0 : decimal ? n : Math.round(n)));
           }}
         />
         {suffix && <span className="sucursal__affix">{suffix}</span>}

@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultBranchInputs, diagnoseLocal, groomerLoad, rampFactor, simulateBranch, simulateScenarios, supplyExpenses } from "./sucursal.js";
+import {
+  defaultBranchInputs,
+  diagnoseLocal,
+  groomerLoad,
+  INVERSION_PARTES,
+  parseNumberInput,
+  partsFromTotal,
+  rampFactor,
+  resolveBranchInputs,
+  simulateBranch,
+  simulateScenarios,
+  sumParts,
+  supplyExpenses,
+} from "./sucursal.js";
 
 const base = {
   inversion: 3_000_000,
@@ -117,4 +130,23 @@ test("el diagnóstico dice qué punto lo frena y muestra la cuenta de la agenda"
   assert.deepEqual(d.motivos.map((c) => c.id), ["agenda"]);
   assert.match(d.checks.find((c) => c.id === "agenda").detail, /Hacen 100 turnos por mes y entran 288 \(2 peluqueros × 6 turnos × 24 días\)/);
   assert.deepEqual(diagnoseLocal(local, { capitalNecesario: 4_000_000 }).motivos, []);
+});
+
+test("los campos numéricos aceptan miles con punto y decimales con coma", () => {
+  assert.equal(parseNumberInput("3.606.721", { money: true }), 3_606_721);
+  assert.equal(parseNumberInput("$ 15.000.000", { money: true }), 15_000_000);
+  assert.equal(parseNumberInput("", { money: true }), null);
+  assert.equal(parseNumberInput("4,5"), 4.5);
+  assert.equal(parseNumberInput("6"), 6);
+  assert.equal(parseNumberInput("abc"), null);
+});
+
+test("la inversión y los fijos por partes mandan la suma", () => {
+  const partes = partsFromTotal(INVERSION_PARTES, 2_000_000);
+  assert.equal(partes.otros, 2_000_000);
+  assert.equal(sumParts(partes), 2_000_000);
+  const r = resolveBranchInputs({ ...base, inversion: 1, inversionPartes: { ...partes, obra: 500_000 }, fijosPartes: { alquiler: 700_000, sueldos: 300_000 } });
+  assert.equal(r.inversion, 2_500_000);
+  assert.equal(r.fijosMes, 1_000_000);
+  assert.equal(resolveBranchInputs({ ...base, inversionPartes: null }).inversion, base.inversion);
 });

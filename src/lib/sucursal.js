@@ -16,6 +16,60 @@ const MIN_PARTE_DIAS = 0.25;
 
 const SUPPLY_CATEGORY = /insumo|afilad|cuchill/i;
 
+// Partes para armar la inversión y los fijos de la sucursal nueva cuando no se
+// tiene un total. La última de cada lista recibe el total que ya estaba cargado.
+export const INVERSION_PARTES = [
+  { id: "obra", label: "Obra y arreglos", hint: "Pintura, electricidad, agua y desagües, mostrador." },
+  { id: "equipos", label: "Equipamiento", hint: "Mesas, secadores, bañera, jaulas, máquinas." },
+  { id: "alquiler", label: "Depósito y adelanto de alquiler" },
+  { id: "habilitacion", label: "Habilitación y trámites" },
+  { id: "arranque", label: "Insumos y mercadería para arrancar" },
+  { id: "otros", label: "Cartel, publicidad y otros" },
+];
+
+export const FIJOS_PARTES = [
+  { id: "alquiler", label: "Alquiler" },
+  { id: "sueldos", label: "Sueldos fijos", hint: "Recepción, limpieza. La comisión de los peluqueros va aparte." },
+  { id: "servicios", label: "Luz, agua, gas e internet" },
+  { id: "impuestos", label: "Impuestos y tasas fijas", hint: "Monotributo, IIBB, TEM, rentas." },
+  { id: "otros", label: "Otros" },
+];
+
+export function sumParts(values) {
+  return Object.values(values || {}).reduce((total, v) => total + Math.max(0, num(v)), 0);
+}
+
+// Pasa de un total a partes sin perderlo: queda en la última parte.
+export function partsFromTotal(parts, total) {
+  return Object.fromEntries(parts.map((p, i) => [p.id, i === parts.length - 1 ? Math.max(0, num(total)) : 0]));
+}
+
+// Los supuestos que usa la simulación: si la inversión o los fijos se
+// armaron por partes, manda la suma de las partes.
+export function resolveBranchInputs(inputs) {
+  if (!inputs) return inputs;
+  return {
+    ...inputs,
+    inversion: inputs.inversionPartes ? sumParts(inputs.inversionPartes) : inputs.inversion,
+    fijosMes: inputs.fijosPartes ? sumParts(inputs.fijosPartes) : inputs.fijosMes,
+  };
+}
+
+// Lee lo que se escribe en un campo numérico. En plata se ignoran los
+// separadores de miles («3.606.721», «$ 1.500.000»); en el resto se acepta
+// coma o punto decimal («4,5»). Vacío o sin números = null.
+export function parseNumberInput(text, { money = false } = {}) {
+  const raw = String(text ?? "").trim();
+  if (money) {
+    const digits = raw.replace(/[^0-9]/g, "");
+    return digits === "" ? null : Number(digits);
+  }
+  const cleaned = raw.replace(/[^0-9.,-]/g, "").replace(",", ".");
+  if (cleaned === "" || cleaned === "-" || cleaned === ".") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 export const SCENARIOS = [
   { id: "pesimista", label: "Si va peor", factor: 0.7 },
   { id: "esperado", label: "Esperado", factor: 1 },
