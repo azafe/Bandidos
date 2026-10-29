@@ -108,7 +108,6 @@
 .sucursal__capacity { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
 .sucursal__reset { align-self: flex-start; }
 .sucursal__table tr.is-muted td { color: var(--text-faint); }
-#suc-inversion { scroll-margin-top: 80px; }
 
 /* Formularios */
 .sucursal__inline-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -170,3 +169,34 @@
   .sucursal__check { flex-direction: column; gap: 6px; }
   .sucursal__check-badge { flex-basis: auto; }
 }
+
+/* Inversión y fijos por partes */
+.sucursal__parts { display: flex; flex-direction: column; gap: 8px; min-width: 0; scroll-margin-top: 80px; }
+.sucursal__parts-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sucursal__parts-head span { font-weight: 500; color: var(--text-strong); }
+.sucursal__parts-head strong { font-size: 1.1rem; color: var(--text-strong); }
+.sucursal__parts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-soft);
+}
+.sucursal__link-button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--brand-magenta);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sucursal__ref-list { list-style: none; margin: 0 0 8px; padding: 0; font-size: 0.85rem; }
+.sucursal__ref-list li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border-soft); }
+.sucursal__ref-list li span:first-child { color: var(--text-muted); overflow-wrap: anywhere; }
+.sucursal__ref-list li span:last-child { white-space: nowrap; color: var(--text-strong); }
+.sucursal__ref-list .sucursal__ref-total span { font-weight: 600; color: var(--text-strong); }

@@ -38,6 +38,13 @@ precaución, naranja si hay de cuidado o solo nota, verde si todo es tranquiliza
    Los insumos por servicio salen de las categorías de insumos y afilado; si el
    local no las usa, de todos los gastos diarios (que pueden incluir mercadería
    del PetShop o personal).
+   - Inversión y gastos fijos se pueden cargar como total o «por partes» (obra,
+     equipamiento, depósito, habilitación…; alquiler, sueldos fijos, servicios,
+     impuestos…); en partes manda la suma y el total cargado pasa a «otros».
+   - Debajo de los fijos se ve la lista de gastos fijos del mes en curso del
+     local, para saber qué incluye el número de partida.
+   - Los campos son de texto numérico: se pueden vaciar, muestran separador de
+     miles y aceptan «4,5» donde hay decimales (antes el 0 no se podía borrar).
 3. **Resultado.** Punto de equilibrio, ganancia mensual ya arrancada, plata
    necesaria (inversión + pérdidas del arranque), mes de recupero, caja
    acumulada a 36 meses y escenarios −30% / +20%. Avisa si la demanda supera la
