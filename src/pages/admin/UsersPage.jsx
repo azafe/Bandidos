@@ -3,7 +3,8 @@ import { useApiResource } from "../../hooks/useApiResource";
 import Modal from "../../components/ui/Modal";
 import { useAuth } from "../../context/AuthContext";
 import { showApiError } from "../../utils/errorDialog";
-import ChoferAccessEditor from "../../components/traslados/ChoferAccessEditor";
+import EmployeeAccessEditor from "../../components/employees/EmployeeAccessEditor";
+import "../../styles/employee-portal.css";
 import "../../styles/traslados.css";
 
 export default function UsersPage() {
@@ -17,6 +18,7 @@ export default function UsersPage() {
     password: "",
     role: "staff",
     chofer_id: "",
+    employee_id: "",
   });
   const [editingId, setEditingId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -50,6 +52,7 @@ export default function UsersPage() {
       const payload = {
         email: form.email.trim(),
         role: form.role,
+        ...(form.employee_id ? { employee_id: form.employee_id } : {}),
         ...(form.chofer_id ? { chofer_id: form.chofer_id } : {}),
         ...(form.password ? { password: form.password } : {}),
       };
@@ -62,7 +65,7 @@ export default function UsersPage() {
       showApiError(err, "No se pudo crear el usuario.");
       return;
     }
-    setForm({ email: "", password: "", role: "staff", chofer_id: "" });
+    setForm({ email: "", password: "", role: "staff", chofer_id: "", employee_id: "" });
     setEditingId(null);
   }
 
@@ -80,7 +83,7 @@ export default function UsersPage() {
 
   function cancelEdit() {
     setEditingId(null);
-    setForm({ email: "", password: "", role: "staff", chofer_id: "" });
+    setForm({ email: "", password: "", role: "staff", chofer_id: "", employee_id: "" });
   }
 
   function openModalEdit(item) {
@@ -155,7 +158,7 @@ export default function UsersPage() {
           {editingId ? "Editar usuario" : "Nuevo usuario"}
         </h2>
         <p className="card-subtitle">
-            Creá accesos para el equipo. Una cuenta vinculada a un chofer verá únicamente sus propios traslados.
+            Creá una cuenta personal para cada empleado. Podrá ver sus trabajos, anticipos, pagos y conversar con el equipo.
         </p>
 
         <div className="form-grid">
@@ -188,7 +191,7 @@ export default function UsersPage() {
               id="role"
               name="role"
               value={form.role}
-              disabled={!!form.chofer_id}
+              disabled={!!form.chofer_id || !!form.employee_id}
               onChange={handleChange}
             >
               <option value="admin">Admin</option>
@@ -196,14 +199,14 @@ export default function UsersPage() {
             </select>
           </div>
           <label className="form-field">
-            <span>Acceso exclusivo de chofer</span>
-            <select aria-label="Acceso exclusivo de chofer" value={form.chofer_id} disabled={form.role === "admin" || employees.loading || !!employees.error} onChange={(e) => setForm((prev) => ({ ...prev, chofer_id: e.target.value }))}>
+            <span>Cuenta personal de</span>
+            <select aria-label="Empleado de la cuenta" value={form.employee_id} disabled={form.role === "admin" || employees.loading || !!employees.error} onChange={(e) => setForm((prev) => ({ ...prev, employee_id: e.target.value, chofer_id: "" }))}>
               <option value="">Acceso general según rol</option>
-              {employees.items.filter((e) => e.is_driver && e.status === "active").map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+              {employees.items.filter((e) => e.status === "active").map((e) => <option key={e.id} value={e.id}>{e.name} · {e.role}</option>)}
             </select>
           </label>
         </div>
-        {employees.error && <p role="alert">No se pudieron cargar los choferes. Volvé a cargar antes de crear su acceso.</p>}
+        {employees.error && <p role="alert">No se pudo cargar el equipo. Volvé a cargar antes de crear un acceso personal.</p>}
 
         <div className="form-actions">
           <button type="submit" className="btn-primary">
@@ -247,6 +250,7 @@ export default function UsersPage() {
                 </div>
                 <div className="list-item__meta">
                   <span>Rol: {item.role || "-"}</span>
+                  {item.employee_id && <span> · Cuenta personal de {employees.items.find((e) => e.id === item.employee_id)?.name || "su empleado vinculado"}</span>}
                   {item.chofer_id && <span> · Solo traslados de {employees.items.find((e) => e.id === item.chofer_id)?.name || "su chofer vinculado"}</span>}
                 </div>
               </div>
@@ -295,6 +299,7 @@ export default function UsersPage() {
                 <label className="form-field">
                   <span>Rol</span>
                   <select
+                    disabled={!!selectedUser.employee_id || !!selectedUser.chofer_id}
                     value={modalForm.role}
                     onChange={(e) =>
                       setModalForm((prev) => ({
@@ -318,8 +323,8 @@ export default function UsersPage() {
                 </div>
               </>
             )}
-            {!isEditingModal && !employees.error && <ChoferAccessEditor
-              key={`${selectedUser.id}/${selectedUser.chofer_id || "general"}`}
+            {!isEditingModal && !employees.error && <EmployeeAccessEditor
+              key={`${selectedUser.id}/${selectedUser.employee_id || selectedUser.chofer_id || "general"}`}
               cuenta={selectedUser} empleados={employees.items} disabled={selectedUser.id === user?.id || employees.loading}
               onSaved={async (saved) => { setSelectedUser((prev) => ({ ...prev, ...saved })); await refresh(); }}
             />}

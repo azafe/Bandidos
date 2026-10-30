@@ -1,4 +1,4 @@
-import { groomerShares, groomerShare } from "../../lib/sharedGroomer";
+import { groomerShares, groomerShare, groomerPayout } from "../../lib/sharedGroomer";
 // src/pages/agenda/AgendaPage.jsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -772,8 +772,6 @@ export default function AgendaPage() {
     const grouped = new Map();
 
     closeFilteredTurnos.forEach((turno) => {
-      const primaryId = getTurnoGroomerId(turno);
-      const primaryRate = primaryId ? getEmployeeCommissionRate(employeesById.get(String(primaryId))) : 0;
       groomerShares(turno).forEach(({ groomerId: rawGroomerId, share }) => {
         if (closeGroomerId && String(rawGroomerId) !== String(closeGroomerId)) return;
         const hasGroomerId = rawGroomerId !== null && rawGroomerId !== undefined && rawGroomerId !== "";
@@ -804,7 +802,7 @@ export default function AgendaPage() {
         if (normalizeStatus(turno.status) === "finished") {
           row.finishedCount += share;
           row.finishedIncome += amount;
-          row.payout += amount * primaryRate;
+          row.payout += hasGroomerId ? groomerPayout(turno, getServicePrice(turno), employees, rawGroomerId) : 0;
         }
       });
     });
@@ -818,7 +816,7 @@ export default function AgendaPage() {
           : 0,
       }))
       .sort((a, b) => b.payout - a.payout || b.finishedIncome - a.finishedIncome);
-  }, [closeFilteredTurnos, employeesById, getServicePrice, closeGroomerId]);
+  }, [closeFilteredTurnos, employees, employeesById, getServicePrice, closeGroomerId]);
 
   const closeLiquidationTotals = useMemo(
     () =>

@@ -1,6 +1,9 @@
 // src/App.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
+import EmployeeStatementPage from "./pages/employees/EmployeeStatementPage";
+import ChatPage from "./pages/chat/ChatPage";
+import { ChatProvider } from "./context/ChatContext";
 
 import DashboardHome from "./pages/DashboardHome";
 import ServicesListPage from "./pages/services/ServicesListPage";
@@ -75,6 +78,7 @@ function AdminGuard({ children }) {
 function App() {
   return (
     <AuthProvider>
+      <ChatProvider>
       <ThemeApplier />
       <ErrorDialog />
       <Routes>
@@ -95,6 +99,9 @@ function App() {
                   <Route path="/services" element={<StaffGuard><ServicesListPage /></StaffGuard>} />
                   <Route path="/services/new" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
                   <Route path="/services/:id" element={<StaffGuard><ServiceFormPage /></StaffGuard>} />
+                  <Route path="/mi-cuenta" element={<EmployeeStatementPage />} />
+                  <Route path="/chat" element={<ChatPage />} />
+                  <Route path="/employees/:id/liquidacion" element={<AdminGuard><EmployeeStatementPage /></AdminGuard>} />
                   <Route path="/agenda" element={<AgendaPage />} />
                   <Route path="/traslados" element={<BandimovilesLayout />}>
                     <Route index element={<BandimovilesInicioPage />} />
@@ -139,6 +146,7 @@ function App() {
           }
         />
       </Routes>
+      </ChatProvider>
     </AuthProvider>
   );
 }

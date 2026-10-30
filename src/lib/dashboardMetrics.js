@@ -1,3 +1,4 @@
+import { groomerCommissionPool } from "./sharedGroomer.js";
 // src/lib/dashboardMetrics.js
 function parseDateValue(value) {
   if (!value) return null;
@@ -91,6 +92,7 @@ function normalizeService(service) {
     date: service.date || service.created_at || service.createdAt,
     amount,
     status: service.status || "",
+    commissionRateSnapshot: service.commission_rate_snapshot == null ? null : Number(service.commission_rate_snapshot),
     groomerId: service.groomer_id || service.groomerId || service.groomer?.id || null,
     petName: service.dogName || service.pet_name || service.pet?.name || "",
     customerName:
@@ -236,8 +238,8 @@ function buildCommissionRates(employees) {
 // vez de un porcentaje plano sobre el total.
 function commissionFor(services, rates) {
   return services.reduce((total, service) => {
-    const rate = rates.get(String(service.groomerId));
-    return total + service.amount * (rate === undefined ? DEFAULT_COMMISSION_RATE : rate);
+    const rate = service.commissionRateSnapshot ?? rates.get(String(service.groomerId)) ?? DEFAULT_COMMISSION_RATE;
+    return total + groomerCommissionPool(service.amount, rate);
   }, 0);
 }
 

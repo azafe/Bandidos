@@ -160,6 +160,7 @@ export default function EmployeeDetailPage() {
     <div className="page-content">
       <header className="page-header">
         <div>
+          <Link className="btn-secondary" to={`/employees/${id}/liquidacion`}>Liquidación, anticipos y pagos</Link>
           <h1 className="page-title">Ficha del estilista</h1>
           <p className="page-subtitle">Servicios brindados y métricas del período.</p>
         </div>

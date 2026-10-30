@@ -20,8 +20,19 @@ export function employeeCommissionRate(employee) {
   return Math.min(rate > 1 ? rate / 100 : rate, 1);
 }
 
+export function groomerCommissionPool(amount, rate) {
+  const priceCents = BigInt(Math.round(Number(amount) * 100));
+  const rateUnits = BigInt(Math.round(Number(rate) * 10000));
+  return Number((priceCents * rateUnits + 5000n) / 10000n) / 100;
+}
+
 export function groomerPayout(record, amount, employees, groomerId) {
   const primaryId = record.groomer_id ?? record.groomer?.id;
   const primary = employees.find((employee) => String(employee.id) === String(primaryId));
-  return Number(amount) * employeeCommissionRate(primary) * groomerShare(record, groomerId);
+  const rate = record.commission_rate_snapshot == null ? employeeCommissionRate(primary) : Number(record.commission_rate_snapshot);
+  const parts = groomerShares(record);
+  const poolCents = Math.round(groomerCommissionPool(amount, rate) * 100);
+  const index = parts.findIndex(p => String(p.groomerId) === String(groomerId));
+  if (index < 0) return 0;
+  return (Math.floor(poolCents / parts.length) + (index < poolCents % parts.length ? 1 : 0)) / 100;
 }

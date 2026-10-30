@@ -7,6 +7,8 @@ import { useAuth } from "../context/AuthContext";
 const LS_KEY = "bandidos_vio_recordatorios";
 
 const PAGE_TITLES = {
+  "/mi-cuenta": "Mi cuenta",
+  "/chat": "Chat del equipo",
   "/traslados": "Bandimóviles",
   "/traslados/dia": "Recorrido del día",
   "/traslados/resultados": "Resultados de traslados",
@@ -83,7 +85,7 @@ export default function MainLayout({ children }) {
       </div>
 
       {/* Toast de bienvenida: Recordatorios */}
-      {showToast && !user?.chofer_id && (
+      {showToast && !user?.chofer_id && !user?.employee_id && (
         <div
           style={{
             position: "fixed",
