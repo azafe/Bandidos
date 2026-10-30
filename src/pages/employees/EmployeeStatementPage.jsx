@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiRequest } from '../../services/apiClient';
-import { monthBoundsISO, todayISO } from '../../utils/dates';
+import { monthBoundsISO, todayISO, addMonthsISO, formatMonthLabel } from '../../utils/dates';
+import { employeeStatementActivity } from '../../lib/employeeStatement';
+import ResponsiveTable from '../../components/ui/ResponsiveTable';
 import '../../styles/employee-portal.css';
 
 const money=new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'});
@@ -74,33 +76,51 @@ export default function EmployeeStatementPage(){
   },[base,month]);
   useEffect(()=>{const currentRequest=request;void refresh();return()=>{currentRequest.current++;};},[refresh]);
   const data=state.key===key?state.data:null,error=state.key===key?state.error:'';
+  const activity=data?employeeStatementActivity(data):null;
+  const monthLabel=formatMonthLabel(`${month}-01`);
+  const workColumns=[
+    {label:'Mascota / servicio',title:true,render:w=><div className="portal-work-name"><strong>{w.pet_name || 'Mascota'}</strong><span>{w.service_name || 'Servicio'}</span></div>},
+    {label:'Fecha',render:w=><time dateTime={w.date}>{day(w.date)}</time>},
+    {label:'Precio del servicio',align:'right',render:w=>w.price==null?'A confirmar':fmt(w.price)},
+    {label:'Reparto',render:w=><span className="portal-work-share">{new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(Number(w.commission_rate_snapshot ?? 0.4)*100)}%{w.participants>1?` entre ${w.participants} personas`:''}{w.commission_historical_estimate && <small>Porcentaje estimado</small>}</span>},
+    {label:admin?'Comisión generada':'Tu comisión',align:'right',highlight:true,render:w=><div className="portal-work-commission"><span>{admin?'Comisión':'Tu comisión'}</span><strong>{w.price==null?'A confirmar':fmt(w.earned)}</strong></div>},
+  ];
   return <div className="page-content employee-portal">
-    <header className="page-header"><div><h1 className="page-title">{admin?'Liquidación del equipo':'Mi cuenta'}</h1><p className="page-subtitle">{data?.employee.name || 'Trabajos, anticipos y pagos'}</p></div>
-      <label className="form-field"><span>Mes</span><input type="month" required value={month} onChange={e=>{if(e.target.value)setMonth(e.target.value);}}/></label>
+    <header className="portal-header"><div><p className="portal-eyebrow">{admin?'Liquidación del equipo':'Mi cuenta'}</p><h1>{data?.employee.name || 'Trabajos y pagos'}</h1><p className="portal-header-caption">Tu actividad de {monthLabel.toLocaleLowerCase('es-AR')}</p></div>
+      <div className="portal-period">
+        <button type="button" aria-label="Mes anterior" onClick={()=>setMonth(v=>addMonthsISO(`${v}-01`,-1).slice(0,7))}>‹</button>
+        <label className="form-field"><span>Mes de consulta</span><input aria-label="Mes de consulta" type="month" required value={month} onChange={e=>{if(e.target.value)setMonth(e.target.value);}}/></label>
+        <button type="button" aria-label="Mes siguiente" onClick={()=>setMonth(v=>addMonthsISO(`${v}-01`,1).slice(0,7))}>›</button>
+      </div>
     </header>
     <div className="portal-toolbar">{admin?<Link to={`/employees/${id}`}>Volver al empleado</Link>:<Link to="/chat">Conversar con el equipo</Link>}<button className="btn-secondary" onClick={refresh}>Actualizar</button></div>
     {error && <div className="card portal-error" role="alert">{error}</div>}
     {!data && !error && <p role="status">Cargando tu liquidación…</p>}
     {data && <>
-      <p className="portal-note">Liquidación desde el {day(data.employee.payroll_start_date)}. Los trabajos anteriores se muestran como historial. El saldo incluye lo pendiente de meses anteriores.</p>
-      <div className="portal-stats">
-        {[['Saldo anterior',data.summary.opening],['Comisiones del mes',data.summary.earned],['Anticipos del mes',data.summary.advances],['Pagos del mes',data.summary.paid],['Pendiente al cierre del mes',data.summary.balance]].map(([label,value])=><article className="card" key={label}><span>{label}</span><strong>{fmt(value)}</strong></article>)}
-      </div>
-      {data.summary.balance<0 && <p className="portal-note">Las entregas superan lo generado. Ese importe queda a cuenta de próximos trabajos.</p>}
-      {data.summary.missing_prices>0 && <p className="portal-note">Hay {data.summary.missing_prices} trabajos sin precio registrado. Su comisión queda pendiente de confirmar y todavía no se suma al saldo.</p>}
-      {data.summary.historical_estimates>0 && <p className="portal-note">Hay {data.summary.historical_estimates} trabajos anteriores a esta función cuyo porcentaje se reconstruyó con el valor vigente al incorporarlos. Administración puede revisar el saldo inicial.</p>}
+      <section className="portal-activity" aria-label="Actividad del mes">
+        <article className="card portal-earned"><h2>Comisiones del mes</h2><strong>{activity.count>0 && activity.missingPrices===activity.count?'A confirmar':fmt(activity.earned)}</strong><p>{monthLabel}</p>{activity.estimated>0 && <span className="portal-estimate">Contiene porcentajes estimados</span>}</article>
+        <article className="card portal-work-count"><h2>Trabajos realizados</h2><strong>{activity.count}</strong><p>{activity.shared>0?`${activity.shared} compartido${activity.shared===1?'':'s'}`:'En el mes consultado'}</p></article>
+      </section>
+      <section className={`card portal-ledger ${activity.beforePayroll?'portal-ledger-pending':''}`} aria-label="Estado de pagos">
+        <div className="portal-ledger-heading"><div><h2>{activity.beforePayroll?'Saldo de este período':activity.partialPayroll && activity.beforeStart>0?'Saldo registrado':'Saldo pendiente'}</h2><p>{activity.beforePayroll?'Requiere revisión de administración':`Registro de pagos desde el ${day(data.employee.payroll_start_date)}`}</p></div><strong>{activity.beforePayroll?'Por confirmar':fmt(data.summary.balance)}</strong></div>
+        {activity.beforePayroll?<p className="portal-note">Los pagos se registran aquí desde el {day(data.employee.payroll_start_date)}. Administración debe confirmar cuánto quedó pendiente de {monthLabel.toLocaleLowerCase('es-AR')}. Las comisiones de todos los trabajos del mes se muestran arriba.</p>:<>
+          <dl className="portal-ledger-breakdown">{[['Saldo anterior',data.summary.opening],['Anticipos registrados',data.summary.advances],['Pagos registrados',data.summary.paid]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{fmt(value)}</dd></div>)}</dl>
+          {activity.partialPayroll && activity.beforeStart>0 && <p className="portal-note">El saldo incluye los movimientos desde el {day(data.employee.payroll_start_date)}. Hay {activity.beforeStart} {activity.beforeStart===1?'trabajo anterior incluido':'trabajos anteriores incluidos'} en las comisiones del mes; su saldo previo debe estar confirmado por administración.</p>}
+          {data.summary.balance<0 && <p className="portal-note">Las entregas superan lo generado en la liquidación. Ese importe queda a cuenta de próximos trabajos.</p>}
+        </>}
+      </section>
+      {activity.missingPrices>0 && <p className="portal-note">Hay {activity.missingPrices} trabajos sin precio registrado. Su comisión queda pendiente de confirmar y todavía no se suma al total.</p>}
       <nav className="portal-tabs" aria-label="Detalle de mi cuenta">
-        <button className={tab==='works'?'active':''} onClick={()=>setTab('works')}>Mis trabajos ({data.works.length})</button>
-        <button className={tab==='advances'?'active':''} onClick={()=>setTab('advances')}>Anticipos ({data.summary.advance_count})</button>
-        <button className={tab==='payments'?'active':''} onClick={()=>setTab('payments')}>Todos los pagos</button>
+        <button aria-pressed={tab==='works'} className={tab==='works'?'active':''} onClick={()=>setTab('works')}>Trabajos <span>{data.works.length}</span></button>
+        <button aria-pressed={tab==='advances'} className={tab==='advances'?'active':''} onClick={()=>setTab('advances')}>Anticipos <span>{data.summary.advance_count}</span></button>
+        <button aria-pressed={tab==='payments'} className={tab==='payments'?'active':''} onClick={()=>setTab('payments')}>Pagos</button>
       </nav>
       <section className="card portal-section">
         {tab==='works'?<>
           <h2 className="card-title">{admin?'Trabajos realizados':'Mis trabajos realizados'}</h2>
-          <p className="card-subtitle">La comisión se genera al finalizar el trabajo. En trabajos compartidos se reparte el porcentaje de la peluquera principal.</p>
-          {!data.works.length?<p>No hay trabajos finalizados en este mes.</p>:<div className="portal-table"><table><thead><tr><th>Fecha</th><th>Mascota / servicio</th><th>Precio del servicio</th><th>Participación</th><th>Comisión generada</th></tr></thead><tbody>
-            {data.works.map(w=><tr key={w.id}><td>{day(w.date)}{w.date<data.employee.payroll_start_date && <small>Solo historial</small>}</td><td>{w.pet_name}<small>{w.service_name || 'Servicio'}</small></td><td>{w.price==null?"A confirmar":fmt(w.price)}</td><td>{w.participants>1?`Compartido entre ${w.participants}`:'Individual'}<small>{Number(w.commission_rate_snapshot)*100}% del servicio</small></td><td><strong>{w.price==null?"A confirmar":fmt(w.earned)}</strong>{w.commission_historical_estimate && <small>Porcentaje histórico estimado</small>}</td></tr>)}
-          </tbody></table></div>}
+          <p className="card-subtitle">{monthLabel} · {data.works.length} trabajos finalizados</p>
+          <details className="portal-work-help"><summary>Cómo se calcula la comisión</summary><p>La comisión se genera al finalizar el trabajo. Si es compartido, se reparte en partes iguales el porcentaje de la peluquera principal.</p>{activity.estimated>0 && <p>En {activity.estimated} trabajos antiguos, el porcentaje se reconstruyó con el valor vigente al incorporar el historial. Administración puede revisarlo.</p>}</details>
+          <div className="portal-work-list"><ResponsiveTable columns={workColumns} rows={data.works} rowKey={w=>w.id} empty="No hay trabajos finalizados en este mes."/></div>
         </>:<>
           <h2 className="card-title">{tab==='advances'?'Anticipos recibidos':'Entregas registradas'}</h2>
           <p className="card-subtitle">Administración registra las entregas. Los movimientos anulados se conservan para poder revisarlos.</p>
