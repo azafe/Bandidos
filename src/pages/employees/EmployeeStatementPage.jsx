@@ -81,8 +81,8 @@ export default function EmployeeStatementPage(){
   const workColumns=[
     {label:'Mascota / servicio',title:true,render:w=><div className="portal-work-name"><strong>{w.pet_name || 'Mascota'}</strong><span>{w.service_name || 'Servicio'}</span></div>},
     {label:'Fecha',render:w=><time dateTime={w.date}>{day(w.date)}</time>},
-    {label:'Precio del servicio',align:'right',render:w=>w.price==null?'A confirmar':fmt(w.price)},
-    {label:'Reparto',render:w=><span className="portal-work-share">{new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(Number(w.commission_rate_snapshot ?? 0.4)*100)}%{w.participants>1?` entre ${w.participants} personas`:''}{w.commission_historical_estimate && <small>Porcentaje estimado</small>}</span>},
+    {label:'Precio del servicio',align:'right',desktopOnly:!admin,render:w=>w.price==null?'A confirmar':fmt(w.price)},
+    {label:'Reparto',desktopOnly:!admin,render:w=><span className="portal-work-share">{new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(Number(w.commission_rate_snapshot ?? 0.4)*100)}%{w.participants>1?` entre ${w.participants} personas`:''}{w.commission_historical_estimate && <small>Porcentaje estimado</small>}</span>},
     {label:admin?'Comisión generada':'Tu comisión',align:'right',highlight:true,render:w=><div className="portal-work-commission"><span>{admin?'Comisión':'Tu comisión'}</span><strong>{w.price==null?'A confirmar':fmt(w.earned)}</strong></div>},
   ];
   return <div className="page-content employee-portal">
