@@ -12,6 +12,17 @@ un trabajo comparten el porcentaje de la principal en partes iguales, con
 reparto de los centavos sobrantes en orden. El porcentaje queda guardado al
 finalizar para conservar las comisiones anteriores.
 
+El total **Comisiones del mes** suma todos los trabajos del mes visible, incluidos
+los anteriores al inicio del registro de pagos. Es actividad generada; el saldo
+pendiente se calcula con el inicio y los pagos registrados en la liquidación.
+Para meses anteriores a ese inicio se indica **Por confirmar** en el saldo,
+ya que no se conoce qué pagos se hicieron antes. Los porcentajes reconstruidos
+del historial quedan identificados como estimados.
+
+En el celular, el nombre y el mes de consulta permanecen visibles, con navegación
+al mes anterior/siguiente. Los trabajos se presentan como tarjetas con mascota,
+servicio, fecha, precio, reparto y comisión; en escritorio se mantiene la tabla.
+
 Administración entra por **Equipo → empleado → Liquidación, anticipos y pagos**.
 Antes de la primera entrega debe definir la fecha de inicio y el saldo pendiente
 anterior. Después registra anticipos y pagos y puede anular una entrega
