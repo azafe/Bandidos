@@ -9,10 +9,12 @@ import {
   getSubscriptionStatus,
 } from "../../services/pushNotifications.js";
 import { todayISO } from "../../utils/dates";
+import { useChatInbox } from "../../context/ChatContext";
 import { showApiError } from "../../utils/errorDialog";
 
 export default function Sidebar({ isOpen = true, onNavigate }) {
   const { user, logout } = useAuth();
+  const { unread } = useChatInbox();
   const showBackofficeLinks = user?.role === "admin" || user?.role === "super_admin";
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -81,8 +83,12 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
       </div>
 
       <nav className="sidebar__nav">
+        {user?.role !== "super_admin" && <>
+          {(user?.employee_id || user?.chofer_id) && <NavLink to="/mi-cuenta" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Mi cuenta</NavLink>}
+          <NavLink to="/chat" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Chat del equipo {unread > 0 && <span aria-label={`${unread} mensajes sin leer`}>({unread})</span>}</NavLink>
+        </>}
         {user?.chofer_id && <NavLink to="/traslados/dia" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Mis traslados</NavLink>}
-        {user?.role !== "super_admin" && !user?.chofer_id && (
+        {user?.role !== "super_admin" && !user?.chofer_id && !user?.employee_id && (
           <>
             {isEnabled("dashboard") && user?.role !== "staff" && (
               <NavLink

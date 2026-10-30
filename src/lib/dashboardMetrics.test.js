@@ -42,3 +42,11 @@ test("Una consulta fallida no se transforma en cero cobrado ni en un resultado f
   assert.equal(kpis.servicesCount, 2);
   assert.equal(kpis.income, 40000);
 });
+
+test("Inicio conserva la comisión histórica aunque cambie el porcentaje del empleado", () => {
+  const report=buildDashboardMetrics({range,categories:[],current:{
+    services:[{id:'historico',date:'2026-10-10',status:'finished',price:10000.01,groomer_id:'a',commission_rate_snapshot:0.4}],
+    employees:[{id:'a',commission_rate:0.9}],dailyExpenses:[],fixedExpenses:[],
+  }});
+  assert.equal(report.kpis.groomerCommissions,4000);
+});

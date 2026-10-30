@@ -29,3 +29,10 @@ test('removing the third groomer restores a half share for both remaining partic
   assert.equal(groomerPayout(service, 30000, employees, 'a'), 6000);
   assert.equal(groomerPayout(service, 30000, employees, 'b'), 6000);
 });
+
+test('a frozen historical rate and cent rounding remain stable',()=>{
+  assert.equal(groomerPayout({groomer_id:'a',commission_rate_snapshot:0.25},100,employees,'a'),25);
+  const sharedThree={groomer_id:'a',second_groomer_id:'b',third_groomer_id:'c',commission_rate_snapshot:0.4};
+  assert.deepEqual(['a','b','c'].map(id=>groomerPayout(sharedThree,10000.01,employees,id)),[1333.34,1333.33,1333.33]);
+  assert.equal(groomerPayout({groomer_id:'a',commission_rate_snapshot:0.5},1.01,employees,'a'),0.51);
+});

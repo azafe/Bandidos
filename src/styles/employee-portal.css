@@ -1,0 +1,25 @@
+.employee-portal { max-width: 1250px; margin: 0 auto; }
+.portal-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 0 20px; }
+.portal-toolbar a { color:var(--color-primary, #ff69b4); }
+.portal-note { color:var(--text-muted, #949db0); line-height:1.6; font-size:.9rem; margin:16px 0; }
+.portal-error { color:#dc5365; }
+.portal-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:12px; }
+.portal-stats article { display:flex; flex-direction:column; gap:12px; padding:20px; }
+.portal-stats article span { font-size:.85rem; color:var(--text-muted, #949db0); }
+.portal-stats article strong { font-size:1.4rem; font-variant-numeric:tabular-nums; }
+.portal-stats article:last-child { border-color:var(--color-primary, #ff69b4); }
+.portal-section { margin:20px 0; padding:22px; }
+.portal-section summary { cursor:pointer; font-weight:600; }
+.portal-fields { border:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; align-items:end; }
+.portal-wide { grid-column:1/-1; }
+.portal-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:24px 0 10px; }
+.portal-tabs button { padding:10px 16px; border:1px solid var(--border, #394154); background:transparent; color:inherit; border-radius:12px; cursor:pointer; }
+.portal-tabs button.active { background:var(--color-primary, #d74791); color:white; border-color:transparent; }
+.portal-table { overflow:auto; }
+.portal-table table { border-collapse:collapse; width:100%; text-align:left; }
+.portal-table th,.portal-table td { padding:14px 12px; border-bottom:1px solid var(--border, #394154); white-space:nowrap; }
+.portal-table small { display:block; color:var(--text-muted, #949db0); padding-top:5px; }
+.portal-movement { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:16px 0; border-bottom:1px solid var(--border, #394154); }
+.portal-movement p { margin:6px 0; font-size:.9rem; }
+.portal-movement.voided { opacity:.65; }
+@media(max-width:600px) { .portal-section { padding:16px; } .portal-stats { grid-template-columns:1fr 1fr; } .portal-stats article:last-child { grid-column:1/-1; } }

@@ -25,8 +25,8 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Un dispositivo compartido puede conservar una suscripción del panel.
-    if (user?.chofer_id) disableLocalPush().catch(() => {});
-  }, [user?.chofer_id]);
+    if (user?.chofer_id || user?.employee_id) disableLocalPush().catch(() => {});
+  }, [user?.chofer_id,user?.employee_id]);
 
   useEffect(() => {
     setStoredToken(token);
@@ -46,7 +46,6 @@ export function AuthProvider({ children }) {
       return;
     }
     try {
-      setLoading(true);
       let me;
       try {
         me = await apiRequest("/me", { token });
@@ -69,6 +68,22 @@ export function AuthProvider({ children }) {
       if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [token, logout]);
+
+  // AppTzReactChofer revalida al volver a la app y cada minuto. Se conserva
+  // el JWT de Bandidos y se refresca /me para aplicar bajas y cambios de acceso.
+  useEffect(() => {
+    if (!token) return;
+    let lastCheck = 0;
+    const check = () => {
+      if (document.visibilityState === "hidden" || Date.now() - lastCheck < 15000) return;
+      lastCheck = Date.now();
+      void loadMeRef.current?.();
+    };
+    const timer = setInterval(check, 60000);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => { clearInterval(timer); window.removeEventListener("focus", check); document.removeEventListener("visibilitychange", check); };
+  }, [token]);
 
   // Mantener el ref actualizado con la última versión de loadMe
   useEffect(() => {

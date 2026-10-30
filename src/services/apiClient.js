@@ -109,7 +109,7 @@ export async function apiRequest(
   if (res.status === 403) {
     const clone = res.clone();
     clone.json().then((body) => {
-      if (body?.message === "Tenant is inactive" && suspendedHandler) {
+      if ((body?.message === "Tenant is inactive" || body?.employee_inactive) && suspendedHandler) {
         suspendedHandler(body.suspended_reason ?? null);
       }
     }).catch(() => {});

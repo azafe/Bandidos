@@ -33,6 +33,7 @@ self.addEventListener("push", (event) => {
       body: data.body,
       icon: "/icon-192x192.png",
       badge: "/icon-192x192.png",
+      data: { path: data.url === "/chat" ? "/chat" : "/" },
     })
   );
 });
@@ -40,13 +41,14 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
-          return client.focus();
+          const path = event.notification.data?.path === "/chat" ? "/chat" : "/";
+          return client.navigate(path).then(() => client.focus());
         }
       }
-      if (clients.openWindow) return clients.openWindow("/");
+      if (self.clients.openWindow) return self.clients.openWindow(event.notification.data?.path === "/chat" ? "/chat" : "/");
     })
   );
 });
