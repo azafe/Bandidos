@@ -22,7 +22,8 @@ del historial quedan identificados como estimados.
 
 En el celular, el nombre y el mes de consulta permanecen visibles, con navegación
 al mes anterior/siguiente. Los trabajos se presentan como tarjetas con mascota,
-servicio, fecha, precio, reparto y comisión; en escritorio se mantiene la tabla.
+servicio, fecha y comisión. El precio total y el reparto se conservan en la
+tabla de escritorio y en la vista de administración.
 
 Administración entra por **Equipo → empleado → Liquidación, anticipos y pagos**.
 Antes de la primera entrega debe definir la fecha de inicio y el saldo pendiente
