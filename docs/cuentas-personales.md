@@ -6,7 +6,8 @@ tienen **Mis traslados**. Una cuenta personal solo puede consultar su propia
 información; la API aplica la misma restricción.
 
 **Mi cuenta** muestra por mes los trabajos finalizados, comisión por trabajo,
-anticipos, pagos y saldo acumulado al cierre. Las comisiones y el dinero
+anticipos y pagos. El bloque de saldo se muestra solo en la liquidación de
+administración. Las comisiones y el dinero
 efectivamente entregado se muestran por separado. Las tres participantes de
 un trabajo comparten el porcentaje de la principal en partes iguales, con
 reparto de los centavos sobrantes en orden. El porcentaje queda guardado al
@@ -15,7 +16,7 @@ finalizar para conservar las comisiones anteriores.
 El total **Comisiones del mes** suma todos los trabajos del mes visible, incluidos
 los anteriores al inicio del registro de pagos. Es actividad generada; el saldo
 pendiente se calcula con el inicio y los pagos registrados en la liquidación.
-Para meses anteriores a ese inicio se indica **Por confirmar** en el saldo,
+En administración, para meses anteriores a ese inicio se indica **Por confirmar** en el saldo,
 ya que no se conoce qué pagos se hicieron antes. Los porcentajes reconstruidos
 del historial quedan identificados como estimados.
 
