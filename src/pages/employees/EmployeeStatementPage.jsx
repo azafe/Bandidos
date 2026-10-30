@@ -101,14 +101,14 @@ export default function EmployeeStatementPage(){
         <article className="card portal-earned"><h2>Comisiones del mes</h2><strong>{activity.count>0 && activity.missingPrices===activity.count?'A confirmar':fmt(activity.earned)}</strong><p>{monthLabel}</p>{activity.estimated>0 && <span className="portal-estimate">Contiene porcentajes estimados</span>}</article>
         <article className="card portal-work-count"><h2>Trabajos realizados</h2><strong>{activity.count}</strong><p>{activity.shared>0?`${activity.shared} compartido${activity.shared===1?'':'s'}`:'En el mes consultado'}</p></article>
       </section>
-      <section className={`card portal-ledger ${activity.beforePayroll?'portal-ledger-pending':''}`} aria-label="Estado de pagos">
+      {admin && <section className={`card portal-ledger ${activity.beforePayroll?'portal-ledger-pending':''}`} aria-label="Estado de pagos">
         <div className="portal-ledger-heading"><div><h2>{activity.beforePayroll?'Saldo de este período':activity.partialPayroll && activity.beforeStart>0?'Saldo registrado':'Saldo pendiente'}</h2><p>{activity.beforePayroll?'Requiere revisión de administración':`Registro de pagos desde el ${day(data.employee.payroll_start_date)}`}</p></div><strong>{activity.beforePayroll?'Por confirmar':fmt(data.summary.balance)}</strong></div>
         {activity.beforePayroll?<p className="portal-note">Los pagos se registran aquí desde el {day(data.employee.payroll_start_date)}. Administración debe confirmar cuánto quedó pendiente de {monthLabel.toLocaleLowerCase('es-AR')}. Las comisiones de todos los trabajos del mes se muestran arriba.</p>:<>
           <dl className="portal-ledger-breakdown">{[['Saldo anterior',data.summary.opening],['Anticipos registrados',data.summary.advances],['Pagos registrados',data.summary.paid]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{fmt(value)}</dd></div>)}</dl>
           {activity.partialPayroll && activity.beforeStart>0 && <p className="portal-note">El saldo incluye los movimientos desde el {day(data.employee.payroll_start_date)}. Hay {activity.beforeStart} {activity.beforeStart===1?'trabajo anterior incluido':'trabajos anteriores incluidos'} en las comisiones del mes; su saldo previo debe estar confirmado por administración.</p>}
           {data.summary.balance<0 && <p className="portal-note">Las entregas superan lo generado en la liquidación. Ese importe queda a cuenta de próximos trabajos.</p>}
         </>}
-      </section>
+      </section>}
       {activity.missingPrices>0 && <p className="portal-note">Hay {activity.missingPrices} trabajos sin precio registrado. Su comisión queda pendiente de confirmar y todavía no se suma al total.</p>}
       <nav className="portal-tabs" aria-label="Detalle de mi cuenta">
         <button aria-pressed={tab==='works'} className={tab==='works'?'active':''} onClick={()=>setTab('works')}>Trabajos <span>{data.works.length}</span></button>
