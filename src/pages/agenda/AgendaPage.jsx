@@ -1,4 +1,4 @@
-import SplitPayments from "../../components/payments/SplitPayments.jsx";
+import FinishTurnoForm from "../../components/agenda/FinishTurnoForm.jsx";
 import { paymentRows, paymentError, paymentDescription } from "../../lib/servicePayments.js";
 import { groomerShares, groomerShare, groomerPayout } from "../../lib/sharedGroomer";
 // src/pages/agenda/AgendaPage.jsx
@@ -1663,8 +1663,6 @@ export default function AgendaPage() {
   const selectedTurnoPrice = selectedTurno ? getServicePrice(selectedTurno) : 0;
   const selectedTurnoDeposit = Number(selectedTurno?.deposit_amount || 0);
   const selectedTurnoBalance = Math.max(selectedTurnoPrice - selectedTurnoDeposit, 0);
-  const finishTotalAmount = Number(finishForm.price || 0);
-  const finishRemainingAmount = Math.max(finishTotalAmount - selectedTurnoDeposit, 0);
 
   function resetFilters() {
     setFilters({
@@ -2429,8 +2427,8 @@ export default function AgendaPage() {
       <Modal
         isOpen={Boolean(selectedTurno)}
         onClose={() => setSelectedTurno(null)}
-        title="Detalle del turno"
-        className="agenda-bottom-sheet"
+        title={showFinishForm ? (selectedTurnoStatus === "finished" ? "Editar cobro y reparto" : "Cerrar y cobrar turno") : "Detalle del turno"}
+        className={`agenda-bottom-sheet${showFinishForm ? " agenda-closing-modal" : ""}`}
       >
         {selectedTurno && (
           <>
@@ -2462,6 +2460,7 @@ export default function AgendaPage() {
                 </span>
               </div>
 
+              {!showFinishForm && <>
               <div className="agenda-turno-modal__metrics">
                 <article className="agenda-turno-modal__metric">
                   <span>Precio del servicio</span>
@@ -2578,176 +2577,17 @@ export default function AgendaPage() {
                 </article>
               </div>
 
-              {showFinishForm ? (
-                <div className="agenda-turno-modal__finish" ref={finishFormRef}>
-                  <div className="agenda-turno-modal__finish-header">
-                    <h4>Cerrar y facturar turno</h4>
-                    <p>Completá los datos para registrar la finalización.</p>
-                  </div>
-                  <div className="agenda-finish-summary">
-                    <div className="agenda-finish-summary__item">
-                      <span className="agenda-finish-summary__label">Costo total</span>
-                      <strong className="agenda-finish-summary__value">
-                        {formatCurrency(finishTotalAmount)}
-                      </strong>
-                    </div>
-                    <div className="agenda-finish-summary__item">
-                      <span className="agenda-finish-summary__label">Seña registrada</span>
-                      <strong className="agenda-finish-summary__value">
-                        {formatCurrency(selectedTurnoDeposit)}
-                      </strong>
-                    </div>
-                    <div className="agenda-finish-summary__item">
-                      <span className="agenda-finish-summary__label">Saldo pendiente</span>
-                      <strong className={`agenda-finish-summary__value${finishRemainingAmount > 0 ? " agenda-finish-summary__value--pending" : ""}`}>
-                        {formatCurrency(finishRemainingAmount)}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className="agenda-finish agenda-finish--modal">
-                    <label className="form-field">
-                      <span>Groomer</span>
-                      <select
-                        value={finishForm.groomer_id}
-                        onChange={(e) =>
-                          setFinishForm((prev) => ({
-                            ...prev,
-                            groomer_id: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Seleccioná</option>
-                        {groomerOptions(employees, finishForm.groomer_id).map((emp) => (
-                          <option key={emp.id} value={emp.id}>
-                            {emp.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="form-field">
-                      <span><input type="checkbox" checked={finishForm.shared}
-                        onChange={(e) => setFinishForm((prev) => ({ ...prev, shared: e.target.checked, second_groomer_id: "", third_groomer_id: "" }))} /> Trabajaron varios peluqueros</span>
-                    </label>
-                    {finishForm.shared && <label className="form-field">
-                      <span>Segundo peluquero</span>
-                      <select value={finishForm.second_groomer_id}
-                        onChange={(e) => setFinishForm((prev) => ({ ...prev, second_groomer_id: e.target.value }))}>
-                        <option value="">Seleccioná</option>
-                        {groomerOptions(employees, finishForm.second_groomer_id)
-                          .filter((emp) => String(emp.id) !== String(finishForm.groomer_id) && String(emp.id) !== String(finishForm.third_groomer_id))
-                          .map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-                      </select>
-                      <small className="agenda-helper">La comisión del peluquero principal se divide en partes iguales entre {finishForm.third_groomer_id ? "los tres" : "los dos"}. El precio al cliente no cambia.</small>
-                    </label>}
-                    {finishForm.shared && <label className="form-field">
-                      <span>Tercer peluquero (opcional)</span>
-                      <select value={finishForm.third_groomer_id}
-                        onChange={(e) => setFinishForm((prev) => ({ ...prev, third_groomer_id: e.target.value }))}>
-                        <option value="">Sin tercer peluquero</option>
-                        {groomerOptions(employees, finishForm.third_groomer_id)
-                          .filter((emp) => ![String(finishForm.groomer_id), String(finishForm.second_groomer_id)].includes(String(emp.id)))
-                          .map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
-                      </select>
-                    </label>}
-                    {finishForm.shared && finishForm.groomer_id && finishForm.second_groomer_id && <div className="form-field" aria-live="polite">
-                      <span>Comisión a liquidar por peluquero</span>
-                      {groomerShares({ ...finishForm, third_groomer_id: finishForm.third_groomer_id || null }).map(({ groomerId }) => <small key={groomerId}>
-                        {employees.find(e => String(e.id) === String(groomerId))?.name || "Peluquero"}: {formatCurrency(groomerPayout({ ...finishForm,
-                          commission_rate_snapshot: finishForm.groomer_id === selectedTurno.groomer_id ? selectedTurno.commission_rate_snapshot : null,
-                        }, Number(finishForm.price || 0), employees, groomerId))}
-                      </small>)}
-                    </div>}
-                    <label className="form-field">
-                      <span>Tipo de servicio</span>
-                      <select
-                        value={finishForm.service_type_id}
-                        onChange={(e) =>
-                          setFinishForm((prev) => ({
-                            ...prev,
-                            service_type_id: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Seleccioná</option>
-                        {serviceTypes.map((service) => (
-                          <option key={service.id} value={service.id}>
-                            {service.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className="agenda-finish__price-payment-row">
-                      <label className="form-field agenda-finish__price-field">
-                        <span>Costo total final</span>
-                        <div className="agenda-input-currency">
-                          <span>$</span>
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={finishForm.price}
-                            onChange={(e) =>
-                              setFinishForm((prev) => ({
-                                ...prev,
-                                price: e.target.value.replace(/\D/g, ""),
-                              }))
-                            }
-                            placeholder="0"
-                          />
-                        </div>
-                        <small className="agenda-helper">
-                          Precio total para recalcular el saldo.
-                        </small>
-                      </label>
-                      {!finishForm.payments?.length && <label className="form-field">
-                        <span>Método de pago</span>
-                        <select
-                          value={finishForm.payment_method_id}
-                          onChange={(e) =>
-                            setFinishForm((prev) => ({ ...prev, payment_method_id: e.target.value }))
-                          }
-                        >
-                          <option value="">Sin especificar</option>
-                          {paymentMethods.map((method) => (
-                            <option key={method.id} value={method.id}>
-                              {method.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>}
-                    </div>
-                    <SplitPayments payments={finishForm.payments} methods={paymentMethods}
-                      methodId={finishForm.payment_method_id}
-                      balance={Number(finishForm.price || 0) - Number(selectedTurno.deposit_amount || 0)}
-                      onChange={payments => setFinishForm(prev => ({ ...prev, payments }))} />
-                    {selectedTurno?.traslado && (
-                      <TrasladoFields
-                        id="finish-traslado"
-                        value={finishForm}
-                        required
-                        onChange={(patch) => setFinishForm((prev) => ({ ...prev, ...patch }))}
-                      />
-                    )}
-                  </div>
-                  <div className="agenda-turno-modal__finish-actions">
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => setShowFinishForm(false)}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={handleFinishSubmit}
-                    >
-                      Guardar finalización
-                    </button>
-                  </div>
-                </div>
-              ) : null}
+              </>}
+              {showFinishForm && <div ref={finishFormRef}>
+                <FinishTurnoForm turno={selectedTurno} form={finishForm}
+                  employees={employees} serviceTypes={serviceTypes} paymentMethods={paymentMethods}
+                  getGroomerOptions={groomerOptions}
+                  onPatch={patch => setFinishForm(prev => ({ ...prev, ...patch }))}
+                  onSubmit={handleFinishSubmit} onCancel={() => setShowFinishForm(false)} />
+              </div>}
+
             </div>
-            <div className="modal-actions agenda-turno-modal__actions">
+            {!showFinishForm && <div className="modal-actions agenda-turno-modal__actions">
               <label className="form-field agenda-turno-modal__status-field">
                 <span>Estado operativo</span>
                 <select
@@ -2804,7 +2644,7 @@ export default function AgendaPage() {
                   Eliminar
                 </button>
               </div>
-            </div>
+            </div>}
           </>
         )}
       </Modal>
