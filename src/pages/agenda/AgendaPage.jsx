@@ -1,3 +1,5 @@
+import SplitPayments from "../../components/payments/SplitPayments.jsx";
+import { paymentRows, paymentError, paymentDescription } from "../../lib/servicePayments.js";
 import { groomerShares, groomerShare, groomerPayout } from "../../lib/sharedGroomer";
 // src/pages/agenda/AgendaPage.jsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -435,6 +437,7 @@ export default function AgendaPage() {
   const [customDuration, setCustomDuration] = useState("");
   const [finishForm, setFinishForm] = useState({
     groomer_id: "",
+    payments: [],
     shared: false,
     second_groomer_id: "",
     third_groomer_id: "",
@@ -607,6 +610,7 @@ export default function AgendaPage() {
     setShowFinishForm(false);
     setFinishForm({
       groomer_id: selectedTurno.groomer_id || "",
+      payments: selectedTurno.payments || [],
       shared: Boolean(selectedTurno.second_groomer_id),
       second_groomer_id: selectedTurno.second_groomer_id || "",
       third_groomer_id: selectedTurno.third_groomer_id || "",
@@ -731,11 +735,12 @@ export default function AgendaPage() {
       if (status === "finished") {
         finished += 1;
         finishedIncome += amount;
-        const methodId = turno.payment_method_id || null;
-        const methodName = methodId
-          ? paymentMethods.find((m) => m.id === methodId)?.name || "Sin método"
-          : "Sin método";
-        byPaymentMethodMap.set(methodName, (byPaymentMethodMap.get(methodName) || 0) + amount);
+        const rows = paymentRows({ ...turno, price: amount });
+        if (Number(turno.deposit_amount) > 0) rows.push({ payment_method_id: turno.deposit_payment_method_id || turno.payment_method_id, amount: Number(turno.deposit_amount) });
+        rows.forEach(payment => {
+          const methodName = paymentMethods.find(m => m.id === payment.payment_method_id)?.name || "Sin método";
+          byPaymentMethodMap.set(methodName, (byPaymentMethodMap.get(methodName) || 0) + Number(payment.amount));
+        });
       }
       if (status === "cancelled") cancelled += 1;
     });
@@ -750,7 +755,7 @@ export default function AgendaPage() {
       .sort((a, b) => b.total - a.total);
 
     const finishedWithoutPayment = items.filter(
-      (t) => normalizeStatus(t.status) === "finished" && !t.payment_method_id
+      (t) => normalizeStatus(t.status) === "finished" && !t.payment_method_id && !t.payments?.length
     );
 
     return {
@@ -1501,47 +1506,14 @@ export default function AgendaPage() {
 
   async function updateStatusWithDetails(turno, status, extra) {
     try {
-      const previousStatus = normalizeStatus(turno.status);
-      await updateAgendaTurno(turno.id, { status, ...(extra || {}) });
-      const updatedTurno = { ...turno, ...(extra || {}), status };
-      if (status === "finished" && previousStatus !== "finished") {
-        await createServiceFromTurno(updatedTurno);
-      }
+      const updatedTurno = await updateAgendaTurno(turno.id, { status, ...(extra || {}) });
       await refreshAgendaData();
-      setSelectedTurno((prev) => (prev ? { ...prev, ...(extra || {}), status } : prev));
+      setSelectedTurno(prev => prev ? { ...prev, ...updatedTurno } : prev);
     } catch (err) {
       showApiError(err, "No se pudo actualizar el estado.");
     }
   }
 
-  async function createServiceFromTurno(turno) {
-    try {
-      const price =
-        turno.price !== null && turno.price !== undefined
-          ? Number(turno.price)
-          : getServicePrice(turno);
-      const payload = {
-        date: normalizeDate(turno.date),
-        customer_id: normalizeId(turno.customer_id || turno.owner_id || null),
-        pet_id: normalizeId(turno.pet_id),
-        service_type_id: normalizeId(turno.service_type_id),
-        price,
-        payment_method_id: normalizeId(turno.payment_method_id),
-        groomer_id: normalizeId(turno.groomer_id),
-        second_groomer_id: normalizeId(turno.second_groomer_id),
-        third_groomer_id: normalizeId(turno.third_groomer_id),
-        notes: (turno.notes || "").trim(),
-      };
-      await apiRequest("/v2/services", { method: "POST", body: payload });
-    } catch (err) {
-      console.error("[agenda] Error creando servicio desde turno", {
-        message: err?.message,
-        status: err?.status,
-        payload: err?.payload,
-        turno_id: turno?.id,
-      });
-    }
-  }
 
   async function handleCopyBookingLink() {
     const ok = await copyToClipboard(bookingPublicUrl(bookingLink?.slug));
@@ -1635,6 +1607,9 @@ export default function AgendaPage() {
       alert("El costo total no puede ser menor que la seña registrada.");
       return;
     }
+    const payments = (finishForm.payments || []).map(p => ({ ...p, amount: Number(p.amount) }));
+    const invalidPayment = paymentError(payments, price - deposit);
+    if (invalidPayment) { alert(invalidPayment); return; }
     const paymentMethodId = normalizeId(finishForm.payment_method_id);
     const traslado = {
       traslado: selectedTurno.traslado,
@@ -1652,7 +1627,8 @@ export default function AgendaPage() {
       third_groomer_id: thirdGroomerId,
       service_type_id: serviceTypeId,
       price,
-      ...(paymentMethodId ? { payment_method_id: paymentMethodId } : {}),
+      payments,
+      payment_method_id: payments.length > 1 ? null : payments[0]?.payment_method_id || paymentMethodId,
       traslado_amount: traslado.traslado_amount,
       traslado_bonificado: traslado.traslado_bonificado,
     });
@@ -2528,11 +2504,7 @@ export default function AgendaPage() {
                     <div className="agenda-turno-modal__pair">
                       <span>Método de pago del saldo</span>
                       <strong>
-                        {paymentMethods.find(
-                          (m) => m.id === selectedTurno.payment_method_id
-                        )?.name ||
-                          selectedTurno.payment_method?.name ||
-                          "-"}
+                        {paymentDescription(selectedTurno, paymentMethods, formatCurrency)}
                       </strong>
                     </div>
                     {Number(selectedTurno.deposit_amount || 0) > 0 && (
@@ -2677,6 +2649,14 @@ export default function AgendaPage() {
                           .map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
                       </select>
                     </label>}
+                    {finishForm.shared && finishForm.groomer_id && finishForm.second_groomer_id && <div className="form-field" aria-live="polite">
+                      <span>Comisión a liquidar por peluquero</span>
+                      {groomerShares({ ...finishForm, third_groomer_id: finishForm.third_groomer_id || null }).map(({ groomerId }) => <small key={groomerId}>
+                        {employees.find(e => String(e.id) === String(groomerId))?.name || "Peluquero"}: {formatCurrency(groomerPayout({ ...finishForm,
+                          commission_rate_snapshot: finishForm.groomer_id === selectedTurno.groomer_id ? selectedTurno.commission_rate_snapshot : null,
+                        }, Number(finishForm.price || 0), employees, groomerId))}
+                      </small>)}
+                    </div>}
                     <label className="form-field">
                       <span>Tipo de servicio</span>
                       <select
@@ -2718,7 +2698,7 @@ export default function AgendaPage() {
                           Precio total para recalcular el saldo.
                         </small>
                       </label>
-                      <label className="form-field">
+                      {!finishForm.payments?.length && <label className="form-field">
                         <span>Método de pago</span>
                         <select
                           value={finishForm.payment_method_id}
@@ -2733,8 +2713,12 @@ export default function AgendaPage() {
                             </option>
                           ))}
                         </select>
-                      </label>
+                      </label>}
                     </div>
+                    <SplitPayments payments={finishForm.payments} methods={paymentMethods}
+                      methodId={finishForm.payment_method_id}
+                      balance={Number(finishForm.price || 0) - Number(selectedTurno.deposit_amount || 0)}
+                      onChange={payments => setFinishForm(prev => ({ ...prev, payments }))} />
                     {selectedTurno?.traslado && (
                       <TrasladoFields
                         id="finish-traslado"
@@ -2782,7 +2766,7 @@ export default function AgendaPage() {
                 </select>
               </label>
               <div className="agenda-turno-modal__action-buttons">
-                {!showFinishForm && selectedTurnoStatus !== "finished" ? (
+                {!showFinishForm ? (
                   <button
                     type="button"
                     className="btn-primary"
@@ -2798,7 +2782,7 @@ export default function AgendaPage() {
                     }}
                     disabled={selectedTurno.traslado && selectedTurno.traslado_detallado === undefined}
                   >
-                    Dar por finalizado
+                    {selectedTurnoStatus === "finished" ? "Editar cobro y reparto" : "Dar por finalizado"}
                   </button>
                 ) : null}
                 <button
