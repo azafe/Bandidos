@@ -1,3 +1,4 @@
+import { paymentDescription } from "../../lib/servicePayments.js";
 import { groomerShares, groomerShare, employeeCommissionRate } from "../../lib/sharedGroomer";
 // src/pages/services/ServicesListPage.jsx
 import { useEffect, useRef, useState } from "react";
@@ -207,12 +208,7 @@ export default function ServicesListPage() {
     service.type ||
     getNameById(serviceTypes, service.service_type_id) ||
     "-";
-  const resolvePaymentMethodName = (service) =>
-    service.payment_method?.name ||
-    service.paymentMethod ||
-    service.payment_method?.name ||
-    getNameById(paymentMethods, service.payment_method_id) ||
-    "-";
+  const resolvePaymentMethodName = service => paymentDescription(service, paymentMethods, formatPrice);
   const resolveGroomerName = (service) => groomerShares(service)
     .map(({ groomerId }) => getNameById(employees, groomerId) || service.groomer?.name || "Sin groomer")
     .join(" + ");
@@ -477,7 +473,7 @@ export default function ServicesListPage() {
   const commissions = finishedServices.reduce((sum, service) => {
     const primary = employees.find((emp) => String(emp.id) === String(service.groomer_id));
     const share = filters.groomer_id ? groomerShare(service, filters.groomer_id) : 1;
-    return sum + getServicePrice(service) * employeeCommissionRate(primary) * share;
+    return sum + getServicePrice(service) * (service.commission_rate_snapshot ?? employeeCommissionRate(primary)) * share;
   }, 0);
   const bandidosMargin = totalBilled - commissions;
   const avgTicket = finishedCount > 0 ? totalBilled / finishedCount : 0;

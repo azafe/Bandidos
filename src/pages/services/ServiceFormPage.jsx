@@ -1,3 +1,5 @@
+import SplitPayments from "../../components/payments/SplitPayments.jsx";
+import { paymentError } from "../../lib/servicePayments.js";
 import { groomerOptions } from "../../lib/traslados";
 // src/pages/services/ServiceFormPage.jsx
 import { useEffect, useState } from "react";
@@ -46,6 +48,9 @@ export default function ServiceFormPage() {
     payment_method_id: "",
     groomer_id: "",
     notes: "",
+    payments: [],
+    second_groomer_id: "",
+    third_groomer_id: "",
   });
 
   function handleChange(e) {
@@ -191,6 +196,9 @@ export default function ServiceFormPage() {
             data.payment_method_id || data.payment_method?.id || "",
           groomer_id: data.groomer_id || data.groomer?.id || "",
           notes: data.notes || "",
+          payments: data.payments || [],
+          second_groomer_id: data.second_groomer_id || "",
+          third_groomer_id: data.third_groomer_id || "",
         });
       } catch (err) {
         console.error("[ServiceFormPage] Error cargando servicio:", err);
@@ -224,11 +232,14 @@ export default function ServiceFormPage() {
       setSubmitting(false);
       return;
     }
-    if (!form.payment_method_id) {
+    if (!form.payment_method_id && !form.payments.length) {
       alert("Seleccioná un método de pago.");
       setSubmitting(false);
       return;
     }
+
+    const invalidPayment = paymentError(form.payments, Number(form.price || 0));
+    if (invalidPayment) { alert(invalidPayment); setSubmitting(false); return; }
 
     const payload = {
       date: form.date,
@@ -236,7 +247,10 @@ export default function ServiceFormPage() {
       pet_id: form.pet_id,
       service_type_id: form.service_type_id,
       price: Number(form.price || 0),
-      payment_method_id: form.payment_method_id,
+      payment_method_id: form.payments.length > 1 ? null : form.payments[0]?.payment_method_id || form.payment_method_id || null,
+      payments: form.payments.map(p => ({ ...p, amount: Number(p.amount) })),
+      second_groomer_id: form.second_groomer_id || null,
+      third_groomer_id: form.third_groomer_id || null,
       groomer_id: form.groomer_id || null,
       notes: form.notes.trim(),
     };
@@ -468,7 +482,7 @@ export default function ServiceFormPage() {
             />
           </div>
 
-          <div className="form-field">
+          {!form.payments.length && <div className="form-field">
             <label htmlFor="payment_method_id">Método de pago</label>
             <div className="combo-field">
               <input
@@ -514,8 +528,18 @@ export default function ServiceFormPage() {
                 </div>
               ) : null}
             </div>
-          </div>
+          </div>}
 
+          <SplitPayments payments={form.payments} methods={options.paymentMethods} balance={Number(form.price || 0)} methodId={form.payment_method_id}
+            onChange={payments => setForm(prev => ({ ...prev, payments }))} />
+          {["second_groomer_id", "third_groomer_id"].map((key, index) => <label className="form-field" key={key}>
+            <span>{index === 0 ? "Segundo peluquero (opcional)" : "Tercer peluquero (opcional)"}</span>
+            <select value={form[key]} onChange={e => setForm(prev => ({ ...prev, [key]: e.target.value }))}>
+              <option value="">Sin compartir</option>
+              {options.employees.filter(employee => employee.id === form[key] || ![form.groomer_id, form.second_groomer_id, form.third_groomer_id].includes(employee.id)).map(employee => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+            </select>
+            {index === 0 && <small>La comisión del principal se divide en partes iguales entre los participantes.</small>}
+          </label>)}
           <div className="form-field">
             <label htmlFor="groomer_id">Groomer</label>
             <div className="combo-field">
