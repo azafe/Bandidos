@@ -41,6 +41,7 @@
 .recorrido-aviso-link { display: inline-flex; align-items: center; min-height: 44px; border: 0; background: transparent; color: #79561f; padding: 6px 0; font: inherit; font-size: .8rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .recorrido-list-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .recorrido-list-heading > span { font-size: .78rem; color: #756b80; }
+.recorrido-copiar { white-space: nowrap; }
 .recorrido-vistas { display: flex; flex-wrap: wrap; gap: 8px; }
 .recorrido-vistas button { display: flex; align-items: center; gap: 10px; min-height: 44px; border: 1px solid #e3dfeb; background: #fff; border-radius: 11px; padding: 8px 14px; color: #6a6076; font: inherit; font-size: .8rem; cursor: pointer; }
 .recorrido-vistas button > span { background: #f1eef7; padding: 2px 6px; border-radius: 6px; font-size: .75rem; font-variant-numeric: tabular-nums; }

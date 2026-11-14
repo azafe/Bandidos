@@ -28,6 +28,7 @@ import Modal from "../../components/ui/Modal";
 import PhotoUpload from "../../components/ui/PhotoUpload";
 import TrasladoFields from "../../components/agenda/TrasladoFields";
 import NuevoTurnoForm from "../../components/agenda/NuevoTurnoForm";
+import CopiarHorariosLibres from "../../components/agenda/CopiarHorariosLibres";
 import { getTrasladoError, getTrasladoPayload, newTramos, solicitudPayload, groomerOptions } from "../../lib/traslados";
 import TramosFields from "../../components/traslados/TramosFields";
 import TurnoTrasladoPanel from "../../components/traslados/TurnoTrasladoPanel";
@@ -1861,6 +1862,7 @@ export default function AgendaPage() {
           <button type="button" className="btn-secondary" onClick={handleCopyBookingLink}>
             {bookingLinkCopied ? "¡Copiado!" : "Copiar link"}
           </button>
+          <CopiarHorariosLibres slug={bookingLink.slug} fecha={selectedDate} link={bookingPublicUrl(bookingLink.slug)} />
         </div>
       )}
 

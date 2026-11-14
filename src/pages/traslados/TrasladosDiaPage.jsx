@@ -11,6 +11,8 @@ import ParadaRuta from "../../components/traslados/ParadaRuta";
 import RevisionHistoricos from "../../components/traslados/RevisionHistoricos";
 import TrasladoHistoricoDetalle from "../../components/traslados/TrasladoHistoricoDetalle";
 import { NUEVO_TRASLADO } from "../../lib/bandimovilesInicio";
+import { textoTrasladosDia } from "../../lib/mensajesGrupo";
+import { copyToClipboard } from "../../services/bookingApi";
 
 export default function TrasladosDiaPage() {
   const { user } = useAuth();
@@ -76,6 +78,12 @@ export default function TrasladosDiaPage() {
   function advance(tramo, next) {
     mutate(() => avanzarTramo(tramo.id, tramo.estado, next), `${tramo.pet_name || "Mascota"}: ${ESTADOS_TRAMO[next].toLowerCase()}.`);
   }
+  async function copiarParaGrupo() {
+    const ok = await copyToClipboard(textoTrasladosDia(fecha, operativas));
+    setError("");
+    setMessage(ok ? "Lista copiada. Pegala en el grupo de WhatsApp." : "");
+    if (!ok) setError("No se pudo copiar. Probá de nuevo o desde otro navegador.");
+  }
   function revisarFaltantes() {
     const parada = operativas.find((t) => t.estado !== "entregado" && faltantesParada(t).length > 0);
     setVista("todas");
@@ -120,7 +128,7 @@ export default function TrasladosDiaPage() {
           <div><span className="recorrido-dot recorrido-dot--done" /><strong>{resumen.completadas}</strong><span>Completadas</span></div>
         </section>
         {resumen.porPreparar > 0 && <div className="recorrido-aviso"><p><strong>{resumen.porPreparar} {resumen.porPreparar === 1 ? "parada necesita" : "paradas necesitan"} datos antes de salir.</strong> {driver ? "Consultá con el administrador." : "Completá la dirección, el chofer o el móvil en Agenda."}</p><button className="recorrido-aviso-link" type="button" disabled={busy} onClick={revisarFaltantes}>Ver qué falta →</button></div>}
-        <div className="recorrido-list-heading"><h2>Paradas del recorrido</h2><span>{groups.length} {groups.length === 1 ? "ruta" : "rutas"} · {driver ? "Tus traslados" : "Según chofer y móvil"}</span></div>
+        <div className="recorrido-list-heading"><h2>Paradas del recorrido</h2><span>{groups.length} {groups.length === 1 ? "ruta" : "rutas"} · {driver ? "Tus traslados" : "Según chofer y móvil"}</span>{!driver && operativas.length > 0 && <button type="button" className="btn-secondary recorrido-copiar" disabled={busy} onClick={copiarParaGrupo}>📋 Copiar para WhatsApp</button>}</div>
         <nav className="recorrido-vistas" aria-label="Filtrar paradas por estado">{vistas.map(([key, label, count]) => <button type="button" key={key} aria-pressed={vista === key} disabled={busy} onClick={() => setVista(key)}>{label}<span>{count}</span></button>)}</nav>
         {!operativas.length ? <div className="recorrido-empty"><span aria-hidden="true">✓</span><h2>{driver ? "No tenés paradas asignadas" : "Sin búsquedas ni entregas para este día"}</h2><p>{chofer || vehiculo ? "Probá con otro chofer, móvil o fecha." : driver ? "Cuando te asignen un traslado, lo vas a encontrar acá." : "Agendá un turno con traslado para armar el recorrido."}</p>{!driver && <Link to={NUEVO_TRASLADO}>Agendar un traslado →</Link>}</div>
           : !shownGroups.length && <div className="recorrido-empty"><h2>No hay paradas en este estado</h2><p>Podés seguir con el resto del recorrido.</p><button className="btn-secondary" type="button" onClick={() => setVista("todas")}>Ver todas las paradas</button></div>}

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Planilla del día · Bandidos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Idea: la hoja del cuaderno, renglón por renglón, con el resaltador de cada peluquera */
+  --paper: #fbfaf7;
+  --ink: #1f1d2b;
+  --muted: #6b6779;
+  --line: #e3dfd6;
+  --accent: #5b3fd1;
+  --surface: #ffffff;
+  --warn: #b45309;
+  --warn-bg: #fff4e0;
+  --ok: #15803d;
+  --hl-jime: #ff9fc4;
+  --hl-meli: #8be08f;
+  --hl-flor: #f6e75a;
+  --hl-mai: #ffb56b;
+  --hl-cami: #7fd0f0;
+  --tint: 0.42;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #17161d; --ink: #f1eff7; --muted: #a29eb3; --line: #2e2c38; --accent: #a796ff;
+    --surface: #201f28; --warn: #fbbf6b; --warn-bg: #3a2a12; --ok: #6ee79a; --tint: 0.26;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #17161d; --ink: #f1eff7; --muted: #a29eb3; --line: #2e2c38; --accent: #a796ff;
+  --surface: #201f28; --warn: #fbbf6b; --warn-bg: #3a2a12; --ok: #6ee79a; --tint: 0.26;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.35; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 16px 16px 120px; display: grid; gap: 14px; }
+
+.banner { font-size: .85rem; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.banner button { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; color: var(--muted); }
+
+header.day { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.day-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; margin: 0; text-wrap: balance; }
+h1 small { font-weight: 600; color: var(--muted); font-size: 1rem; margin-left: 8px; }
+.stats { display: flex; gap: 16px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.stats div { display: grid; }
+.stats strong { font-family: var(--font-display); font-size: 1.35rem; }
+.stats span { font-size: .78rem; color: var(--muted); }
+.stats .free strong { color: var(--accent); }
+.staff { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip-staff { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 6px 12px 6px 6px; min-height: 40px; }
+.chip-staff .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .8rem; color: #1f1d2b; }
+.chip-staff em { font-style: normal; color: var(--muted); font-size: .85rem; }
+.chip-staff b { font-variant-numeric: tabular-nums; }
+.chip-staff[aria-pressed="false"] { opacity: .5; }
+.chip-staff[aria-pressed="false"] .name { text-decoration: line-through; }
+.chip-tras { border-style: dashed; padding-left: 12px; }
+.chip-tras[aria-pressed="true"] { background: color-mix(in srgb, var(--hl-meli) 45%, transparent); border-color: transparent; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.block-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.block-head h2 { margin: 0; font-family: var(--font-display); font-size: 1.05rem; }
+.block-head span { color: var(--muted); font-size: .85rem; }
+ol.rows { list-style: none; margin: 0; padding: 0; }
+.row { position: relative; display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 14px 8px 10px; border-bottom: 1px solid var(--line); min-height: 56px; }
+.row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--hl, transparent); }
+.row.has-hl { background: color-mix(in srgb, var(--hl) calc(var(--tint) * 100%), var(--surface)); }
+.time { width: 64px; border: 0; background: transparent; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; padding: 6px 4px; border-radius: 6px; }
+.time:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.line { min-width: 0; text-align: left; background: none; border: 0; padding: 4px 0; display: grid; gap: 4px; }
+.line .main { font-size: 1.05rem; }
+.line .main b { font-size: 1.1rem; }
+.line .sub { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: .78rem; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); white-space: nowrap; }
+.tag.svc { background: color-mix(in srgb, var(--accent) 16%, transparent); font-weight: 700; }
+.tag.new { background: color-mix(in srgb, var(--ok) 18%, transparent); }
+.tag.note { background: var(--warn-bg); color: var(--warn); font-weight: 700; }
+.tag.state { background: var(--ink); color: var(--paper); }
+.money { text-align: right; font-variant-numeric: tabular-nums; font-size: .9rem; display: grid; gap: 2px; }
+.money .tras { color: var(--muted); }
+.row.cancel .main, .row.cancel .sub { text-decoration: line-through; opacity: .55; }
+.row.done .main::after { content: " ✓"; color: var(--ok); font-weight: 700; }
+
+.row.empty .entry { position: relative; }
+.entry input { width: 100%; border: 1px dashed var(--line); background: transparent; border-radius: 8px; padding: 10px 12px; font-size: 1.05rem; }
+.entry input::placeholder { color: var(--accent); opacity: .85; }
+.entry input:focus { border-style: solid; border-color: var(--accent); background: var(--surface); }
+.preview { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: .82rem; }
+.preview .k { color: var(--muted); }
+.suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 48px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgb(0 0 0 / .15); overflow: hidden; }
+.suggest button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.suggest button:hover, .suggest button.active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.suggest small { color: var(--muted); display: block; }
+.add-row { width: 100%; border: 0; background: none; color: var(--accent); padding: 12px; font-weight: 700; text-align: left; }
+
+aside { display: grid; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 10px; }
+.card h2 { margin: 0; font-family: var(--font-display); font-size: 1.05rem; display: flex; justify-content: space-between; align-items: baseline; }
+.card h2 span { font-family: var(--font-body); font-weight: 400; color: var(--muted); font-size: .85rem; }
+.wait { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.wait li { display: flex; justify-content: space-between; gap: 8px; align-items: center; border-bottom: 1px dashed var(--line); padding-bottom: 8px; }
+.wait li small { color: var(--muted); display: block; }
+.wait button { border: 1px solid var(--line); background: none; border-radius: 8px; padding: 4px 10px; font-size: .85rem; }
+.card input, .card textarea { width: 100%; border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 8px 10px; }
+.card textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
+.btn { border: 0; background: var(--accent); color: #fff; border-radius: 10px; padding: 10px 14px; font-weight: 700; }
+.btn.ghost { background: none; color: var(--accent); border: 1px solid currentColor; }
+.help { font-size: .85rem; color: var(--muted); margin: 0; }
+.help code { background: color-mix(in srgb, var(--ink) 8%, transparent); padding: 1px 6px; border-radius: 6px; }
+
+.sheet-panel { position: fixed; inset: auto 0 0 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 40px rgb(0 0 0 / .2); padding: 16px 16px 22px; display: grid; gap: 14px; max-width: 760px; margin: 0 auto; max-height: 85%; overflow: auto; }
+.sheet-panel[hidden] { display: none; }
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .3); z-index: 19; }
+.scrim[hidden] { display: none; }
+.panel-head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.panel-head h3 { margin: 0; font-family: var(--font-display); font-size: 1.3rem; }
+.panel-head p { margin: 2px 0 0; color: var(--muted); }
+.close { border: 1px solid var(--line); background: none; border-radius: 10px; padding: 8px 14px; min-width: 88px; }
+.group { display: grid; gap: 8px; }
+.group > span { font-size: .8rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.opt { border: 2px solid var(--line); background: var(--paper); border-radius: 12px; padding: 10px 14px; min-height: 48px; font-weight: 700; display: inline-flex; gap: 8px; align-items: center; }
+.opt[aria-pressed="true"] { border-color: var(--ink); }
+.opt .dot { width: 18px; height: 18px; border-radius: 50%; }
+.opt.danger { color: #b91c1c; }
+.panel-edit { display: flex; gap: 8px; }
+.panel-edit input { flex: 1; border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 10px 12px; }
+
+.toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; background: var(--ink); color: var(--paper); border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgb(0 0 0 / .25); }
+.toast[hidden] { display: none; }
+.toast button { border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 700; background: var(--paper); color: var(--ink); }
+.toast button.x { background: transparent; color: var(--paper); }
+@media (max-width: 520px) {
+  .row { grid-template-columns: 58px minmax(0, 1fr); }
+  .money { grid-column: 2; text-align: left; display: flex; gap: 10px; }
+  .time { width: 56px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .row { transition: background-color .2s; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="banner"><span><strong>Prototipo para probar.</strong> Es la hoja del miércoles 11/11 pasada a la app. Nada de lo que hagas acá cambia la agenda real.</span><button type="button" id="reset">Volver al ejemplo</button></div>
+
+  <header class="day">
+    <div class="day-top">
+      <h1>Miércoles 11/11 <small>Planilla del día</small></h1>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="staff" id="staff" aria-label="Quién trabaja hoy"></div>
+  </header>
+
+  <div class="layout">
+    <main class="sheet" id="sheet" aria-label="Turnos del día"></main>
+    <aside>
+      <section class="card" aria-labelledby="h-libres">
+        <h2 id="h-libres">Lugares libres <span id="libres-count"></span></h2>
+        <p class="help" id="libres-list"></p>
+        <button type="button" class="btn ghost" id="copy-libres">Copiar libres para WhatsApp</button>
+        <p class="help" id="copy-msg" role="status"></p>
+      </section>
+      <section class="card" aria-labelledby="h-espera">
+        <h2 id="h-espera">En espera <span id="espera-count"></span></h2>
+        <ul class="wait" id="wait"></ul>
+        <form id="wait-form"><label class="help" for="wait-input">Anotar a alguien que espera un lugar</label><input id="wait-input" placeholder="Ej: Panda shitzu 19hs vive al lado" autocomplete="off"></form>
+      </section>
+      <section class="card" aria-labelledby="h-notas">
+        <h2 id="h-notas">Notas del día</h2>
+        <label class="help" for="notes">Como el margen de la hoja: lo que quieras.</label>
+        <textarea id="notes"></textarea>
+      </section>
+      <section class="card" aria-labelledby="h-como">
+        <h2 id="h-como">Cómo se anota</h2>
+        <p class="help">Tocá un renglón <strong>libre</strong> y escribí como en el cuaderno:<br><code>Ramona shitzu Dolores CyB nuevo /5000</code></p>
+        <p class="help"><code>CyB</code> corte y baño · <code>B</code> baño · <code>nuevo</code> · <code>/5000</code> traslado · <code>$27000</code> precio · <code>(es malo)</code> nota · <code>de dos</code> ocupa doble</p>
+        <p class="help">Tocá un turno para pintarlo con el color de la peluquera, marcarlo como listo o cancelado.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet-panel" id="panel" hidden aria-modal="true" role="dialog" aria-labelledby="panel-title"></section>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+  var STORE = "bandidos-planilla-proto-v1";
+  var STAFF = [
+    { id: "jime", name: "Jime", hours: "9 a 15", color: "var(--hl-jime)", hex: "#ff9fc4" },
+    { id: "meli", name: "Meli", hours: "9 a 15", color: "var(--hl-meli)", hex: "#8be08f" },
+    { id: "flor", name: "Flor", hours: "9 a 15", color: "var(--hl-flor)", hex: "#f6e75a" },
+    { id: "mai", name: "Mai", hours: "15 a 21", color: "var(--hl-mai)", hex: "#ffb56b" },
+    { id: "cami", name: "Cami", hours: "15 a 21", color: "var(--hl-cami)", hex: "#7fd0f0" }
+  ];
+  // Clientes que ya existen en la app: al escribir el nombre se completan solos.
+  var KNOWN = [
+    { pet: "Ramona", breed: "shitzu", owner: "Dolores" },
+    { pet: "Manola", breed: "shitzu", owner: "Dolores" },
+    { pet: "Becky", breed: "caniche", owner: "María" },
+    { pet: "Cindy", breed: "caniche", owner: "Cecilia" },
+    { pet: "Tina", breed: "shitzu", owner: "Marta" },
+    { pet: "Rufus", breed: "caniche", owner: "Matías", note: "de dos · es malo" },
+    { pet: "Osito", breed: "caniche", owner: "Carolina", note: "es malo, usar bozal" },
+    { pet: "Betty", breed: "mestiza", owner: "David" },
+    { pet: "Eros", breed: "salchicha", owner: "Sofía", note: "tiene que estar solo, se pone loco con perros" },
+    { pet: "Lupe", breed: "caniche", owner: "Estela", note: "a tijera" },
+    { pet: "Rifle", breed: "mestizo", owner: "Valentina" },
+    { pet: "Chicha", breed: "caniche", owner: "Guadalupe" },
+    { pet: "Princesa", breed: "golden", owner: "Sucre" },
+    { pet: "Blacky", breed: "bulldog francés", owner: "Paola" },
+    { pet: "Molly", breed: "bulldog francés", owner: "Paola" },
+    { pet: "Coco", breed: "chow chow", owner: "Erika", note: "de a dos" }
+  ];
+  function seed() {
+    var r = function (time, raw, groomer, extra) { return Object.assign({ id: uid(), time: time, groomer: groomer || "", status: "" }, parse(raw), { raw: raw }, extra || {}); };
+    var e = function (time) { return { id: uid(), time: time, raw: "" }; };
+    return {
+      present: { jime: true, meli: true, flor: true, mai: true, cami: false },
+      traslados: true,
+      notes: "Flor con Cami: 2 perros cada 1 hora y media.\nNo viene Cami.",
+      wait: [
+        { id: uid(), text: "Panda shitzu", note: "vive al lado, 19hs si se libera" },
+        { id: uid(), text: "Mylo de Mayra", note: "cualquier horario" },
+        { id: uid(), text: "Luis", note: "quiere turno, maltés" }
+      ],
+      rows: [
+        r("09:00", "Teodoro caniche Sofía CyB $27000 /5000", "jime", { status: "done" }),
+        r("09:00", "Manchita fox terrier Elsa B $22000 /5000", "flor", { status: "done" }),
+        r("09:00", "Coco chow chow Erika $50000 /5000 (de a dos)", "meli", { status: "done" }),
+        r("10:00", "Bruna caniche Romina CyB $23000 /5000", "flor"),
+        r("10:00", "Wanda chihuahua Agustín B $20000", "jime"),
+        r("11:00", "Mila mestiza Belén CyB $28000 /5000", "meli"),
+        e("11:00"),
+        r("12:00", "Lolita mestiza Luz CyB $27000", ""),
+        e("12:30"),
+        r("13:00", "Porota caniche Guada CyB $27000 /5000", ""),
+        r("13:00", "Samantha labrador Noemí $40000 /5000", ""),
+        r("14:30", "Lola mestiza pc Aurora B $23000 /5000", ""),
+        r("15:00", "Mora caniche Sofía CyB $36000 /10000", "mai"),
+        r("15:00", "Lila caniche Viviana CyB $27000", ""),
+        r("16:00", "Emma caniche Agustina CyB /5000", ""),
+        r("17:00", "Orión pug Sofía B nuevo /10000", ""),
+        r("17:00", "Eros salchicha Sofía B (con bozal)", ""),
+        r("18:00", "Willow mestizo Rossana B /5000", ""),
+        e("18:00"),
+        e("19:00")
+      ]
+    };
+  }
+
+  var n = 0;
+  function uid() { n += 1; return "r" + Date.now().toString(36) + n; }
+  var norm = function (s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]; }); };
+  var money = function (v) { return "$" + Number(v).toLocaleString("es-AR"); };
+  var cap = function (s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; };
+
+  var BREEDS = ["caniche toy", "caniche", "shitzu", "shih tzu", "schnauzer", "mestizo", "mestiza", "golden", "yorkie", "pug", "salchicha",
+    "bulldog frances", "bulldog", "border collie", "cruza de border", "border", "pastor australiano", "pastor aleman", "ovejero aleman", "ovejero",
+    "maltes", "chihuahua", "labrador", "fox terrier", "chow chow", "beagle", "boxer", "cocker", "pitbull", "dogo", "golden bebe"].sort(function (a, b) { return b.length - a.length; });
+
+  function normTime(t) {
+    var m = String(t || "").trim().match(/^(\d{1,2})(?::|\.|h)?(\d{2})?/);
+    if (!m) return null;
+    var h = Number(m[1]), mi = Number(m[2] || 0);
+    if (h > 23 || mi > 59) return null;
+    return String(h).padStart(2, "0") + ":" + String(mi).padStart(2, "0");
+  }
+
+  // Entiende la línea como se escribe en el cuaderno.
+  function parse(text) {
+    var out = { pet: "", breed: "", owner: "", service: "", nuevo: false, traslado: null, precio: null, notes: [], doble: false, time: null };
+    var s = " " + String(text || "").trim() + " ";
+    var t = s.match(/^\s*(\d{1,2}(?::\d{2}|\d{2})?)\s*(?:hs)?\s+/i);
+    if (t) { out.time = normTime(t[1].length === 4 && t[1].indexOf(":") < 0 ? t[1].slice(0, 2) + ":" + t[1].slice(2) : t[1]); s = " " + s.slice(t[0].length); }
+    s = s.replace(/\(([^)]*)\)/g, function (_, x) { var v = x.trim(); if (/^nuev[oa]s?$/i.test(v)) out.nuevo = true; else if (/de (a )?dos/i.test(v)) { out.doble = true; out.notes.push(v); } else if (v) out.notes.push(v); return " "; });
+    s = s.replace(/\/\s*\$?\s*(\d[\d.]*)\s*(k)?/gi, function (_, v, k) { out.traslado = Number(v.replace(/\./g, "")) * (k ? 1000 : 1); return " "; });
+    s = s.replace(/\$\s*(\d[\d.]*)\s*(k)?/gi, function (_, v, k) { out.precio = Number(v.replace(/\./g, "")) * (k ? 1000 : 1); return " "; });
+    s = s.replace(/\s(\d{2,3})k\s/gi, function (_, v) { out.precio = Number(v) * 1000; return " "; });
+    s = s.replace(/\s(\d{4,6})\s/g, function (_, v) { if (out.precio == null) out.precio = Number(v); return " "; });
+    s = s.replace(/\sc\s*y\s*b\s|\scyb\s|\scb\s/gi, function () { out.service = "CyB"; return " "; });
+    s = s.replace(/\s(corte y bano|corte y baño)\s/gi, function () { out.service = "CyB"; return " "; });
+    s = s.replace(/\s(b|bano|baño)\s/gi, function () { if (!out.service) out.service = "B"; return " "; });
+    s = s.replace(/\s(c|corte)\s/gi, function () { if (!out.service) out.service = "C"; return " "; });
+    s = s.replace(/\snuev[oa]s?\s/gi, function () { out.nuevo = true; return " "; });
+    s = s.replace(/\s(traslado|tras)\s/gi, function () { if (out.traslado == null) out.traslado = 0; return " "; });
+    s = s.replace(/\s(doble|de a dos|de dos|2\s?hs)\s/gi, function (m) { out.doble = true; out.notes.push(m.trim()); return " "; });
+    s = s.replace(/\s(con bozal|usar bozal|bozal)\s/gi, function () { out.notes.push("usar bozal"); return " "; });
+    s = s.replace(/\s(a tijera|tijera)\s/gi, function () { out.notes.push("a tijera"); return " "; });
+    s = s.replace(/\s(es malo|es mala)\s/gi, function (m) { out.notes.push(m.trim()); return " "; });
+    s = s.replace(/[-–—,]/g, " ").replace(/\s+/g, " ").trim();
+    var words = s ? s.split(" ") : [];
+    var lower = words.map(norm);
+    for (var i = 0; i < BREEDS.length && !out.breed; i++) {
+      var b = BREEDS[i].split(" ");
+      for (var j = 1; j + b.length <= lower.length; j++) {
+        if (b.every(function (w, k) { return lower[j + k] === w; })) {
+          var len = b.length;
+          if (lower[j + len] === "pc" || lower[j + len] === "pl") len += 1;
+          out.breed = words.slice(j, j + len).join(" ");
+          words.splice(j, len); lower.splice(j, len);
+          break;
+        }
+      }
+    }
+    if (words.length) { out.pet = cap(words[0]); out.owner = words.slice(1).map(cap).join(" "); }
+    var known = KNOWN.find(function (k) { return norm(k.pet) === norm(out.pet); });
+    if (known) {
+      if (!out.breed) out.breed = known.breed;
+      if (!out.owner) out.owner = known.owner;
+      out.known = true;
+      if (known.note) out.alert = known.note;
+    }
+    if (!out.time) delete out.time;
+    return out;
+  }
+
+  var state = load();
+  function load() {
+    try { var raw = localStorage.getItem(STORE); if (raw) { var st = JSON.parse(raw); if (st && st.rows && st.rows.every(function (r) { return r.time; })) return st; } } catch (err) { /* sin almacenamiento */ }
+    return seed();
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (err) { /* sin almacenamiento */ } }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var staffById = function (id) { return STAFF.find(function (s) { return s.id === id; }); };
+  var isFree = function (r) { return !r.raw; };
+  var active = function (r) { return r.raw && r.status !== "cancel" && r.status !== "noshow"; };
+  function sorted(rows) { return rows.map(function (r, i) { return [r, i]; }).sort(function (a, b) { return a[0].time < b[0].time ? -1 : a[0].time > b[0].time ? 1 : a[1] - b[1]; }).map(function (x) { return x[0]; }); }
+
+  function render() {
+    var rows = sorted(state.rows);
+    var act = rows.filter(active);
+    var free = rows.filter(isFree);
+    var tras = act.reduce(function (s, r) { return s + (r.traslado || 0); }, 0);
+    var cobrado = act.filter(function (r) { return r.status === "done"; }).reduce(function (s, r) { return s + (r.precio || 0); }, 0);
+    $("stats").innerHTML =
+      "<div><strong>" + act.length + "</strong><span>perros</span></div>" +
+      "<div class=\"free\"><strong>" + free.length + "</strong><span>lugares libres</span></div>" +
+      "<div><strong>" + money(tras) + "</strong><span>traslados</span></div>" +
+      "<div><strong>" + money(cobrado) + "</strong><span>ya terminados</span></div>";
+
+    $("staff").innerHTML = STAFF.map(function (s) {
+      var count = act.filter(function (r) { return r.groomer === s.id; }).length;
+      return "<button type=\"button\" class=\"chip-staff\" data-staff=\"" + s.id + "\" aria-pressed=\"" + !!state.present[s.id] + "\" title=\"Tocá para marcar si viene o no\">" +
+        "<span class=\"dot\" style=\"background:" + s.color + "\">" + s.name.charAt(0) + "</span><span class=\"name\">" + s.name + "</span><em>" + (state.present[s.id] ? s.hours : "no viene") + "</em><b>" + count + "</b></button>";
+    }).join("") + "<button type=\"button\" class=\"chip-staff chip-tras\" id=\"tras\" aria-pressed=\"" + !!state.traslados + "\">Traslados " + (state.traslados ? "todo el día" : "no hay") + "</button>";
+
+    var blocks = [["Mañana", function (r) { return r.time < "13:00"; }], ["Tarde", function (r) { return r.time >= "13:00"; }]];
+    $("sheet").innerHTML = blocks.map(function (b, bi) {
+      var list = rows.filter(b[1]);
+      var libres = list.filter(isFree).length;
+      return "<div class=\"block-head\"><h2>" + b[0] + "</h2><span>" + list.filter(active).length + " perros · " + libres + (libres === 1 ? " libre" : " libres") + "</span></div>" +
+        "<ol class=\"rows\">" + list.map(rowHtml).join("") + "</ol>" +
+        "<button type=\"button\" class=\"add-row\" data-add=\"" + bi + "\">+ Agregar renglón a la " + b[0].toLowerCase() + "</button>";
+    }).join("");
+
+    $("libres-count").textContent = free.length + (free.length === 1 ? " lugar" : " lugares");
+    $("libres-list").textContent = free.length ? free.map(function (r) { return r.time; }).join(" · ") : "No queda lugar hoy.";
+    $("espera-count").textContent = state.wait.length ? state.wait.length + "" : "";
+    $("wait").innerHTML = state.wait.length ? state.wait.map(function (w) {
+      return "<li><div><strong>" + esc(w.text) + "</strong><small>" + esc(w.note || "") + "</small></div><span><button type=\"button\" data-wait-use=\"" + w.id + "\">Agendar</button> <button type=\"button\" data-wait-del=\"" + w.id + "\" aria-label=\"Sacar de la espera\">✕</button></span></li>";
+    }).join("") : "<li class=\"help\">Nadie esperando.</li>";
+    if (document.activeElement !== $("notes")) $("notes").value = state.notes || "";
+  }
+
+  function tags(r) {
+    var t = [];
+    if (r.service) t.push("<span class=\"tag svc\">" + (r.service === "CyB" ? "Corte y baño" : r.service === "B" ? "Baño" : "Corte") + "</span>");
+    if (r.nuevo) t.push("<span class=\"tag new\">Nuevo</span>");
+    if (r.doble) t.push("<span class=\"tag\">Doble</span>");
+    (r.notes || []).filter(function (x) { return !/^de (a )?dos$/i.test(x); }).forEach(function (x) { t.push("<span class=\"tag note\">" + esc(x) + "</span>"); });
+    if (r.alert && !(r.notes || []).length) t.push("<span class=\"tag note\">⚠ " + esc(r.alert) + "</span>");
+    if (r.status === "arrived") t.push("<span class=\"tag state\">Llegó</span>");
+    if (r.status === "cancel") t.push("<span class=\"tag state\">Canceló</span>");
+    if (r.status === "noshow") t.push("<span class=\"tag state\">No vino</span>");
+    return t.join("");
+  }
+
+  function rowHtml(r) {
+    var timeInput = "<input class=\"time\" inputmode=\"numeric\" aria-label=\"Hora\" data-time=\"" + r.id + "\" value=\"" + r.time + "\">";
+    if (isFree(r)) {
+      return "<li class=\"row empty\">" + timeInput + "<div class=\"entry\"><input data-entry=\"" + r.id + "\" id=\"in-" + r.id + "\" placeholder=\"libre · escribí el perro\" autocomplete=\"off\" aria-label=\"Anotar turno de las " + r.time + "\"><div class=\"preview\" id=\"pv-" + r.id + "\"></div></div><span></span></li>";
+    }
+    var g = staffById(r.groomer);
+    var cls = "row" + (g ? " has-hl" : "") + (r.status === "cancel" || r.status === "noshow" ? " cancel" : "") + (r.status === "done" ? " done" : "");
+    var style = g ? " style=\"--hl:" + g.color + "\"" : "";
+    var main = "<b>" + esc(r.pet || r.raw) + "</b>" + (r.breed ? " · " + esc(r.breed) : "") + (r.owner ? " — " + esc(r.owner) : "");
+    var m = [];
+    if (r.precio) m.push("<span>" + money(r.precio) + "</span>");
+    if (r.traslado != null) m.push("<span class=\"tras\">traslado " + (r.traslado ? money(r.traslado) : "") + "</span>");
+    return "<li class=\"" + cls + "\"" + style + ">" + timeInput +
+      "<button type=\"button\" class=\"line\" data-open=\"" + r.id + "\"><span class=\"main\">" + main + "</span><span class=\"sub\">" + tags(r) + "</span></button>" +
+      "<div class=\"money\">" + m.join("") + "</div></li>";
+  }
+
+  function previewHtml(p) {
+    var parts = [];
+    if (p.time) parts.push("<span><span class=\"k\">Hora</span> " + p.time + "</span>");
+    if (p.pet) parts.push("<span><span class=\"k\">Perro</span> <b>" + esc(p.pet) + "</b></span>");
+    if (p.breed) parts.push("<span><span class=\"k\">Raza</span> " + esc(p.breed) + "</span>");
+    if (p.owner) parts.push("<span><span class=\"k\">Dueño</span> " + esc(p.owner) + "</span>");
+    if (p.service) parts.push("<span class=\"tag svc\">" + (p.service === "CyB" ? "Corte y baño" : p.service === "B" ? "Baño" : "Corte") + "</span>");
+    if (p.nuevo) parts.push("<span class=\"tag new\">Nuevo</span>");
+    if (p.traslado != null) parts.push("<span class=\"tag\">Traslado " + (p.traslado ? money(p.traslado) : "") + "</span>");
+    if (p.precio) parts.push("<span class=\"tag\">" + money(p.precio) + "</span>");
+    p.notes.forEach(function (x) { parts.push("<span class=\"tag note\">" + esc(x) + "</span>"); });
+    if (p.alert) parts.push("<span class=\"tag note\">⚠ " + esc(p.alert) + "</span>");
+    if (p.known) parts.push("<span class=\"k\">ya es cliente</span>");
+    return parts.join("");
+  }
+
+  function suggestFor(input) {
+    var box = input.parentNode.querySelector(".suggest");
+    var q = norm(input.value.trim().replace(/^\d{1,2}(:?\d{2})?\s*(hs)?\s*/i, ""));
+    var first = q.split(/\s+/)[0] || "";
+    var matches = first.length >= 2 && q.split(/\s+/).length === 1 ? KNOWN.filter(function (k) { return norm(k.pet).indexOf(first) === 0 || norm(k.owner).indexOf(first) === 0; }).slice(0, 5) : [];
+    if (!matches.length) { if (box) box.remove(); return; }
+    if (!box) { box = document.createElement("div"); box.className = "suggest"; input.parentNode.appendChild(box); }
+    box.innerHTML = matches.map(function (k, i) {
+      return "<button type=\"button\" data-pick=\"" + esc(k.pet + " " + k.breed + " " + k.owner) + "\"" + (i === 0 ? " class=\"active\"" : "") + "><strong>" + esc(k.pet) + "</strong> · " + esc(k.breed) + " — " + esc(k.owner) + (k.note ? "<small>⚠ " + esc(k.note) + "</small>" : "") + "</button>";
+    }).join("");
+  }
+
+  function commitEntry(input) {
+    var text = input.value.trim();
+    if (!text) return;
+    var r = state.rows.find(function (x) { return x.id === input.dataset.entry; });
+    if (!r) return;
+    var p = parse(text);
+    Object.assign(r, p, { raw: text, groomer: "", status: "" });
+    save(); render();
+    showToast("Anotado: " + (r.pet || text) + " a las " + r.time + ".");
+  }
+
+  // ── Panel de un turno ────────────────────────────────────────────────
+  var openId = null;
+  function openPanel(id) {
+    var r = state.rows.find(function (x) { return x.id === id; });
+    if (!r) return;
+    openId = id;
+    var p = $("panel");
+    p.innerHTML =
+      "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + esc(r.pet || r.raw) + "</h3><p>" + esc([r.breed, r.owner].filter(Boolean).join(" — ")) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
+      (r.alert ? "<p class=\"tag note\" style=\"white-space:normal\">⚠ " + esc(r.alert) + "</p>" : "") +
+      "<div class=\"group\"><span>¿Quién lo atiende?</span><div class=\"opts\">" + STAFF.map(function (s) {
+        return "<button type=\"button\" class=\"opt\" data-g=\"" + s.id + "\" aria-pressed=\"" + (r.groomer === s.id) + "\"><span class=\"dot\" style=\"background:" + s.color + "\"></span>" + s.name + "</button>";
+      }).join("") + "<button type=\"button\" class=\"opt\" data-g=\"\" aria-pressed=\"" + !r.groomer + "\">Sin asignar</button></div></div>" +
+      "<div class=\"group\"><span>Estado</span><div class=\"opts\">" +
+      [["", "Agendado"], ["arrived", "Llegó"], ["done", "Terminado ✓"], ["noshow", "No vino"], ["cancel", "Canceló"]].map(function (o) {
+        return "<button type=\"button\" class=\"opt" + (o[0] === "cancel" || o[0] === "noshow" ? " danger" : "") + "\" data-s=\"" + o[0] + "\" aria-pressed=\"" + ((r.status || "") === o[0]) + "\">" + o[1] + "</button>";
+      }).join("") + "</div></div>" +
+      "<div class=\"group\"><label for=\"panel-text\"><span style=\"font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em\">Corregir la línea</span></label><form class=\"panel-edit\" id=\"panel-form\"><input id=\"panel-text\" value=\"" + esc(r.raw) + "\" autocomplete=\"off\"><button class=\"btn\" type=\"submit\">Guardar</button></form></div>" +
+      "<div class=\"opts\"><button type=\"button\" class=\"opt danger\" data-del>Borrar y dejar libre</button></div>";
+    p.hidden = false; $("scrim").hidden = false;
+    p.querySelector("[data-close]").focus();
+  }
+  function closePanel() { $("panel").hidden = true; $("scrim").hidden = true; var id = openId; openId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
+
+  function freeUp(r, reason) {
+    state.rows.push({ id: uid(), time: r.time, raw: "" });
+    if (state.wait.length) {
+      var w = state.wait[0];
+      showToast("Se liberó " + r.time + " (" + reason + "). En espera: " + w.text + ".", "Agendar a " + w.text.split(" ")[0], function () { useWait(w.id, r.time); });
+    } else showToast("Se liberó el lugar de las " + r.time + ".");
+  }
+
+  function useWait(wid, time) {
+    var w = state.wait.find(function (x) { return x.id === wid; });
+    if (!w) return;
+    var rows = sorted(state.rows).filter(isFree);
+    var slot = (time && rows.find(function (x) { return x.time === time; })) || rows[0];
+    if (!slot) { showToast("No hay lugares libres. Agregá un renglón o liberá uno."); return; }
+    var text = w.text + (w.note ? " (" + w.note + ")" : "");
+    Object.assign(slot, parse(text), { raw: text, status: "", groomer: "" });
+    state.wait = state.wait.filter(function (x) { return x.id !== wid; });
+    save(); render();
+    showToast(w.text + " quedó a las " + slot.time + ". Avisale al dueño.");
+  }
+
+  var toastTimer;
+  function showToast(msg, actionLabel, action) {
+    var t = $("toast");
+    t.innerHTML = "<span>" + esc(msg) + "</span>" + (actionLabel ? "<button type=\"button\" data-toast-act>" + esc(actionLabel) + "</button>" : "") + "<button type=\"button\" class=\"x\" data-toast-x aria-label=\"Cerrar aviso\">✕</button>";
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    var act = t.querySelector("[data-toast-act]");
+    if (act) act.onclick = function () { t.hidden = true; action(); };
+    t.querySelector("[data-toast-x]").onclick = function () { t.hidden = true; };
+    toastTimer = setTimeout(function () { t.hidden = true; }, actionLabel ? 12000 : 3500);
+  }
+
+  // ── Eventos ──────────────────────────────────────────────────────────
+  document.addEventListener("click", function (ev) {
+    var el = ev.target.closest("button");
+    if (!el) return;
+    if (el.dataset.staff) { state.present[el.dataset.staff] = !state.present[el.dataset.staff]; save(); render(); return; }
+    if (el.id === "tras") { state.traslados = !state.traslados; save(); render(); return; }
+    if (el.dataset.open) { openPanel(el.dataset.open); return; }
+    if (el.dataset.add != null) {
+      var bi = Number(el.dataset.add);
+      var list = sorted(state.rows).filter(function (r) { return bi === 0 ? r.time < "13:00" : r.time >= "13:00"; });
+      var last = list.length ? list[list.length - 1].time : (bi === 0 ? "09:00" : "15:00");
+      var nr = { id: uid(), time: last, raw: "" };
+      state.rows.push(nr); save(); render();
+      var inp = $("in-" + nr.id); if (inp) inp.focus();
+      return;
+    }
+    if (el.dataset.pick) {
+      var input = el.closest(".entry").querySelector("input");
+      input.value = el.dataset.pick + " ";
+      el.parentNode.remove();
+      input.focus();
+      $("pv-" + input.dataset.entry).innerHTML = previewHtml(parse(input.value));
+      return;
+    }
+    if (el.dataset.waitUse) { useWait(el.dataset.waitUse); return; }
+    if (el.dataset.waitDel) { state.wait = state.wait.filter(function (x) { return x.id !== el.dataset.waitDel; }); save(); render(); return; }
+    if (el.id === "reset") { state = seed(); save(); render(); showToast("Volvió la hoja de ejemplo."); return; }
+    if (el.id === "copy-libres") {
+      var libres = sorted(state.rows).filter(isFree).map(function (r) { return r.time; });
+      var text = "*Horarios libres · miércoles 11/11*\n" + (libres.length ? libres.join(" · ") : "Sin lugar");
+      var msg = $("copy-msg");
+      try {
+        navigator.clipboard.writeText(text).then(function () { msg.textContent = "Copiado. Pegalo en el grupo."; }, function () { msg.textContent = text; });
+      } catch (err) { msg.textContent = text; }
+      return;
+    }
+    if (!openId) return;
+    var r = state.rows.find(function (x) { return x.id === openId; });
+    if (el.dataset.close != null) { closePanel(); return; }
+    if (el.dataset.g != null) { r.groomer = el.dataset.g; save(); render(); openPanel(openId); return; }
+    if (el.dataset.s != null) {
+      var prev = r.status;
+      r.status = el.dataset.s;
+      var freed = (r.status === "cancel" || r.status === "noshow") && prev !== "cancel" && prev !== "noshow";
+      save(); closePanel();
+      if (freed) freeUp(r, r.status === "cancel" ? "canceló " + (r.pet || "") : (r.pet || "") + " no vino");
+      save(); render();
+      return;
+    }
+    if (el.dataset.del != null) { r.raw = ""; ["pet", "breed", "owner", "service", "precio", "traslado", "alert", "known", "groomer", "status"].forEach(function (k) { delete r[k]; }); r.notes = []; save(); closePanel(); render(); return; }
+  });
+  $("scrim").addEventListener("click", closePanel);
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && openId) closePanel(); });
+
+  document.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (ev.target.id === "panel-form") {
+      var r = state.rows.find(function (x) { return x.id === openId; });
+      var text = $("panel-text").value.trim();
+      if (!text) return;
+      var keep = { groomer: r.groomer, status: r.status };
+      Object.assign(r, parse(text), { raw: text }, keep);
+      save(); closePanel(); render();
+    }
+    if (ev.target.id === "wait-form") {
+      var v = $("wait-input").value.trim();
+      if (!v) return;
+      var m = v.match(/^(.*?)(\s+(vive|cualquier|si se|\d{1,2}\s?hs).*)?$/i);
+      state.wait.push({ id: uid(), text: (m && m[1] || v).trim(), note: m && m[2] ? m[2].trim() : "" });
+      $("wait-input").value = ""; save(); render();
+    }
+  });
+
+  document.addEventListener("input", function (ev) {
+    var el = ev.target;
+    if (el.dataset.entry) { $("pv-" + el.dataset.entry).innerHTML = el.value.trim() ? previewHtml(parse(el.value)) : ""; suggestFor(el); }
+    if (el.id === "notes") { state.notes = el.value; save(); }
+  });
+  document.addEventListener("keydown", function (ev) {
+    var el = ev.target;
+    if (el.dataset && el.dataset.entry && ev.key === "Enter") {
+      var box = el.parentNode.querySelector(".suggest");
+      if (box) { var a = box.querySelector(".active"); if (a) { a.click(); ev.preventDefault(); return; } }
+      ev.preventDefault(); commitEntry(el);
+    }
+    if (el.dataset && el.dataset.time && ev.key === "Enter") { el.blur(); }
+  });
+  document.addEventListener("focusout", function (ev) {
+    var el = ev.target;
+    if (el.dataset && el.dataset.time) {
+      var v = el.value.trim();
+      var t = normTime(/^\d{3,4}$/.test(v) ? v.padStart(4, "0").slice(0, 2) + ":" + v.padStart(4, "0").slice(2) : v);
+      var r = state.rows.find(function (x) { return x.id === el.dataset.time; });
+      if (r && t && t !== r.time) { r.time = t; save(); render(); } else if (r) el.value = r.time;
+    }
+    if (el.dataset && el.dataset.entry) {
+      setTimeout(function () { var box = el.parentNode && el.parentNode.querySelector(".suggest"); if (box && !el.parentNode.contains(document.activeElement)) box.remove(); }, 150);
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
