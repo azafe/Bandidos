@@ -408,3 +408,31 @@
   font-family: inherit;
   background: #f9f9fc;
 }
+
+.agenda-horarios-libres {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.agenda-horarios-libres label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.agenda-horarios-libres select {
+  max-width: 220px;
+}
+
+.agenda-horarios-libres__label {
+  color: var(--text-muted);
+}
+
+.agenda-horarios-libres__estado {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
