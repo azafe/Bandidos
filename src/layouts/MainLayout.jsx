@@ -32,6 +32,7 @@ const PAGE_TITLES = {
   "/petshop":                 "PetShop",
   "/petshop/stock":           "Stock y conteo",
   "/nueva-sucursal":          "Nueva sucursal",
+  "/inversores": "Inversores",
   "/comunicaciones":          "Comunicaciones",
 };
 

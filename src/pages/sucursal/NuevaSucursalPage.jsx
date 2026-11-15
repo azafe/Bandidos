@@ -6,6 +6,7 @@
 // hace en sus días más cargados) y la ganancia se muestra con los gastos fijos
 // de hoy, que pueden ser distintos a los del período.
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -32,6 +33,7 @@ import {
   parseNumberInput,
   partsFromTotal,
   resolveBranchInputs,
+  SIMULADOR_STORAGE_KEY,
   simulateScenarios,
   sumParts,
   supplyExpenses,
@@ -39,9 +41,7 @@ import {
 import { addDaysISO, addMonthsISO, monthBoundsISO, todayISO } from "../../utils/dates";
 import "../../styles/sucursal.css";
 
-// v2: los peluqueros y turnos del local salen de la agenda; lo guardado antes
-// era el 6 fijo y taparía el dato real.
-const STORAGE_KEY = "bandidos:sucursal:simulador:v2";
+const STORAGE_KEY = SIMULADOR_STORAGE_KEY;
 const MONTHS_BACK = 3;
 const MONTH_NAMES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -209,9 +209,6 @@ export default function NuevaSucursalPage() {
     };
   }, [ranges, reloadKey]);
 
-  useEffect(() => {
-    if (inputs) writeSaved({ inputs, localTurnos, localGroomers });
-  }, [inputs, localTurnos, localGroomers]);
 
   const groomersLocal = localGroomers ?? Math.max(1, local?.groomers || 0);
   const turnosLocal = localTurnos ?? local?.turnosPorGroomer ?? DEFAULT_TURNOS;
@@ -231,6 +228,30 @@ export default function NuevaSucursalPage() {
         : null,
     [local, groomersLocal, turnosLocal, branchInputs?.inversion, expected?.capitalNecesario]
   );
+
+  // Se guarda con un resumen del local para mostrárselo a un inversor.
+  useEffect(() => {
+    if (!inputs) return;
+    writeSaved({
+      inputs,
+      localTurnos,
+      localGroomers,
+      local: local && diagnosis
+        ? {
+            ingresosMes: local.ingresosMes,
+            gananciaMes: local.gananciaMes,
+            margen: local.margen,
+            serviciosMes: local.serviciosMes,
+            ticket: local.ticket,
+            groomers: groomersLocal,
+            ocupacion: diagnosis.ocupacion,
+            crecimiento: diagnosis.crecimiento,
+            periodo: rangeLabel(ranges.current),
+            guardado: new Date().toISOString(),
+          }
+        : readSaved()?.local ?? null,
+    });
+  }, [inputs, localTurnos, localGroomers, local, diagnosis, groomersLocal, ranges]);
 
   function retry() {
     setLoading(true);
@@ -262,6 +283,7 @@ export default function NuevaSucursalPage() {
             ¿Conviene abrir otra? Primero mirá cómo está este local, después probá los números de la nueva.
           </p>
         </div>
+        <Link to="/inversores" className="btn-secondary">Propuestas para inversores</Link>
       </header>
 
       {loading && <div className="card sucursal__state">Cargando los números del local…</div>}

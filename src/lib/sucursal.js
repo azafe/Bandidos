@@ -8,6 +8,12 @@
 
 export const HORIZON_MONTHS = 36;
 
+// Lo que recuerda el simulador en el navegador. También lo lee la pantalla de
+// Inversores: los supuestos de la sucursal y un resumen del local actual.
+// v2: los peluqueros y turnos del local salen de la agenda; lo guardado antes
+// era el 6 fijo y taparía el dato real.
+export const SIMULADOR_STORAGE_KEY = "bandidos:sucursal:simulador:v2";
+
 // Sin agenda para medir, lo que suele atender un peluquero en un día.
 export const DEFAULT_TURNOS = 6;
 // Quien trabajó menos de esta parte de los días abiertos no cuenta como
