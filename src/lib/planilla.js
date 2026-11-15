@@ -157,3 +157,16 @@ export function buscarBandidos(mascotas, texto, limite = 12) {
   const orden = (a, b) => String(a.name).localeCompare(String(b.name), "es") || String(a.owner_name || "").localeCompare(String(b.owner_name || ""), "es");
   return [...porNombre.sort(orden), ...porDueno.sort(orden)].slice(0, limite);
 }
+
+// Solo peluqueras: las activas con rol Groomer (o «peluquera») en Equipo,
+// salvo que en este dispositivo se haya elegido la lista a mano.
+export const esPeluquera = (e) => /groom|peluquer/i.test(String(e?.role || ""));
+export const empleadoActivo = (e) => !e?.status || e.status === "active" || e.status === "Activo";
+export function listaPeluqueras(empleados, elegidas = null) {
+  const activos = empleados.filter(empleadoActivo);
+  if (Array.isArray(elegidas)) {
+    const ids = new Set(elegidas.map(String));
+    return activos.filter((e) => ids.has(String(e.id)));
+  }
+  return activos.filter(esPeluquera);
+}

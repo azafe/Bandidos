@@ -4,17 +4,17 @@ import { useAgendaDay } from "../../../hooks/useAgendaDay";
 import { useApiResource } from "../../../hooks/useApiResource";
 import { getAgendaDayNote, saveAgendaDayNote } from "../../../services/agendaApi";
 import { copyToClipboard } from "../../../services/bookingApi";
-import { groomerOptions } from "../../../lib/traslados";
 import { todayISO } from "../../../utils/dates";
 import {
   armarRenglones, buscarBandidos, coloresPeluqueras, distanciaDias, fechaCorta, fechaLarga, fondoRenglon,
-  formatoPlata, libresAgrupados, montoDe, peluquerasDeTurno, rangoHorario, sumarDias, textoLibres,
+  formatoPlata, libresAgrupados, listaPeluqueras, montoDe, peluquerasDeTurno, rangoHorario, sumarDias, textoLibres,
 } from "../../../lib/planilla";
 import usePlanillaLocal from "./usePlanillaLocal";
 import TurnoModal from "./TurnoModal";
 import CierreModal from "./CierreModal";
 import PeluqueraModal from "./PeluqueraModal";
 import CierreDia from "./CierreDia";
+import EquipoModal from "./EquipoModal";
 import { resumenCierre } from "../../../lib/cierreDia";
 import "../../../styles/planilla.css";
 
@@ -82,7 +82,7 @@ export default function PlanillaPage() {
   const { items: mascotas, refresh: refrescarMascotas } = useApiResource("/v2/pets");
   const [local, updateLocal] = usePlanillaLocal();
 
-  const peluqueras = useMemo(() => groomerOptions(empleados).filter((e) => e.status === "active" || e.status === "Activo" || !e.status), [empleados]);
+  const peluqueras = useMemo(() => listaPeluqueras(empleados, local.peluqueras ?? null), [empleados, local.peluqueras]);
   const colores = useMemo(() => coloresPeluqueras(peluqueras, local.colors), [peluqueras, local.colors]);
   const serviciosActivos = useMemo(() => servicios.filter((s) => s.status !== "inactive" && s.active !== false && !s.archived_at), [servicios]);
   const mediosActivos = useMemo(() => medios.filter((m) => m.status !== "inactive" && m.active !== false && m.is_active !== false), [medios]);
@@ -306,6 +306,8 @@ export default function PlanillaPage() {
               </button>
             );
           })}
+          {!peluqueras.length && empleados.length > 0 && <span className="pl-help">No hay peluqueras con rol Groomer en Equipo.</span>}
+          <button type="button" className="pl-link" onClick={() => abrir({ tipo: "equipo" })}>Elegir peluqueras</button>
           <Link className="pl-link" to="/agenda/clasica" title="La agenda anterior, con semana, mes, bloqueos y cierre del día">Agenda clásica →</Link>
         </div>
       </header>
@@ -364,8 +366,12 @@ export default function PlanillaPage() {
         <TurnoModal fecha={fecha} turno={modalActual.turno} mascota={modalActual.turno.pet} servicios={serviciosActivos} medios={mediosActivos} onClose={cerrar} onSaved={(msg) => alGuardar(msg)} />
       )}
       {modalActual?.tipo === "cierre" && (
-        <CierreModal turno={modalActual.turno} peluqueras={peluqueras} colores={colores} presentes={presentes} servicios={serviciosActivos} medios={mediosActivos}
+        <CierreModal turno={modalActual.turno} peluqueras={peluqueras} empleados={empleados} colores={colores} presentes={presentes} servicios={serviciosActivos} medios={mediosActivos}
           onClose={cerrar} onSaved={alGuardar} onEditar={() => abrir({ tipo: "editar", turno: modalActual.turno })} />
+      )}
+      {modalActual?.tipo === "equipo" && (
+        <EquipoModal empleados={empleados} elegidas={local.peluqueras ?? null} onClose={cerrar}
+          onSave={(ids) => { updateLocal((d) => { if (ids) d.peluqueras = ids; else delete d.peluqueras; return d; }); cerrar(); avisar(ids ? "Lista de peluqueras guardada." : "Se usan las del rol Groomer."); }} />
       )}
       {modalActual?.tipo === "peluquera" && (
         <PeluqueraModal peluquera={modalActual.peluquera} fecha={fecha} viene={presentes[String(modalActual.peluquera.id)]} horario={horarioDe(String(modalActual.peluquera.id))}

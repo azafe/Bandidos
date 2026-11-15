@@ -7,8 +7,11 @@ import { ESTADOS, formatoPlata, hora, montoDe, peluquerasDeTurno, resumenCobro }
 import { normalizarId, pedidoTerminar, precioServicio } from "../../../lib/cierreDia";
 
 // Tocar un turno: cuántas peluqueras, quiénes, estado y, si terminó, el cobro.
-export default function CierreModal({ turno, peluqueras, colores, presentes, servicios, medios, onClose, onSaved, onEditar }) {
+export default function CierreModal({ turno, peluqueras, empleados = [], colores, presentes, servicios, medios, onClose, onSaved, onEditar }) {
   const iniciales = peluquerasDeTurno(turno);
+  // Si el turno ya tiene a alguien que no está en la lista, se muestra igual para no perderlo.
+  const opcionesPeluqueras = [...peluqueras, ...iniciales.filter((id) => !peluqueras.some((p) => String(p.id) === id))
+    .map((id) => empleados.find((e) => String(e.id) === id)).filter(Boolean)];
   const servicioTurno = servicios.find((s) => String(s.id) === String(turno.service_type_id));
   const [cantidad, setCantidad] = useState(Math.max(1, iniciales.length || 1));
   const [elegidas, setElegidas] = useState(iniciales);
@@ -137,7 +140,7 @@ export default function CierreModal({ turno, peluqueras, colores, presentes, ser
         </div>
         <div className="pl-group"><span className="pl-label">2 · ¿Quién{cantidad > 1 ? "es" : ""}? ({elegidas.length} de {cantidad})</span>
           <div className="pl-opts" role="group" aria-label="Peluqueras">
-            {peluqueras.map((p) => (
+            {opcionesPeluqueras.map((p) => (
               <button key={p.id} type="button" className="pl-opt" aria-pressed={elegidas.includes(String(p.id))} onClick={() => alternar(String(p.id))}>
                 <span className="pl-dot" style={{ background: colores[String(p.id)] }} />{p.name}{presentes[String(p.id)] === false && <small> (no vino)</small>}
               </button>
