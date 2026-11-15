@@ -4,6 +4,7 @@ import { apiRequest } from "../../../services/apiClient";
 import { createAgendaTurno, updateAgendaTurno } from "../../../services/agendaApi";
 import { getTrasladoPayload, newTramos, solicitudPayload } from "../../../lib/traslados";
 import { formatoPlata, hora, montoDe } from "../../../lib/planilla";
+import { normalizarId } from "../../../lib/cierreDia";
 
 const MONTOS_TRASLADO = [5000, 8000, 10000, 15000];
 
@@ -62,9 +63,9 @@ export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, c
     const base = {
       date: fecha,
       time: f.hora,
-      service_type_id: Number(f.servicio) || f.servicio,
+      service_type_id: normalizarId(f.servicio),
       deposit_amount: f.sena === "si" ? montoDe(f.senaMonto) : 0,
-      deposit_payment_method_id: f.sena === "si" ? (Number(f.senaMedio) || f.senaMedio) : undefined,
+      deposit_payment_method_id: f.sena === "si" ? normalizarId(f.senaMedio) : undefined,
       notes: f.notas.trim(),
       ...traslado,
     };

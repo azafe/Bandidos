@@ -1,6 +1,7 @@
 import FinishTurnoForm from "../../components/agenda/FinishTurnoForm.jsx";
-import { paymentRows, paymentError, paymentDescription } from "../../lib/servicePayments.js";
-import { groomerShares, groomerShare, groomerPayout } from "../../lib/sharedGroomer";
+import { paymentError, paymentDescription } from "../../lib/servicePayments.js";
+import { groomerShare } from "../../lib/sharedGroomer";
+import { liquidacionPeluqueros, resumenCierre, totalesLiquidacion } from "../../lib/cierreDia";
 // src/pages/agenda/AgendaPage.jsx
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -327,12 +328,6 @@ function normalizeStatus(status) {
   return STATUS_LABELS[status] ? status : "reserved";
 }
 
-function toNumber(value) {
-  const parsed =
-    typeof value === "string" ? Number(value.trim().replace(",", ".")) : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 function getTurnoGroomerId(turno) {
   return turno?.groomer_id ?? turno?.groomer?.id ?? "";
 }
@@ -347,24 +342,6 @@ function getGroomerName(turno, employeesById) {
   const second = employeesById?.get(String(turno.second_groomer_id))?.name;
   const third = employeesById?.get(String(turno.third_groomer_id))?.name;
   return [primary, second, third].filter(Boolean).join(" + ");
-}
-
-function getEmployeeCommissionRate(employee) {
-  if (!employee) return DEFAULT_GROOMER_COMMISSION;
-  const raw =
-    employee.commission_rate ??
-    employee.commissionRate ??
-    employee.commission ??
-    employee.comision ??
-    employee.comision_porcentaje ??
-    employee.percentage ??
-    DEFAULT_GROOMER_COMMISSION;
-  const rate = Number(raw);
-  if (!Number.isFinite(rate)) return DEFAULT_GROOMER_COMMISSION;
-  // Un valor > 1 solo puede venir cargado como porcentaje (40 en vez de 0.40):
-  // lo pasamos a fraccion en vez de liquidar 40 veces la facturacion.
-  const asFraction = rate > 1 ? rate / 100 : rate;
-  return Math.max(0, Math.min(1, asFraction));
 }
 
 // La tasa viaja como fraccion; para mostrarla hay que llevarla a porcentaje.
@@ -718,125 +695,18 @@ export default function AgendaPage() {
     );
   }, [items, closeGroomerId]);
 
-  const closeSummary = useMemo(() => {
-    let reserved = 0;
-    let finished = 0;
-    let cancelled = 0;
-    let estimatedIncome = 0;
-    let finishedIncome = 0;
-    let totalDeposit = 0;
-    const byPaymentMethodMap = new Map();
-
-    items.forEach((turno) => {
-      const status = normalizeStatus(turno.status);
-      const amount = getServicePrice(turno);
-      estimatedIncome += amount;
-      totalDeposit += toNumber(turno.deposit_amount);
-      if (status === "reserved") reserved += 1;
-      if (status === "finished") {
-        finished += 1;
-        finishedIncome += amount;
-        const rows = paymentRows({ ...turno, price: amount });
-        if (Number(turno.deposit_amount) > 0) rows.push({ payment_method_id: turno.deposit_payment_method_id || turno.payment_method_id, amount: Number(turno.deposit_amount) });
-        rows.forEach(payment => {
-          const methodName = paymentMethods.find(m => m.id === payment.payment_method_id)?.name || "Sin método";
-          byPaymentMethodMap.set(methodName, (byPaymentMethodMap.get(methodName) || 0) + Number(payment.amount));
-        });
-      }
-      if (status === "cancelled") cancelled += 1;
-    });
-
-    const totalScheduled = items.length;
-    const completionRate = totalScheduled
-      ? Math.round((finished / totalScheduled) * 100)
-      : 0;
-
-    const byPaymentMethod = Array.from(byPaymentMethodMap.entries())
-      .map(([name, total]) => ({ name, total }))
-      .sort((a, b) => b.total - a.total);
-
-    const finishedWithoutPayment = items.filter(
-      (t) => normalizeStatus(t.status) === "finished" && !t.payment_method_id && !t.payments?.length
-    );
-
-    return {
-      totalScheduled,
-      reserved,
-      finished,
-      cancelled,
-      completionRate,
-      estimatedIncome,
-      finishedIncome,
-      totalDeposit,
-      pendingCollection: Math.max(estimatedIncome - totalDeposit, 0),
-      byPaymentMethod,
-      finishedWithoutPayment,
-    };
-  }, [items, getServicePrice, paymentMethods]);
-
-  const closeLiquidationRows = useMemo(() => {
-    const grouped = new Map();
-
-    closeFilteredTurnos.forEach((turno) => {
-      groomerShares(turno).forEach(({ groomerId: rawGroomerId, share }) => {
-        if (closeGroomerId && String(rawGroomerId) !== String(closeGroomerId)) return;
-        const hasGroomerId = rawGroomerId !== null && rawGroomerId !== undefined && rawGroomerId !== "";
-        const groomerKey = hasGroomerId ? String(rawGroomerId) : "unassigned";
-        const employee = hasGroomerId ? employeesById.get(groomerKey) : null;
-        const groomerName =
-          employee?.name ||
-          (hasGroomerId ? `Groomer #${groomerKey}` : "Sin groomer asignado");
-        const commissionRate = hasGroomerId ? getEmployeeCommissionRate(employee) : 0;
-
-        if (!grouped.has(groomerKey)) {
-          grouped.set(groomerKey, {
-            groomerId: groomerKey,
-            groomerName,
-            commissionRate,
-            scheduledCount: 0,
-            finishedCount: 0,
-            estimatedIncome: 0,
-            finishedIncome: 0,
-            payout: 0,
-          });
-        }
-
-        const row = grouped.get(groomerKey);
-        const amount = getServicePrice(turno) * share;
-        row.scheduledCount += share;
-        row.estimatedIncome += amount;
-        if (normalizeStatus(turno.status) === "finished") {
-          row.finishedCount += share;
-          row.finishedIncome += amount;
-          row.payout += hasGroomerId ? groomerPayout(turno, getServicePrice(turno), employees, rawGroomerId) : 0;
-        }
-      });
-    });
-
-    return Array.from(grouped.values())
-      .map((row) => ({
-        ...row,
-        commissionRate: row.finishedIncome ? row.payout / row.finishedIncome : row.commissionRate,
-        completionRate: row.scheduledCount
-          ? Math.round((row.finishedCount / row.scheduledCount) * 100)
-          : 0,
-      }))
-      .sort((a, b) => b.payout - a.payout || b.finishedIncome - a.finishedIncome);
-  }, [closeFilteredTurnos, employees, employeesById, getServicePrice, closeGroomerId]);
-
-  const closeLiquidationTotals = useMemo(
-    () =>
-      closeLiquidationRows.reduce(
-        (acc, row) => ({
-          scheduledCount: acc.scheduledCount + row.scheduledCount,
-          finishedCount: acc.finishedCount + row.finishedCount,
-          finishedIncome: acc.finishedIncome + row.finishedIncome,
-          payout: acc.payout + row.payout,
-        }),
-        { scheduledCount: 0, finishedCount: 0, finishedIncome: 0, payout: 0 }
-      ),
-    [closeLiquidationRows]
+  // Mismas cuentas que la Planilla del día (src/lib/cierreDia.js).
+  const closeSummary = useMemo(
+    () => resumenCierre(items, serviceTypes, paymentMethods),
+    [items, serviceTypes, paymentMethods]
   );
+
+  const closeLiquidationRows = useMemo(
+    () => liquidacionPeluqueros(closeFilteredTurnos, serviceTypes, employees, { groomerId: closeGroomerId }),
+    [closeFilteredTurnos, serviceTypes, employees, closeGroomerId]
+  );
+
+  const closeLiquidationTotals = useMemo(() => totalesLiquidacion(closeLiquidationRows), [closeLiquidationRows]);
 
   const closeLiquidationRowsVisible = useMemo(() => {
     if (closeGroomerId) return closeLiquidationRows;
@@ -845,16 +715,7 @@ export default function AgendaPage() {
   }, [closeLiquidationRows, closeGroomerId, showZeroFinishedRows]);
 
   const closeLiquidationVisibleTotals = useMemo(
-    () =>
-      closeLiquidationRowsVisible.reduce(
-        (acc, row) => ({
-          scheduledCount: acc.scheduledCount + row.scheduledCount,
-          finishedCount: acc.finishedCount + row.finishedCount,
-          finishedIncome: acc.finishedIncome + row.finishedIncome,
-          payout: acc.payout + row.payout,
-        }),
-        { scheduledCount: 0, finishedCount: 0, finishedIncome: 0, payout: 0 }
-      ),
+    () => totalesLiquidacion(closeLiquidationRowsVisible),
     [closeLiquidationRowsVisible]
   );
 
