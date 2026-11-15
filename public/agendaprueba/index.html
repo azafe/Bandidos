@@ -172,7 +172,7 @@ aside { display: grid; gap: 14px; }
 </head>
 <body>
 <div class="wrap">
-  <div class="banner"><span><strong>Prototipo para probar.</strong> Es la hoja del miércoles 11/11 pasada a la app. Nada de lo que hagas acá cambia la agenda real.</span><button type="button" id="reset">Volver al ejemplo</button></div>
+  <div class="banner"><span><strong>Prototipo para probar.</strong> Es la hoja del miércoles 11/11 pasada a la app. Nada de lo que hagas acá cambia la agenda real.<br><span id="base-status" role="status">Buscando los bandidos de la base…</span></span><button type="button" id="reset">Volver al ejemplo</button></div>
 
   <header class="day">
     <div class="day-top">
@@ -364,6 +364,7 @@ aside { display: grid; gap: 14px; }
 
   var state = load();
   (state.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
+  var realLoaded = false;
   function load() {
     try { var raw = localStorage.getItem(STORE); if (raw) { var st = JSON.parse(raw); if (st && st.rows && st.rows.every(function (r) { return r.time; })) return st; } } catch (err) { /* sin almacenamiento */ }
     return seed();
@@ -465,10 +466,12 @@ aside { display: grid; gap: 14px; }
     var q = norm(input.value.trim().replace(/^\d{1,2}(:?\d{2})?\s*(hs)?\s*/i, ""));
     var single = q && q.split(/\s+/).length === 1;
     var matches = single ? KNOWN.map(function (k, i) { return [k, i]; }).filter(function (x) { return norm(x[0].pet).indexOf(q) === 0; }) : [];
-    if (single && matches.length < 6) {
-      KNOWN.forEach(function (k, i) { if (norm(k.owner).indexOf(q) === 0 && !matches.some(function (m) { return m[1] === i; })) matches.push([k, i]); });
+    if (single) {
+      KNOWN.forEach(function (k, i) { if (norm(k.owner).split(/\s+/).some(function (w) { return w.indexOf(q) === 0; }) && !matches.some(function (m) { return m[1] === i; })) matches.push([k, i]); });
     }
-    matches = matches.slice(0, 8);
+    var byName = function (k) { return norm(k.pet).indexOf(q) === 0 ? 0 : 1; };
+    matches.sort(function (a, b) { return byName(a[0]) - byName(b[0]) || a[0].pet.localeCompare(b[0].pet, "es") || a[0].owner.localeCompare(b[0].owner, "es"); });
+    matches = matches.slice(0, 12);
     if (!single) { if (box) box.remove(); return; }
     if (!box) { box = document.createElement("div"); box.className = "suggest"; box.setAttribute("role", "listbox"); input.parentNode.appendChild(box); }
     var typed = cap(input.value.trim().replace(/^\d{1,2}(:?\d{2})?\s*(hs)?\s*/i, ""));
@@ -517,7 +520,7 @@ aside { display: grid; gap: 14px; }
     p.dataset.mode = "form";
     p.innerHTML =
       "<form id=\"turno-form\" novalidate style=\"display:grid;gap:16px\">" +
-      "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + (d.isNew ? "Bandido nuevo" : esc(d.pet) + " <span style=\"font-weight:600;color:var(--muted)\">(" + esc(d.owner) + ")</span>") + "</h3><p>" + (d.isNew ? "Completá los datos una sola vez: la próxima aparece en la lista." : esc(d.breed)) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
+      "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + (d.isNew ? "Bandido nuevo" : esc(d.pet) + " <span style=\"font-weight:600;color:var(--muted)\">(" + esc(d.owner) + ")</span>") + "</h3><p>" + (d.isNew ? "Completá los datos una sola vez: la próxima aparece en la lista." : esc([d.breed, d.phone].filter(Boolean).join(" · "))) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
       (d.alert ? "<p class=\"tag note\" style=\"white-space:normal;margin:0\">⚠ " + esc(d.alert) + "</p>" : "") +
       (d.isNew ? "<div class=\"group\"><span>Bandido</span><div class=\"form-grid\">" +
         "<label>Nombre<input id=\"f-pet\" value=\"" + esc(d.pet) + "\" autocomplete=\"off\"></label>" +
@@ -652,7 +655,7 @@ aside { display: grid; gap: 14px; }
     if (el.dataset.pick != null) {
       var input = el.closest(".entry").querySelector("input");
       var k = KNOWN[Number(el.dataset.pick)];
-      openTurnoForm(input.dataset.entry, { pet: k.pet, breed: k.breed, owner: k.owner, service: k.svc || "", direccion: k.addr || "", alert: k.note || "" });
+      openTurnoForm(input.dataset.entry, { petId: k.id || null, pet: k.pet, breed: k.breed, owner: k.owner, phone: k.phone || "", service: k.svc || "", direccion: k.addr || "", alert: k.note || "" });
       return;
     }
     if (el.dataset.new != null) {
@@ -757,6 +760,47 @@ aside { display: grid; gap: 14px; }
   });
 
   render();
+
+  // ── Bandidos reales: usa la sesión abierta del panel (mismo sitio) ──
+  // Solo lectura: consulta las mascotas para sugerirlas. No crea turnos.
+  var API = "https://bandidos-backend-production.up.railway.app";
+  function setBaseStatus(html) { var el = $("base-status"); if (el) el.innerHTML = html; }
+  function loadRealPets() {
+    var token = null, device = null;
+    try { token = localStorage.getItem("bandidos_token"); device = localStorage.getItem("bandidos_device_id"); } catch (err) { /* sin almacenamiento */ }
+    if (!token) {
+      setBaseStatus("Lista de ejemplo. Para usar <strong>los bandidos reales</strong>, <a href=\"/\">iniciá sesión en el panel</a> en este navegador y volvé a esta página.");
+      return;
+    }
+    var headers = { "Content-Type": "application/json", Authorization: "Bearer " + token };
+    if (device) headers["X-Device-Id"] = device;
+    fetch(API + "/v2/pets", { headers: headers })
+      .then(function (res) {
+        if (res.status === 401 || res.status === 403) throw new Error("sesion");
+        if (!res.ok) throw new Error("http");
+        return res.json();
+      })
+      .then(function (data) {
+        var list = (Array.isArray(data) ? data : (data && data.items) || []).filter(function (x) { return x && x.name && !x.archived_at; });
+        if (!list.length) { setBaseStatus("La base no devolvió bandidos. Se usa la lista de ejemplo."); return; }
+        KNOWN.length = 0;
+        list.forEach(function (x) {
+          KNOWN.push({
+            id: x.id, pet: String(x.name).trim(), breed: String(x.breed || "").trim(), owner: String(x.owner_name || "").trim() || "sin dueño",
+            phone: x.owner_phone || "", addr: String(x.address || "").trim(), note: String(x.behavior || "").trim(), real: true
+          });
+        });
+        (state.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
+        realLoaded = true;
+        setBaseStatus("Usando <strong>" + list.length + " bandidos reales</strong> de la base. Solo se consultan: los turnos de esta prueba no se guardan en la agenda.");
+      })
+      .catch(function (err) {
+        setBaseStatus(err && err.message === "sesion"
+          ? "Tu sesión del panel venció. <a href=\"/\">Volvé a iniciar sesión</a> y recargá esta página. Mientras, se usa la lista de ejemplo."
+          : "No se pudo leer la base (revisá la conexión). Se usa la lista de ejemplo.");
+      });
+  }
+  loadRealPets();
 })();
 </script>
 </body>
