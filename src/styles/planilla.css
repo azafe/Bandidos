@@ -110,8 +110,8 @@
 .pl-btn:disabled { opacity: .6; cursor: wait; }
 
 /* Ventana: centrada en compu, desde abajo en celular */
-.pl-scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .32); z-index: 1000; }
-.pl-panel { position: fixed; z-index: 1001; inset: auto 0 0 0; background: var(--pl-surface); color: var(--pl-ink); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 40px rgb(0 0 0 / .2); padding: 16px 16px 22px; max-height: 88%; overflow: auto; display: grid; gap: 16px; }
+.pl-scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .32); z-index: 10001; }
+.pl-panel { position: fixed; z-index: 10002; inset: auto 0 0 0; background: var(--pl-surface); color: var(--pl-ink); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 40px rgb(0 0 0 / .2); padding: 16px 16px 22px; max-height: 88%; overflow: auto; display: grid; gap: 16px; }
 @media (min-width: 700px) {
   .pl-panel { inset: auto; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(760px, calc(100% - 48px)); max-height: calc(100% - 48px); border: 1px solid var(--pl-line); border-radius: 18px; box-shadow: 0 24px 60px rgb(0 0 0 / .28); padding: 22px 24px; }
 }
@@ -154,7 +154,7 @@
 .pl-horario { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pl-horario select { width: auto !important; }
 
-.pl-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 1100; background: var(--pl-ink, #14151c); color: #fff; border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgb(0 0 0 / .25); }
+.pl-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10003; background: var(--pl-ink, #14151c); color: #fff; border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgb(0 0 0 / .25); }
 .pl-toast button { border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 700; background: #fff; color: #14151c; }
 .pl-toast button.x { background: transparent; color: #fff; }
 
@@ -214,3 +214,5 @@ button.pl-link { cursor: pointer; }
   .pl-row { padding-right: 10px; }
   .pl-panel { max-width: 100vw; }
 }
+.pl-panel { padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+.pl-panel input[type="time"] { min-height: 46px; }
