@@ -16,6 +16,7 @@ const PAGE_TITLES = {
   "/traslados/configuracion": "Bandimóviles",
   "/":                        "Inicio",
   "/agenda":                  "Agenda",
+  "/agenda/clasica":          "Agenda clásica",
   "/reservas-online":         "Reservas online",
   "/services":                "Servicios",
   "/pets":                    "Mascotas",

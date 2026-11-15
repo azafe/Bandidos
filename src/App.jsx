@@ -9,6 +9,7 @@ import DashboardHome from "./pages/DashboardHome";
 import ServicesListPage from "./pages/services/ServicesListPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
 import AgendaPage from "./pages/agenda/AgendaPage";
+import PlanillaPage from "./pages/agenda/planilla/PlanillaPage";
 import DailyExpensesPage from "./pages/expenses/DailyExpensesPage";
 import FixedExpensesPage from "./pages/expenses/FixedExpensesPage";
 import DailyIncomesPage from "./pages/expenses/DailyIncomesPage";
@@ -110,7 +111,10 @@ function App() {
                   <Route path="/mi-cuenta" element={<EmployeeStatementPage />} />
                   <Route path="/chat" element={<ChatPage />} />
                   <Route path="/employees/:id/liquidacion" element={<AdminGuard><EmployeeStatementPage /></AdminGuard>} />
-                  <Route path="/agenda" element={<AgendaPage />} />
+                  {/* La planilla del día reemplaza a la agenda. Para volver a la anterior,
+                      intercambiar los elementos de estas dos rutas (ver docs/planilla-del-dia.md). */}
+                  <Route path="/agenda" element={<PlanillaPage />} />
+                  <Route path="/agenda/clasica" element={<AgendaPage />} />
                   <Route path="/traslados" element={<BandimovilesLayout />}>
                     <Route index element={<BandimovilesInicioPage />} />
                     <Route path="dia" element={<TrasladosDiaPage />} />
