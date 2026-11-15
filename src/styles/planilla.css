@@ -193,3 +193,6 @@
 .pl-table th:first-child, .pl-table td:first-child { text-align: left; }
 .pl-table th { font-size: .78rem; color: var(--pl-muted); font-weight: 700; }
 .pl-table tr.total td { font-weight: 700; border-bottom: 0; }
+.pl-equipo { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.pl-equipo .pl-check { border: 1px solid var(--pl-line); border-radius: 10px; padding: 10px 12px; background: var(--pl-paper); }
+button.pl-link { cursor: pointer; }

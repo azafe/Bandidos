@@ -64,3 +64,18 @@ test("el buscador ordena por nombre y después por dueño, sin archivados", () =
   assert.deepEqual(buscarBandidos(pets, "lo").map((p) => p.id), [2, 1, 3]);
   assert.deepEqual(buscarBandidos(pets, ""), []);
 });
+
+test("la planilla muestra solo peluqueras activas, o las elegidas a mano", async () => {
+  const { listaPeluqueras } = await import("./planilla.js");
+  const equipo = [
+    { id: 1, name: "Maira", role: "Groomer", status: "active" },
+    { id: 2, name: "Jorge", role: "Chofer", status: "active", is_driver: true },
+    { id: 3, name: "Tamara", role: "Recepción", status: "active" },
+    { id: 4, name: "Melina", role: "groomer" },
+    { id: 5, name: "Vieja", role: "Groomer", status: "inactive" },
+    { id: 6, name: "Ale", role: "Socio", status: "active" },
+  ];
+  assert.deepEqual(listaPeluqueras(equipo).map((e) => e.name), ["Maira", "Melina"]);
+  assert.deepEqual(listaPeluqueras(equipo, ["3", 1, 5]).map((e) => e.name), ["Maira", "Tamara"]);
+  assert.deepEqual(listaPeluqueras(equipo, []), []);
+});
