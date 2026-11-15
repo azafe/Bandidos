@@ -124,7 +124,7 @@ export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, c
           </div>
         )}
         <div className="pl-grid">
-          <label>Hora<input value={f.hora} onChange={(e) => set({ hora: e.target.value })} inputMode="numeric" placeholder="HH:MM" autoComplete="off" /></label>
+          <label>Hora<input type="time" step="300" value={f.hora} onChange={(e) => set({ hora: e.target.value.slice(0, 5) })} /></label>
         </div>
         <div className="pl-group"><span className="pl-label">1 · Servicio</span>
           {opcionesServicio.length ? <Opciones opciones={opcionesServicio} valor={f.servicio} onChange={(v) => set({ servicio: v })} etiqueta="Servicio" />
