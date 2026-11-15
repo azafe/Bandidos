@@ -98,7 +98,14 @@ h1 small { font-weight: 600; color: var(--muted); font-size: 1rem; margin-left: 
 .chip-staff .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .8rem; color: #1f1d2b; }
 .chip-staff em { font-style: normal; color: var(--muted); font-size: .85rem; }
 .chip-staff b { font-variant-numeric: tabular-nums; }
-.chip-staff[aria-pressed="false"] { opacity: .5; }
+.chip-staff[aria-pressed="false"] { opacity: .55; }
+.chip-staff .edit-ico { color: var(--muted); font-size: .85rem; }
+.chip-staff:hover { border-color: var(--accent); }
+.dot-lg { display: inline-block; width: 18px; height: 18px; border-radius: 50%; margin-right: 8px; vertical-align: -2px; }
+.horario-libre { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.horario-libre label { color: var(--muted); font-weight: 700; font-size: .9rem; }
+.horario-libre select { border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 10px 12px; font-size: 1.02rem; color: var(--ink); }
+.group[hidden] { display: none; }
 .chip-staff[aria-pressed="false"] .name { text-decoration: line-through; }
 .chip-tras { border-style: dashed; padding-left: 12px; }
 .chip-tras[aria-pressed="true"] { background: color-mix(in srgb, var(--hl-meli) 45%, transparent); border-color: transparent; }
@@ -484,7 +491,7 @@ aside { display: grid; gap: 14px; }
   var realLoaded = false;
   function save() {
     store.wait = state.wait; store.extraKnown = state.extraKnown || [];
-    store.days[current] = { rows: state.rows, notes: state.notes, present: state.present, traslados: state.traslados };
+    store.days[current] = { rows: state.rows, notes: state.notes, present: state.present, traslados: state.traslados, hours: state.hours || {} };
     try { localStorage.setItem(STORE2, JSON.stringify(store)); } catch (err) { /* sin almacenamiento */ }
   }
   function irA(iso) {
@@ -503,6 +510,63 @@ aside { display: grid; gap: 14px; }
   var MEDIOS = ["Efectivo", "Transferencia", "Débito", "Crédito", "Mercado Pago"];
   var active = function (r) { return r.raw && r.status !== "cancel" && r.status !== "noshow"; };
   function sorted(rows) { return rows.map(function (r, i) { return [r, i]; }).sort(function (a, b) { return a[0].time < b[0].time ? -1 : a[0].time > b[0].time ? 1 : a[1] - b[1]; }).map(function (x) { return x[0]; }); }
+
+  // ── Horario de cada peluquera ────────────────────────────────────────
+  var BASE_HOURS = { jime: ["09:00", "15:00"], meli: ["09:00", "15:00"], flor: ["09:00", "15:00"], mai: ["15:00", "21:00"], cami: ["15:00", "21:00"] };
+  var PRESETS = [["09:00", "15:00"], ["15:00", "21:00"], ["09:00", "21:00"], ["09:00", "13:00"], ["14:00", "21:00"]];
+  function horaCorta(t) { var a = t.split(":"); return Number(a[0]) + (a[1] !== "00" ? ":" + a[1] : ""); }
+  function rango(h) { return horaCorta(h[0]) + " a " + horaCorta(h[1]); }
+  function horarioDe(id) {
+    return (state.hours && state.hours[id]) || (store.defaultHours && store.defaultHours[id]) || BASE_HOURS[id] || ["09:00", "18:00"];
+  }
+  var HORAS = [];
+  for (var hh = 7; hh <= 22; hh++) { HORAS.push((hh < 10 ? "0" : "") + hh + ":00"); if (hh < 22) HORAS.push((hh < 10 ? "0" : "") + hh + ":30"); }
+
+  var se = null; // edición de una peluquera
+  function openStaff(id) {
+    var s = staffById(id);
+    var h = horarioDe(id);
+    se = { id: id, viene: !!state.present[id], desde: h[0], hasta: h[1], habitual: false };
+    openId = null; formRowId = null;
+    var p = $("panel"); p.dataset.mode = "staff";
+    renderStaff();
+    p.hidden = false; $("scrim").hidden = false;
+    p.querySelector("[data-close]").focus();
+    void s;
+  }
+  function renderStaff() {
+    var s = staffById(se.id);
+    var sel = function (name, val) {
+      return "<select id=\"st-" + name + "\" data-st=\"" + name + "\">" + HORAS.map(function (t) { return "<option value=\"" + t + "\"" + (t === val ? " selected" : "") + ">" + horaCorta(t) + " hs</option>"; }).join("") + "</select>";
+    };
+    $("panel").innerHTML =
+      "<form id=\"staff-form\" novalidate style=\"display:grid;gap:16px\">" +
+      "<div class=\"panel-head\"><div><h3 id=\"panel-title\"><span class=\"dot-lg\" style=\"background:" + s.color + "\"></span>" + s.name + "</h3><p>" + fechaLarga(current) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
+      "<div class=\"group\"><span>¿Viene este día?</span><div class=\"opts\">" +
+        "<button type=\"button\" class=\"opt\" data-sv=\"1\" aria-pressed=\"" + se.viene + "\">Viene</button>" +
+        "<button type=\"button\" class=\"opt danger\" data-sv=\"0\" aria-pressed=\"" + !se.viene + "\">No viene</button></div></div>" +
+      "<div class=\"group\"" + (se.viene ? "" : " hidden") + "><span>Horario</span><div class=\"opts\">" + PRESETS.map(function (pr) {
+        var on = pr[0] === se.desde && pr[1] === se.hasta;
+        return "<button type=\"button\" class=\"opt\" data-preset=\"" + pr.join("-") + "\" aria-pressed=\"" + on + "\">" + rango(pr) + "</button>";
+      }).join("") + "</div>" +
+        "<div class=\"horario-libre\"><label for=\"st-desde\">Desde</label>" + sel("desde", se.desde) + "<label for=\"st-hasta\">hasta</label>" + sel("hasta", se.hasta) + "</div>" +
+        "<label class=\"check\"><input type=\"checkbox\" id=\"st-habitual\"" + (se.habitual ? " checked" : "") + "> Usar este horario también los próximos días</label></div>" +
+      "<p class=\"form-error\" id=\"staff-error\" role=\"alert\"></p>" +
+      "<div class=\"form-actions\"><button type=\"button\" class=\"btn ghost\" data-close>Cancelar</button><button type=\"submit\" class=\"btn big\">Guardar</button></div>" +
+      "</form>";
+  }
+  function saveStaff() {
+    if (se.viene && se.desde >= se.hasta) { $("staff-error").textContent = "La hora de salida tiene que ser después de la de entrada."; return; }
+    state.present[se.id] = se.viene;
+    if (se.viene) {
+      state.hours = state.hours || {};
+      state.hours[se.id] = [se.desde, se.hasta];
+      if (se.habitual) { store.defaultHours = store.defaultHours || {}; store.defaultHours[se.id] = [se.desde, se.hasta]; }
+    }
+    var s = staffById(se.id);
+    var msg = s.name + (se.viene ? " viene de " + rango([se.desde, se.hasta]) + (se.habitual ? " (también los próximos días)" : "") : " no viene") + ".";
+    save(); closePanel(); render(); showToast(msg);
+  }
 
   function libresAgrupados(free) {
     var orden = [], cuenta = {};
@@ -531,8 +595,8 @@ aside { display: grid; gap: 14px; }
 
     $("staff").innerHTML = STAFF.map(function (s) {
       var count = act.filter(function (r) { return groomersOf(r).indexOf(s.id) >= 0; }).length;
-      return "<button type=\"button\" class=\"chip-staff\" data-staff=\"" + s.id + "\" aria-pressed=\"" + !!state.present[s.id] + "\" title=\"Tocá para marcar si viene o no\">" +
-        "<span class=\"dot\" style=\"background:" + s.color + "\">" + s.name.charAt(0) + "</span><span class=\"name\">" + s.name + "</span><em>" + (state.present[s.id] ? s.hours : "no viene") + "</em><b>" + count + "</b></button>";
+      return "<button type=\"button\" class=\"chip-staff\" data-staff=\"" + s.id + "\" aria-pressed=\"" + !!state.present[s.id] + "\" aria-label=\"" + s.name + ": " + (state.present[s.id] ? "viene de " + rango(horarioDe(s.id)) : "no viene") + ". Tocá para cambiar\" title=\"Tocá para cambiar si viene y su horario\">" +
+        "<span class=\"dot\" style=\"background:" + s.color + "\">" + s.name.charAt(0) + "</span><span class=\"name\">" + s.name + "</span><em>" + (state.present[s.id] ? rango(horarioDe(s.id)) : "no viene") + "</em><b>" + count + "</b><span class=\"edit-ico\" aria-hidden=\"true\">✎</span></button>";
     }).join("") + "<button type=\"button\" class=\"chip-staff chip-tras\" id=\"tras\" aria-pressed=\"" + !!state.traslados + "\">Traslados " + (state.traslados ? "todo el día" : "no hay") + "</button>";
 
     var blocks = [["Mañana", function (r) { return r.time < "13:00"; }], ["Tarde", function (r) { return r.time >= "13:00"; }]];
@@ -849,7 +913,7 @@ aside { display: grid; gap: 14px; }
     else showToast(r.status === "done" ? (r.pet || "Turno") + " terminado y cobrado." : "Turno guardado.");
   }
 
-  function closePanel() { pd = null; $("panel").hidden = true; $("scrim").hidden = true; var id = openId || formRowId; openId = null; formRowId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
+  function closePanel() { pd = null; se = null; $("panel").hidden = true; $("scrim").hidden = true; var id = openId || formRowId; openId = null; formRowId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
 
   function freeUp(r, reason) {
     state.rows.push({ id: uid(), time: r.time, raw: "" });
@@ -888,7 +952,13 @@ aside { display: grid; gap: 14px; }
   document.addEventListener("click", function (ev) {
     var el = ev.target.closest("button");
     if (!el) return;
-    if (el.dataset.staff) { state.present[el.dataset.staff] = !state.present[el.dataset.staff]; save(); render(); return; }
+    if (el.dataset.staff) { openStaff(el.dataset.staff); return; }
+    if (se) {
+      if (el.dataset.close != null) { closePanel(); return; }
+      if (el.dataset.sv) { se.viene = el.dataset.sv === "1"; renderStaff(); return; }
+      if (el.dataset.preset) { var pr = el.dataset.preset.split("-"); se.desde = pr[0]; se.hasta = pr[1]; se.habitual = $("st-habitual") ? $("st-habitual").checked : se.habitual; renderStaff(); return; }
+      return;
+    }
     if (el.id === "tras") { state.traslados = !state.traslados; save(); render(); return; }
     if (el.dataset.open) { openPanel(el.dataset.open); return; }
     if (el.dataset.add != null) {
@@ -981,12 +1051,13 @@ aside { display: grid; gap: 14px; }
     if (el.dataset.del != null) { r.raw = ""; ["pet", "breed", "owner", "service", "precio", "traslado", "alert", "known", "groomer", "status"].forEach(function (k) { delete r[k]; }); r.notes = []; save(); closePanel(); render(); return; }
   });
   $("scrim").addEventListener("click", closePanel);
-  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && (openId || formRowId)) closePanel(); });
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && (openId || formRowId || se)) closePanel(); });
 
   document.addEventListener("submit", function (ev) {
     ev.preventDefault();
     if (ev.target.id === "turno-form") { saveTurnoForm(); return; }
     if (ev.target.id === "cierre-form") { saveCierre(); return; }
+    if (ev.target.id === "staff-form") { saveStaff(); return; }
     if (ev.target.id === "panel-form") {
       var r = state.rows.find(function (x) { return x.id === openId; });
       var text = $("panel-text").value.trim();
@@ -1009,7 +1080,7 @@ aside { display: grid; gap: 14px; }
   window.addEventListener("hashchange", function () { var h = location.hash.replace("#", ""); if (/^\d{4}-\d{2}-\d{2}$/.test(h)) irA(h); });
   document.addEventListener("keydown", function (ev) {
     var tag = (ev.target.tagName || "").toLowerCase();
-    if (openId || formRowId || tag === "input" || tag === "textarea" || tag === "select") return;
+    if (openId || formRowId || se || tag === "input" || tag === "textarea" || tag === "select") return;
     if (ev.key === "ArrowLeft") irA(sumarDias(current, -1));
     if (ev.key === "ArrowRight") irA(sumarDias(current, 1));
   });
@@ -1017,6 +1088,8 @@ aside { display: grid; gap: 14px; }
     var el = ev.target;
     if (el.dataset.entry) { var multi = el.value.trim().split(/\s+/).length > 1; $("pv-" + el.dataset.entry).innerHTML = multi ? previewHtml(parse(el.value)) : ""; suggestFor(el); }
     if (el.id === "notes") { state.notes = el.value; save(); }
+    if (se && el.dataset.st) { se[el.dataset.st] = el.value; se.habitual = $("st-habitual").checked; renderStaff(); var again = $("st-" + el.dataset.st); if (again) again.focus(); return; }
+    if (se && el.id === "st-habitual") { se.habitual = el.checked; return; }
     if (pd && openId && el.closest && el.closest("#cierre-form")) {
       var rr = state.rows.find(function (x) { return x.id === openId; });
       if (el.dataset.bind) pd[el.dataset.bind] = el.value;
