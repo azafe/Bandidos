@@ -137,12 +137,25 @@ aside { display: grid; gap: 14px; }
 .group > span { font-size: .8rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .opts { display: flex; gap: 8px; flex-wrap: wrap; }
 .opt { border: 2px solid var(--line); background: var(--paper); border-radius: 12px; padding: 10px 14px; min-height: 48px; font-weight: 700; display: inline-flex; gap: 8px; align-items: center; }
-.opt[aria-pressed="true"] { border-color: var(--ink); }
+.opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: #fff; }
+.opt[aria-pressed="true"].danger { background: #b91c1c; border-color: #b91c1c; color: #fff; }
 .opt .dot { width: 18px; height: 18px; border-radius: 50%; }
 .opt.danger { color: #b91c1c; }
 .panel-edit { display: flex; gap: 8px; }
 .panel-edit input { flex: 1; border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 10px 12px; }
 
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; }
+.form-grid[hidden] { display: none; }
+.form-grid label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); font-weight: 700; }
+.form-grid label.wide { grid-column: 1 / -1; }
+.form-grid input { border: 1px solid var(--line); background: var(--paper); border-radius: 10px; padding: 12px; font-size: 1.05rem; color: var(--ink); font-weight: 400; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick .opt { min-height: 40px; padding: 6px 12px; font-size: .9rem; }
+.mini { display: block; font-size: .85rem; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.form-error { margin: 0; color: #b91c1c; font-weight: 700; min-height: 1.2em; }
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.btn.big { padding: 14px 20px; font-size: 1.05rem; }
+.suggest { max-height: 340px; overflow-y: auto; }
 .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; background: var(--ink); color: var(--paper); border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgb(0 0 0 / .25); }
 .toast[hidden] { display: none; }
 .toast button { border: 0; border-radius: 10px; padding: 8px 12px; font-weight: 700; background: var(--paper); color: var(--ink); }
@@ -190,8 +203,9 @@ aside { display: grid; gap: 14px; }
       </section>
       <section class="card" aria-labelledby="h-como">
         <h2 id="h-como">Cómo se anota</h2>
-        <p class="help">Tocá un renglón <strong>libre</strong> y escribí como en el cuaderno:<br><code>Ramona shitzu Dolores CyB nuevo /5000</code></p>
-        <p class="help"><code>CyB</code> corte y baño · <code>B</code> baño · <code>nuevo</code> · <code>/5000</code> traslado · <code>$27000</code> precio · <code>(es malo)</code> nota · <code>de dos</code> ocupa doble</p>
+        <p class="help">Tocá un renglón <strong>libre</strong> y empezá a escribir el nombre del bandido. Elegilo de la lista (entre paréntesis está el dueño) y completá servicio, traslado y seña.</p>
+        <p class="help">Si es nuevo, elegí <strong>+ es un bandido nuevo</strong> y cargá raza y dueño una sola vez.</p>
+        <p class="help">Atajo: también se puede escribir todo en una línea, como en el cuaderno: <code>Osito CyB /5000</code></p>
         <p class="help">Tocá un turno para pintarlo con el color de la peluquera, marcarlo como listo o cancelado.</p>
       </section>
     </aside>
@@ -214,23 +228,34 @@ aside { display: grid; gap: 14px; }
     { id: "cami", name: "Cami", hours: "15 a 21", color: "var(--hl-cami)", hex: "#7fd0f0" }
   ];
   // Clientes que ya existen en la app: al escribir el nombre se completan solos.
+  // Bandidos que ya existen en la app. Hay homónimos a propósito (Lola, Luna, Mora).
   var KNOWN = [
-    { pet: "Ramona", breed: "shitzu", owner: "Dolores" },
-    { pet: "Manola", breed: "shitzu", owner: "Dolores" },
-    { pet: "Becky", breed: "caniche", owner: "María" },
-    { pet: "Cindy", breed: "caniche", owner: "Cecilia" },
-    { pet: "Tina", breed: "shitzu", owner: "Marta" },
-    { pet: "Rufus", breed: "caniche", owner: "Matías", note: "de dos · es malo" },
-    { pet: "Osito", breed: "caniche", owner: "Carolina", note: "es malo, usar bozal" },
-    { pet: "Betty", breed: "mestiza", owner: "David" },
-    { pet: "Eros", breed: "salchicha", owner: "Sofía", note: "tiene que estar solo, se pone loco con perros" },
-    { pet: "Lupe", breed: "caniche", owner: "Estela", note: "a tijera" },
-    { pet: "Rifle", breed: "mestizo", owner: "Valentina" },
-    { pet: "Chicha", breed: "caniche", owner: "Guadalupe" },
-    { pet: "Princesa", breed: "golden", owner: "Sucre" },
-    { pet: "Blacky", breed: "bulldog francés", owner: "Paola" },
-    { pet: "Molly", breed: "bulldog francés", owner: "Paola" },
-    { pet: "Coco", breed: "chow chow", owner: "Erika", note: "de a dos" }
+    { pet: "Ramona", breed: "shitzu", owner: "Dolores", svc: "CyB", addr: "San Martín 850" },
+    { pet: "Manola", breed: "shitzu", owner: "Dolores", svc: "CyB", addr: "San Martín 850" },
+    { pet: "Becky", breed: "caniche", owner: "María", svc: "CyB" },
+    { pet: "Cindy", breed: "caniche", owner: "Cecilia", svc: "CyB" },
+    { pet: "Tina", breed: "shitzu", owner: "Marta", svc: "B", addr: "Virgen de la Merced 200, 6° 3" },
+    { pet: "Rufus", breed: "caniche", owner: "Matías", svc: "CyB", note: "de dos · es malo" },
+    { pet: "Osito", breed: "caniche", owner: "Carolina", svc: "CyB", note: "es malo, usar bozal" },
+    { pet: "Betty", breed: "mestiza", owner: "David", svc: "CyB" },
+    { pet: "Eros", breed: "salchicha", owner: "Sofía", svc: "B", note: "tiene que estar solo, se pone loco con perros" },
+    { pet: "Lupe", breed: "caniche", owner: "Estela", svc: "CyB", note: "a tijera" },
+    { pet: "Lola", breed: "caniche", owner: "Huerto", svc: "CyB", addr: "Sarmiento 400" },
+    { pet: "Lola", breed: "mestizo pc", owner: "Mayra", svc: "B", addr: "25 de Mayo 2200" },
+    { pet: "Lola", breed: "schnauzer", owner: "Cecy", svc: "CyB" },
+    { pet: "Luna", breed: "caniche", owner: "Paola", svc: "CyB" },
+    { pet: "Luna", breed: "golden", owner: "Mer", svc: "B" },
+    { pet: "Luna", breed: "caniche", owner: "Flor", svc: "CyB", addr: "Laprida 300" },
+    { pet: "Mora", breed: "caniche", owner: "Sofía", svc: "CyB" },
+    { pet: "Mora", breed: "caniche negra", owner: "Violeta", svc: "CyB" },
+    { pet: "Rifle", breed: "mestizo", owner: "Valentina", svc: "B" },
+    { pet: "Chicha", breed: "caniche", owner: "Guadalupe", svc: "CyB" },
+    { pet: "Princesa", breed: "golden", owner: "Sucre", svc: "B" },
+    { pet: "Blacky", breed: "bulldog francés", owner: "Paola", svc: "B" },
+    { pet: "Molly", breed: "bulldog francés", owner: "Paola", svc: "B" },
+    { pet: "Coco", breed: "chow chow", owner: "Erika", svc: "B", note: "de a dos" },
+    { pet: "Coco", breed: "caniche", owner: "Graciela", svc: "CyB", addr: "Catamarca 1100" },
+    { pet: "Mercedita", breed: "caniche", owner: "Agustina", svc: "CyB", addr: "San Juan 400, 3° A" }
   ];
   function seed() {
     var r = function (time, raw, groomer, extra) { return Object.assign({ id: uid(), time: time, groomer: groomer || "", status: "" }, parse(raw), { raw: raw }, extra || {}); };
@@ -325,7 +350,8 @@ aside { display: grid; gap: 14px; }
       }
     }
     if (words.length) { out.pet = cap(words[0]); out.owner = words.slice(1).map(cap).join(" "); }
-    var known = KNOWN.find(function (k) { return norm(k.pet) === norm(out.pet); });
+    var same = KNOWN.filter(function (k) { return norm(k.pet) === norm(out.pet); });
+    var known = same.find(function (k) { return out.owner && norm(k.owner) === norm(out.owner); }) || (same.length === 1 ? same[0] : null);
     if (known) {
       if (!out.breed) out.breed = known.breed;
       if (!out.owner) out.owner = known.owner;
@@ -337,6 +363,7 @@ aside { display: grid; gap: 14px; }
   }
 
   var state = load();
+  (state.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
   function load() {
     try { var raw = localStorage.getItem(STORE); if (raw) { var st = JSON.parse(raw); if (st && st.rows && st.rows.every(function (r) { return r.time; })) return st; } } catch (err) { /* sin almacenamiento */ }
     return seed();
@@ -392,6 +419,8 @@ aside { display: grid; gap: 14px; }
     if (r.doble) t.push("<span class=\"tag\">Doble</span>");
     (r.notes || []).filter(function (x) { return !/^de (a )?dos$/i.test(x); }).forEach(function (x) { t.push("<span class=\"tag note\">" + esc(x) + "</span>"); });
     if (r.alert && !(r.notes || []).length) t.push("<span class=\"tag note\">⚠ " + esc(r.alert) + "</span>");
+    if (r.sena) t.push("<span class=\"tag new\">Seña " + money(r.sena) + (r.senaMedio ? " · " + esc(r.senaMedio) : "") + "</span>");
+    if (r.direccion) t.push("<span class=\"tag\">Traslado: " + esc(r.direccion) + "</span>");
     if (r.status === "arrived") t.push("<span class=\"tag state\">Llegó</span>");
     if (r.status === "cancel") t.push("<span class=\"tag state\">Canceló</span>");
     if (r.status === "noshow") t.push("<span class=\"tag state\">No vino</span>");
@@ -401,7 +430,7 @@ aside { display: grid; gap: 14px; }
   function rowHtml(r) {
     var timeInput = "<input class=\"time\" inputmode=\"numeric\" aria-label=\"Hora\" data-time=\"" + r.id + "\" value=\"" + r.time + "\">";
     if (isFree(r)) {
-      return "<li class=\"row empty\">" + timeInput + "<div class=\"entry\"><input data-entry=\"" + r.id + "\" id=\"in-" + r.id + "\" placeholder=\"libre · escribí el perro\" autocomplete=\"off\" aria-label=\"Anotar turno de las " + r.time + "\"><div class=\"preview\" id=\"pv-" + r.id + "\"></div></div><span></span></li>";
+      return "<li class=\"row empty\">" + timeInput + "<div class=\"entry\"><input data-entry=\"" + r.id + "\" id=\"in-" + r.id + "\" placeholder=\"libre · escribí el nombre del bandido\" autocomplete=\"off\" aria-label=\"Anotar turno de las " + r.time + "\"><div class=\"preview\" id=\"pv-" + r.id + "\"></div></div><span></span></li>";
     }
     var g = staffById(r.groomer);
     var cls = "row" + (g ? " has-hl" : "") + (r.status === "cancel" || r.status === "noshow" ? " cancel" : "") + (r.status === "done" ? " done" : "");
@@ -434,13 +463,30 @@ aside { display: grid; gap: 14px; }
   function suggestFor(input) {
     var box = input.parentNode.querySelector(".suggest");
     var q = norm(input.value.trim().replace(/^\d{1,2}(:?\d{2})?\s*(hs)?\s*/i, ""));
-    var first = q.split(/\s+/)[0] || "";
-    var matches = first.length >= 2 && q.split(/\s+/).length === 1 ? KNOWN.filter(function (k) { return norm(k.pet).indexOf(first) === 0 || norm(k.owner).indexOf(first) === 0; }).slice(0, 5) : [];
-    if (!matches.length) { if (box) box.remove(); return; }
-    if (!box) { box = document.createElement("div"); box.className = "suggest"; input.parentNode.appendChild(box); }
-    box.innerHTML = matches.map(function (k, i) {
-      return "<button type=\"button\" data-pick=\"" + esc(k.pet + " " + k.breed + " " + k.owner) + "\"" + (i === 0 ? " class=\"active\"" : "") + "><strong>" + esc(k.pet) + "</strong> · " + esc(k.breed) + " — " + esc(k.owner) + (k.note ? "<small>⚠ " + esc(k.note) + "</small>" : "") + "</button>";
-    }).join("");
+    var single = q && q.split(/\s+/).length === 1;
+    var matches = single ? KNOWN.map(function (k, i) { return [k, i]; }).filter(function (x) { return norm(x[0].pet).indexOf(q) === 0; }) : [];
+    if (single && matches.length < 6) {
+      KNOWN.forEach(function (k, i) { if (norm(k.owner).indexOf(q) === 0 && !matches.some(function (m) { return m[1] === i; })) matches.push([k, i]); });
+    }
+    matches = matches.slice(0, 8);
+    if (!single) { if (box) box.remove(); return; }
+    if (!box) { box = document.createElement("div"); box.className = "suggest"; box.setAttribute("role", "listbox"); input.parentNode.appendChild(box); }
+    var typed = cap(input.value.trim().replace(/^\d{1,2}(:?\d{2})?\s*(hs)?\s*/i, ""));
+    box.innerHTML = matches.map(function (m, i) {
+      var k = m[0];
+      return "<button type=\"button\" role=\"option\" data-pick=\"" + m[1] + "\"" + (i === 0 ? " class=\"active\"" : "") + "><strong>" + esc(k.pet) + "</strong> (" + esc(k.owner) + ")<small>" + esc(k.breed) + (k.note ? " · ⚠ " + esc(k.note) : "") + "</small></button>";
+    }).join("") + "<button type=\"button\" data-new=\"" + esc(typed) + "\"" + (matches.length ? "" : " class=\"active\"") + "><strong>+ " + esc(typed) + "</strong> es un bandido nuevo<small>Cargá raza y dueño</small></button>";
+  }
+
+  function moveActive(input, delta) {
+    var box = input.parentNode.querySelector(".suggest");
+    if (!box) return;
+    var items = Array.prototype.slice.call(box.querySelectorAll("button"));
+    var i = items.findIndex(function (b) { return b.classList.contains("active"); });
+    if (i >= 0) items[i].classList.remove("active");
+    var next = items[Math.max(0, Math.min(items.length - 1, i + delta))];
+    next.classList.add("active");
+    next.scrollIntoView({ block: "nearest" });
   }
 
   function commitEntry(input) {
@@ -454,13 +500,89 @@ aside { display: grid; gap: 14px; }
     showToast("Anotado: " + (r.pet || text) + " a las " + r.time + ".");
   }
 
+  // ── Ficha para agendar o editar un turno ─────────────────────────────
+  var SERVICES = [["B", "Baño"], ["CyB", "Corte y baño"], ["C", "Corte"]];
+  var formRowId = null;
+  function opts(name, list, value) {
+    return "<div class=\"opts\" role=\"radiogroup\">" + list.map(function (o) {
+      return "<button type=\"button\" class=\"opt\" role=\"radio\" data-f=\"" + name + "\" data-v=\"" + o[0] + "\" aria-checked=\"" + (value === o[0]) + "\" aria-pressed=\"" + (value === o[0]) + "\">" + o[1] + "</button>";
+    }).join("") + "</div>";
+  }
+  function openTurnoForm(rowId, data) {
+    var r = state.rows.find(function (x) { return x.id === rowId; });
+    if (!r) return;
+    formRowId = rowId; openId = null;
+    var d = Object.assign({ pet: "", breed: "", owner: "", phone: "", service: "", tras: "no", direccion: "", trasPrecio: "", sena: "no", senaMonto: "", senaMedio: "Transferencia", isNew: false }, data);
+    var p = $("panel");
+    p.dataset.mode = "form";
+    p.innerHTML =
+      "<form id=\"turno-form\" novalidate style=\"display:grid;gap:16px\">" +
+      "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + (d.isNew ? "Bandido nuevo" : esc(d.pet) + " <span style=\"font-weight:600;color:var(--muted)\">(" + esc(d.owner) + ")</span>") + "</h3><p>" + (d.isNew ? "Completá los datos una sola vez: la próxima aparece en la lista." : esc(d.breed)) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
+      (d.alert ? "<p class=\"tag note\" style=\"white-space:normal;margin:0\">⚠ " + esc(d.alert) + "</p>" : "") +
+      (d.isNew ? "<div class=\"group\"><span>Bandido</span><div class=\"form-grid\">" +
+        "<label>Nombre<input id=\"f-pet\" value=\"" + esc(d.pet) + "\" autocomplete=\"off\"></label>" +
+        "<label>Raza<input id=\"f-breed\" value=\"" + esc(d.breed) + "\" placeholder=\"caniche, mestizo…\" autocomplete=\"off\"></label>" +
+        "<label>Dueño<input id=\"f-owner\" value=\"" + esc(d.owner) + "\" autocomplete=\"off\"></label>" +
+        "<label>Celular<input id=\"f-phone\" value=\"" + esc(d.phone) + "\" inputmode=\"tel\" placeholder=\"opcional\" autocomplete=\"off\"></label></div></div>" : "") +
+      "<div class=\"group\"><span>1 · Servicio</span>" + opts("service", SERVICES, d.service) + "</div>" +
+      "<div class=\"group\"><span>2 · ¿Va con traslado?</span>" + opts("tras", [["no", "No"], ["si", "Sí"]], d.tras) +
+        "<div class=\"form-grid\" id=\"tras-fields\"" + (d.tras === "si" ? "" : " hidden") + ">" +
+        "<label class=\"wide\">Dirección<input id=\"f-dir\" value=\"" + esc(d.direccion) + "\" placeholder=\"Calle, número, depto\" autocomplete=\"off\"></label>" +
+        "<label>Precio del traslado<input id=\"f-trasprecio\" value=\"" + esc(d.trasPrecio) + "\" inputmode=\"numeric\" placeholder=\"$\" autocomplete=\"off\"></label>" +
+        "<div class=\"quick\">" + [5000, 8000, 10000, 15000].map(function (v) { return "<button type=\"button\" class=\"opt\" data-quick=\"f-trasprecio\" data-amount=\"" + v + "\">" + money(v) + "</button>"; }).join("") + "</div></div></div>" +
+      "<div class=\"group\"><span>3 · ¿Dejó seña?</span>" + opts("sena", [["no", "No"], ["si", "Sí"]], d.sena) +
+        "<div class=\"form-grid\" id=\"sena-fields\"" + (d.sena === "si" ? "" : " hidden") + ">" +
+        "<label>Monto de la seña<input id=\"f-sena\" value=\"" + esc(d.senaMonto) + "\" inputmode=\"numeric\" placeholder=\"$\" autocomplete=\"off\"></label>" +
+        "<div><span class=\"mini\">Medio</span>" + opts("senaMedio", [["Transferencia", "Transferencia"], ["Efectivo", "Efectivo"]], d.senaMedio) + "</div></div></div>" +
+      "<p class=\"form-error\" id=\"form-error\" role=\"alert\"></p>" +
+      "<div class=\"form-actions\"><button type=\"button\" class=\"btn ghost\" data-close>Cancelar</button><button type=\"submit\" class=\"btn big\">Guardar turno de las " + r.time + "</button></div>" +
+      "</form>";
+    p.formData = d;
+    p.hidden = false; $("scrim").hidden = false;
+    var first = d.isNew ? $("f-breed") : p.querySelector("[data-f=service]");
+    if (first) first.focus();
+  }
+
+  function numero(v) { var n = Number(String(v || "").replace(/[^\d]/g, "")); return n > 0 ? n : null; }
+
+  function saveTurnoForm() {
+    var p = $("panel"), d = p.formData;
+    var err = $("form-error");
+    if (d.isNew) { d.pet = cap($("f-pet").value.trim()); d.breed = $("f-breed").value.trim(); d.owner = cap($("f-owner").value.trim()); d.phone = $("f-phone").value.trim(); }
+    if (d.tras === "si") { d.direccion = $("f-dir").value.trim(); d.trasPrecio = $("f-trasprecio").value.trim(); }
+    if (d.sena === "si") d.senaMonto = $("f-sena").value.trim();
+    var faltan = [];
+    if (!d.pet) faltan.push("el nombre");
+    if (d.isNew && !d.owner) faltan.push("el dueño");
+    if (!d.service) faltan.push("el servicio");
+    if (d.tras === "si" && !d.direccion) faltan.push("la dirección del traslado");
+    if (d.sena === "si" && !numero(d.senaMonto)) faltan.push("el monto de la seña");
+    if (faltan.length) { err.textContent = "Falta " + faltan.join(", ") + "."; return; }
+    var r = state.rows.find(function (x) { return x.id === formRowId; });
+    var tras = d.tras === "si" ? (numero(d.trasPrecio) || 0) : null;
+    Object.assign(r, {
+      pet: d.pet, breed: d.breed, owner: d.owner, phone: d.phone, service: d.service, nuevo: !!d.isNew || !!d.nuevo,
+      traslado: tras, direccion: d.tras === "si" ? d.direccion : "", sena: d.sena === "si" ? numero(d.senaMonto) : null,
+      senaMedio: d.sena === "si" ? d.senaMedio : "", alert: d.alert || "", notes: r.notes && r.raw ? r.notes : [], known: !d.isNew,
+      raw: [d.pet, d.breed, d.owner].filter(Boolean).join(" - ")
+    });
+    if (r.status == null) r.status = "";
+    if (d.isNew && !KNOWN.some(function (k) { return norm(k.pet) === norm(d.pet) && norm(k.owner) === norm(d.owner); })) {
+      KNOWN.push({ pet: d.pet, breed: d.breed, owner: d.owner, svc: d.service, addr: d.direccion });
+      state.extraKnown = (state.extraKnown || []).concat([{ pet: d.pet, breed: d.breed, owner: d.owner, svc: d.service, addr: d.direccion }]);
+    }
+    save(); closePanel(); render();
+    showToast("Agendado: " + d.pet + " (" + d.owner + ") a las " + r.time + ".");
+  }
+
   // ── Panel de un turno ────────────────────────────────────────────────
   var openId = null;
   function openPanel(id) {
     var r = state.rows.find(function (x) { return x.id === id; });
     if (!r) return;
-    openId = id;
+    openId = id; formRowId = null;
     var p = $("panel");
+    p.dataset.mode = "turno";
     p.innerHTML =
       "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + esc(r.pet || r.raw) + "</h3><p>" + esc([r.breed, r.owner].filter(Boolean).join(" — ")) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
       (r.alert ? "<p class=\"tag note\" style=\"white-space:normal\">⚠ " + esc(r.alert) + "</p>" : "") +
@@ -471,12 +593,12 @@ aside { display: grid; gap: 14px; }
       [["", "Agendado"], ["arrived", "Llegó"], ["done", "Terminado ✓"], ["noshow", "No vino"], ["cancel", "Canceló"]].map(function (o) {
         return "<button type=\"button\" class=\"opt" + (o[0] === "cancel" || o[0] === "noshow" ? " danger" : "") + "\" data-s=\"" + o[0] + "\" aria-pressed=\"" + ((r.status || "") === o[0]) + "\">" + o[1] + "</button>";
       }).join("") + "</div></div>" +
-      "<div class=\"group\"><label for=\"panel-text\"><span style=\"font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em\">Corregir la línea</span></label><form class=\"panel-edit\" id=\"panel-form\"><input id=\"panel-text\" value=\"" + esc(r.raw) + "\" autocomplete=\"off\"><button class=\"btn\" type=\"submit\">Guardar</button></form></div>" +
+      "<div class=\"opts\"><button type=\"button\" class=\"opt\" data-edit>Editar servicio, traslado o seña</button></div>" +
       "<div class=\"opts\"><button type=\"button\" class=\"opt danger\" data-del>Borrar y dejar libre</button></div>";
     p.hidden = false; $("scrim").hidden = false;
     p.querySelector("[data-close]").focus();
   }
-  function closePanel() { $("panel").hidden = true; $("scrim").hidden = true; var id = openId; openId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
+  function closePanel() { $("panel").hidden = true; $("scrim").hidden = true; var id = openId || formRowId; openId = null; formRowId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
 
   function freeUp(r, reason) {
     state.rows.push({ id: uid(), time: r.time, raw: "" });
@@ -527,12 +649,29 @@ aside { display: grid; gap: 14px; }
       var inp = $("in-" + nr.id); if (inp) inp.focus();
       return;
     }
-    if (el.dataset.pick) {
+    if (el.dataset.pick != null) {
       var input = el.closest(".entry").querySelector("input");
-      input.value = el.dataset.pick + " ";
-      el.parentNode.remove();
-      input.focus();
-      $("pv-" + input.dataset.entry).innerHTML = previewHtml(parse(input.value));
+      var k = KNOWN[Number(el.dataset.pick)];
+      openTurnoForm(input.dataset.entry, { pet: k.pet, breed: k.breed, owner: k.owner, service: k.svc || "", direccion: k.addr || "", alert: k.note || "" });
+      return;
+    }
+    if (el.dataset.new != null) {
+      var input2 = el.closest(".entry").querySelector("input");
+      openTurnoForm(input2.dataset.entry, { pet: el.dataset.new, isNew: true });
+      return;
+    }
+    if (formRowId) {
+      var pd = $("panel").formData;
+      if (el.dataset.close != null) { closePanel(); return; }
+      if (el.dataset.f) {
+        pd[el.dataset.f] = el.dataset.v;
+        el.parentNode.querySelectorAll("[data-f]").forEach(function (b) { var on = b === el; b.setAttribute("aria-pressed", on); b.setAttribute("aria-checked", on); });
+        if (el.dataset.f === "tras") { $("tras-fields").hidden = el.dataset.v !== "si"; if (el.dataset.v === "si") $("f-dir").focus(); }
+        if (el.dataset.f === "sena") { $("sena-fields").hidden = el.dataset.v !== "si"; if (el.dataset.v === "si") $("f-sena").focus(); }
+        $("form-error").textContent = "";
+        return;
+      }
+      if (el.dataset.quick) { $(el.dataset.quick).value = money(Number(el.dataset.amount)); return; }
       return;
     }
     if (el.dataset.waitUse) { useWait(el.dataset.waitUse); return; }
@@ -560,13 +699,18 @@ aside { display: grid; gap: 14px; }
       save(); render();
       return;
     }
+    if (el.dataset.edit != null) {
+      openTurnoForm(r.id, { pet: r.pet, breed: r.breed, owner: r.owner, phone: r.phone || "", service: r.service || "", tras: r.traslado != null ? "si" : "no", direccion: r.direccion || "", trasPrecio: r.traslado ? money(r.traslado) : "", sena: r.sena ? "si" : "no", senaMonto: r.sena ? money(r.sena) : "", senaMedio: r.senaMedio || "Transferencia", alert: r.alert || "", nuevo: r.nuevo });
+      return;
+    }
     if (el.dataset.del != null) { r.raw = ""; ["pet", "breed", "owner", "service", "precio", "traslado", "alert", "known", "groomer", "status"].forEach(function (k) { delete r[k]; }); r.notes = []; save(); closePanel(); render(); return; }
   });
   $("scrim").addEventListener("click", closePanel);
-  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && openId) closePanel(); });
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && (openId || formRowId)) closePanel(); });
 
   document.addEventListener("submit", function (ev) {
     ev.preventDefault();
+    if (ev.target.id === "turno-form") { saveTurnoForm(); return; }
     if (ev.target.id === "panel-form") {
       var r = state.rows.find(function (x) { return x.id === openId; });
       var text = $("panel-text").value.trim();
@@ -586,11 +730,12 @@ aside { display: grid; gap: 14px; }
 
   document.addEventListener("input", function (ev) {
     var el = ev.target;
-    if (el.dataset.entry) { $("pv-" + el.dataset.entry).innerHTML = el.value.trim() ? previewHtml(parse(el.value)) : ""; suggestFor(el); }
+    if (el.dataset.entry) { var multi = el.value.trim().split(/\s+/).length > 1; $("pv-" + el.dataset.entry).innerHTML = multi ? previewHtml(parse(el.value)) : ""; suggestFor(el); }
     if (el.id === "notes") { state.notes = el.value; save(); }
   });
   document.addEventListener("keydown", function (ev) {
     var el = ev.target;
+    if (el.dataset && el.dataset.entry && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) { ev.preventDefault(); moveActive(el, ev.key === "ArrowDown" ? 1 : -1); return; }
     if (el.dataset && el.dataset.entry && ev.key === "Enter") {
       var box = el.parentNode.querySelector(".suggest");
       if (box) { var a = box.querySelector(".active"); if (a) { a.click(); ev.preventDefault(); return; } }
