@@ -80,7 +80,7 @@ h1 small { font-weight: 600; color: var(--muted); font-size: 1rem; margin-left: 
 .block-head span { color: var(--muted); font-size: .85rem; }
 ol.rows { list-style: none; margin: 0; padding: 0; }
 .row { position: relative; display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 14px 8px 10px; border-bottom: 1px solid var(--line); min-height: 56px; }
-.row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--hl, transparent); }
+.row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--bar, var(--hl, transparent)); }
 .row.has-hl { background: color-mix(in srgb, var(--hl) calc(var(--tint) * 100%), var(--surface)); }
 .time { width: 64px; border: 0; background: transparent; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; padding: 6px 4px; border-radius: 6px; }
 .time:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -127,6 +127,28 @@ aside { display: grid; gap: 14px; }
 
 .sheet-panel { position: fixed; inset: auto 0 0 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 40px rgb(0 0 0 / .2); padding: 16px 16px 22px; display: grid; gap: 14px; max-width: 760px; margin: 0 auto; max-height: 85%; overflow: auto; }
 .sheet-panel[hidden] { display: none; }
+@media (min-width: 700px) {
+  .sheet-panel { inset: auto; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(760px, calc(100% - 48px)); max-height: calc(100% - 48px); margin: 0; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 24px 60px rgb(0 0 0 / .28); padding: 22px 24px; }
+}
+.count-opts .opt { min-width: 56px; justify-content: center; font-size: 1.1rem; }
+.opt:disabled { opacity: .45; cursor: not-allowed; }
+.cobro { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--paper); }
+.cobro[hidden] { display: none; }
+.cobro-lineas { display: grid; gap: 10px; }
+.pago { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 8px; align-items: center; }
+.pago select, .pago input, .cobro-campos input { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 11px 12px; font-size: 1.02rem; color: var(--ink); width: 100%; }
+.pago .quitar { border: 1px solid var(--line); background: none; border-radius: 10px; padding: 10px 12px; }
+.cobro-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.cobro-campos label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); font-weight: 700; }
+.check { display: flex; gap: 8px; align-items: center; font-size: .95rem; }
+.check input { width: 20px; height: 20px; }
+.resumen { display: grid; gap: 4px; font-variant-numeric: tabular-nums; border-top: 1px dashed var(--line); padding-top: 10px; }
+.resumen div { display: flex; justify-content: space-between; gap: 12px; }
+.resumen .total { font-weight: 700; font-size: 1.1rem; }
+.resumen .ok { color: var(--ok); font-weight: 700; }
+.resumen .falta { color: #b91c1c; font-weight: 700; }
+.help-inline { font-size: .85rem; color: var(--muted); margin: 0; }
+@media (max-width: 520px) { .pago { grid-template-columns: 1fr 1fr; } .pago .quitar { grid-column: 1 / -1; } }
 .scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .3); z-index: 19; }
 .scrim[hidden] { display: none; }
 .panel-head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
@@ -374,6 +396,8 @@ aside { display: grid; gap: 14px; }
   var $ = function (id) { return document.getElementById(id); };
   var staffById = function (id) { return STAFF.find(function (s) { return s.id === id; }); };
   var isFree = function (r) { return !r.raw; };
+  function groomersOf(r) { return r.groomers && r.groomers.length ? r.groomers : (r.groomer ? [r.groomer] : []); }
+  var MEDIOS = ["Efectivo", "Transferencia", "Débito", "Crédito", "Mercado Pago"];
   var active = function (r) { return r.raw && r.status !== "cancel" && r.status !== "noshow"; };
   function sorted(rows) { return rows.map(function (r, i) { return [r, i]; }).sort(function (a, b) { return a[0].time < b[0].time ? -1 : a[0].time > b[0].time ? 1 : a[1] - b[1]; }).map(function (x) { return x[0]; }); }
 
@@ -390,7 +414,7 @@ aside { display: grid; gap: 14px; }
       "<div><strong>" + money(cobrado) + "</strong><span>ya terminados</span></div>";
 
     $("staff").innerHTML = STAFF.map(function (s) {
-      var count = act.filter(function (r) { return r.groomer === s.id; }).length;
+      var count = act.filter(function (r) { return groomersOf(r).indexOf(s.id) >= 0; }).length;
       return "<button type=\"button\" class=\"chip-staff\" data-staff=\"" + s.id + "\" aria-pressed=\"" + !!state.present[s.id] + "\" title=\"Tocá para marcar si viene o no\">" +
         "<span class=\"dot\" style=\"background:" + s.color + "\">" + s.name.charAt(0) + "</span><span class=\"name\">" + s.name + "</span><em>" + (state.present[s.id] ? s.hours : "no viene") + "</em><b>" + count + "</b></button>";
     }).join("") + "<button type=\"button\" class=\"chip-staff chip-tras\" id=\"tras\" aria-pressed=\"" + !!state.traslados + "\">Traslados " + (state.traslados ? "todo el día" : "no hay") + "</button>";
@@ -422,6 +446,10 @@ aside { display: grid; gap: 14px; }
     if (r.alert && !(r.notes || []).length) t.push("<span class=\"tag note\">⚠ " + esc(r.alert) + "</span>");
     if (r.sena) t.push("<span class=\"tag new\">Seña " + money(r.sena) + (r.senaMedio ? " · " + esc(r.senaMedio) : "") + "</span>");
     if (r.direccion) t.push("<span class=\"tag\">Traslado: " + esc(r.direccion) + "</span>");
+    var gl = groomersOf(r).map(staffById).filter(Boolean);
+    if (gl.length > 1) t.push("<span class=\"tag\">" + gl.map(function (x) { return x.name; }).join(" + ") + "</span>");
+    if (r.status === "done" && r.pagos && r.pagos.length) t.push("<span class=\"tag new\">Cobrado " + money(r.pagos.reduce(function (a, x) { return a + (x.monto || 0); }, 0)) + " · " + r.pagos.map(function (x) { return x.medio; }).join(" + ") + "</span>");
+    if (r.propina) t.push("<span class=\"tag\">Propina " + money(r.propina) + "</span>");
     if (r.status === "arrived") t.push("<span class=\"tag state\">Llegó</span>");
     if (r.status === "cancel") t.push("<span class=\"tag state\">Canceló</span>");
     if (r.status === "noshow") t.push("<span class=\"tag state\">No vino</span>");
@@ -433,9 +461,11 @@ aside { display: grid; gap: 14px; }
     if (isFree(r)) {
       return "<li class=\"row empty\">" + timeInput + "<div class=\"entry\"><input data-entry=\"" + r.id + "\" id=\"in-" + r.id + "\" placeholder=\"libre · escribí el nombre del bandido\" autocomplete=\"off\" aria-label=\"Anotar turno de las " + r.time + "\"><div class=\"preview\" id=\"pv-" + r.id + "\"></div></div><span></span></li>";
     }
-    var g = staffById(r.groomer);
+    var gs = groomersOf(r).map(staffById).filter(Boolean);
+    var g = gs[0];
     var cls = "row" + (g ? " has-hl" : "") + (r.status === "cancel" || r.status === "noshow" ? " cancel" : "") + (r.status === "done" ? " done" : "");
-    var style = g ? " style=\"--hl:" + g.color + "\"" : "";
+    var bar = gs.length > 1 ? "linear-gradient(" + gs.map(function (x, i) { return x.color + " " + (i * 100 / gs.length) + "% " + ((i + 1) * 100 / gs.length) + "%"; }).join(", ") + ")" : "";
+    var style = g ? " style=\"--hl:" + g.color + (bar ? ";--bar:" + bar : "") + "\"" : "";
     var main = "<b>" + esc(r.pet || r.raw) + "</b>" + (r.breed ? " · " + esc(r.breed) : "") + (r.owner ? " — " + esc(r.owner) : "");
     var m = [];
     if (r.precio) m.push("<span>" + money(r.precio) + "</span>");
@@ -580,28 +610,125 @@ aside { display: grid; gap: 14px; }
 
   // ── Panel de un turno ────────────────────────────────────────────────
   var openId = null;
+  var pd = null; // borrador del panel del turno
+  var ESTADOS = [["", "Agendado"], ["arrived", "Llegó"], ["done", "Terminado ✓"], ["noshow", "No vino"], ["cancel", "Canceló"]];
+
   function openPanel(id) {
     var r = state.rows.find(function (x) { return x.id === id; });
     if (!r) return;
     openId = id; formRowId = null;
+    var gs = groomersOf(r).slice();
+    pd = {
+      count: Math.max(1, gs.length || 1), groomers: gs, status: r.status || "",
+      precio: r.precio ? String(r.precio) : "", propina: r.propina ? String(r.propina) : "", trasChofer: !!r.trasChofer,
+      pagos: (r.pagos || []).map(function (x) { return { medio: x.medio, monto: String(x.monto) }; })
+    };
     var p = $("panel");
     p.dataset.mode = "turno";
-    p.innerHTML =
-      "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + esc(r.pet || r.raw) + "</h3><p>" + esc([r.breed, r.owner].filter(Boolean).join(" — ")) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
-      (r.alert ? "<p class=\"tag note\" style=\"white-space:normal\">⚠ " + esc(r.alert) + "</p>" : "") +
-      "<div class=\"group\"><span>¿Quién lo atiende?</span><div class=\"opts\">" + STAFF.map(function (s) {
-        return "<button type=\"button\" class=\"opt\" data-g=\"" + s.id + "\" aria-pressed=\"" + (r.groomer === s.id) + "\"><span class=\"dot\" style=\"background:" + s.color + "\"></span>" + s.name + "</button>";
-      }).join("") + "<button type=\"button\" class=\"opt\" data-g=\"\" aria-pressed=\"" + !r.groomer + "\">Sin asignar</button></div></div>" +
-      "<div class=\"group\"><span>Estado</span><div class=\"opts\">" +
-      [["", "Agendado"], ["arrived", "Llegó"], ["done", "Terminado ✓"], ["noshow", "No vino"], ["cancel", "Canceló"]].map(function (o) {
-        return "<button type=\"button\" class=\"opt" + (o[0] === "cancel" || o[0] === "noshow" ? " danger" : "") + "\" data-s=\"" + o[0] + "\" aria-pressed=\"" + ((r.status || "") === o[0]) + "\">" + o[1] + "</button>";
-      }).join("") + "</div></div>" +
-      "<div class=\"opts\"><button type=\"button\" class=\"opt\" data-edit>Editar servicio, traslado o seña</button></div>" +
-      "<div class=\"opts\"><button type=\"button\" class=\"opt danger\" data-del>Borrar y dejar libre</button></div>";
+    renderPanel();
     p.hidden = false; $("scrim").hidden = false;
     p.querySelector("[data-close]").focus();
   }
-  function closePanel() { $("panel").hidden = true; $("scrim").hidden = true; var id = openId || formRowId; openId = null; formRowId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
+
+  function totales(r) {
+    var precio = numero(pd.precio) || 0;
+    var tras = r.traslado && !pd.trasChofer ? r.traslado : 0;
+    var sena = r.sena || 0;
+    var total = Math.max(0, precio + tras - sena);
+    var pagado = pd.pagos.reduce(function (a, x) { return a + (numero(x.monto) || 0); }, 0);
+    return { precio: precio, tras: tras, sena: sena, total: total, pagado: pagado, dif: total - pagado };
+  }
+
+  function resumenHtml(r) {
+    var t = totales(r);
+    var lineas = "<div><span>Servicio</span><span>" + money(t.precio) + "</span></div>";
+    if (r.traslado) lineas += "<div><span>Traslado" + (pd.trasChofer ? " (lo cobró el chofer)" : "") + "</span><span>" + money(t.tras) + "</span></div>";
+    if (t.sena) lineas += "<div><span>Seña ya pagada" + (r.senaMedio ? " · " + esc(r.senaMedio) : "") + "</span><span>− " + money(t.sena) + "</span></div>";
+    lineas += "<div class=\"total\"><span>Total a cobrar hoy</span><span>" + money(t.total) + "</span></div>";
+    lineas += t.dif === 0 ? "<div class=\"ok\"><span>Cobro completo</span><span>✓</span></div>"
+      : t.dif > 0 ? "<div class=\"falta\"><span>Falta registrar</span><span>" + money(t.dif) + "</span></div>"
+      : "<div class=\"falta\"><span>Sobra (revisá los montos)</span><span>" + money(-t.dif) + "</span></div>";
+    return lineas;
+  }
+
+  function renderPanel() {
+    var r = state.rows.find(function (x) { return x.id === openId; });
+    var p = $("panel");
+    var lleno = pd.groomers.length >= pd.count;
+    var done = pd.status === "done";
+    p.innerHTML =
+      "<form id=\"cierre-form\" novalidate style=\"display:grid;gap:16px\">" +
+      "<div class=\"panel-head\"><div><h3 id=\"panel-title\">" + r.time + " · " + esc(r.pet || r.raw) + (r.owner ? " <span style=\"font-weight:600;color:var(--muted)\">(" + esc(r.owner) + ")</span>" : "") + "</h3><p>" +
+        esc([r.breed, r.service === "CyB" ? "Corte y baño" : r.service === "B" ? "Baño" : r.service === "C" ? "Corte" : ""].filter(Boolean).join(" · ")) + "</p></div><button type=\"button\" class=\"close\" data-close>× Cerrar</button></div>" +
+      (r.alert ? "<p class=\"tag note\" style=\"white-space:normal;margin:0\">⚠ " + esc(r.alert) + "</p>" : "") +
+
+      "<div class=\"group\"><span>1 · ¿Cuántas peluqueras participaron?</span><div class=\"opts count-opts\">" + [1, 2, 3].map(function (n) {
+        return "<button type=\"button\" class=\"opt\" data-pc=\"" + n + "\" aria-pressed=\"" + (pd.count === n) + "\">" + n + "</button>";
+      }).join("") + "</div>" + (pd.count > 1 ? "<p class=\"help-inline\">La comisión se reparte en partes iguales entre las " + pd.count + ".</p>" : "") + "</div>" +
+
+      "<div class=\"group\"><span>2 · ¿Quién" + (pd.count > 1 ? "es" : "") + "? <em style=\"font-style:normal;text-transform:none;letter-spacing:0\">(" + pd.groomers.length + " de " + pd.count + ")</em></span><div class=\"opts\">" + STAFF.map(function (s) {
+        var on = pd.groomers.indexOf(s.id) >= 0;
+        return "<button type=\"button\" class=\"opt\" data-pg=\"" + s.id + "\" aria-pressed=\"" + on + "\"><span class=\"dot\" style=\"background:" + s.color + "\"></span>" + s.name + (state.present[s.id] ? "" : " <small>(no vino)</small>") + "</button>";
+      }).join("") + "</div>" + (lleno && pd.count > 1 ? "" : "") + "</div>" +
+
+      "<div class=\"group\"><span>3 · Estado</span><div class=\"opts\">" + ESTADOS.map(function (o) {
+        return "<button type=\"button\" class=\"opt" + (o[0] === "cancel" || o[0] === "noshow" ? " danger" : "") + "\" data-ps=\"" + o[0] + "\" aria-pressed=\"" + (pd.status === o[0]) + "\">" + o[1] + "</button>";
+      }).join("") + "</div></div>" +
+
+      "<section class=\"cobro\" aria-label=\"Cobro\"" + (done ? "" : " hidden") + ">" +
+        "<div class=\"group\"><span>4 · ¿Cuánto pagó?</span>" +
+        "<div class=\"cobro-campos\"><label>Precio del servicio<input id=\"c-precio\" data-bind=\"precio\" inputmode=\"numeric\" placeholder=\"$\" value=\"" + esc(pd.precio ? money(numero(pd.precio)) : "") + "\" autocomplete=\"off\"></label>" +
+        "<label>Propina (aparte, opcional)<input id=\"c-propina\" data-bind=\"propina\" inputmode=\"numeric\" placeholder=\"$\" value=\"" + esc(pd.propina ? money(numero(pd.propina)) : "") + "\" autocomplete=\"off\"></label></div>" +
+        (r.traslado ? "<label class=\"check\"><input type=\"checkbox\" id=\"c-chofer\"" + (pd.trasChofer ? " checked" : "") + "> El traslado lo cobró el chofer</label>" : "") +
+        "</div>" +
+        "<div class=\"group\"><span>Medio de pago</span><div class=\"cobro-lineas\">" + pd.pagos.map(function (x, i) {
+          return "<div class=\"pago\"><select aria-label=\"Medio de pago " + (i + 1) + "\" data-pm=\"" + i + "\">" + MEDIOS.map(function (m) { return "<option" + (m === x.medio ? " selected" : "") + ">" + m + "</option>"; }).join("") + "</select>" +
+            "<input aria-label=\"Monto " + (i + 1) + "\" data-pmonto=\"" + i + "\" inputmode=\"numeric\" placeholder=\"$\" value=\"" + esc(x.monto ? money(numero(x.monto)) : "") + "\" autocomplete=\"off\">" +
+            (pd.pagos.length > 1 ? "<button type=\"button\" class=\"quitar\" data-delpay=\"" + i + "\" aria-label=\"Quitar este pago\">Quitar</button>" : "<span></span>") + "</div>";
+        }).join("") + "</div><div class=\"opts\"><button type=\"button\" class=\"opt\" data-addpay>+ Pagó con otro medio también</button></div></div>" +
+        "<div class=\"resumen\" id=\"cierre-resumen\" aria-live=\"polite\">" + resumenHtml(r) + "</div>" +
+      "</section>" +
+
+      "<p class=\"form-error\" id=\"cierre-error\" role=\"alert\"></p>" +
+      "<div class=\"form-actions\"><button type=\"button\" class=\"opt\" data-edit>Editar servicio, traslado o seña</button><button type=\"button\" class=\"opt danger\" data-del>Borrar y dejar libre</button><button type=\"submit\" class=\"btn big\">Guardar</button></div>" +
+      "</form>";
+  }
+
+  function fillPagoDefault(r) {
+    if (pd.pagos.length) return;
+    var t = totales(r);
+    pd.pagos.push({ medio: "Efectivo", monto: t.total ? String(t.total) : "" });
+  }
+
+  function saveCierre() {
+    var r = state.rows.find(function (x) { return x.id === openId; });
+    var err = $("cierre-error");
+    var activo = pd.status !== "cancel" && pd.status !== "noshow";
+    if (activo && pd.groomers.length && pd.groomers.length !== pd.count) { err.textContent = "Elegí " + pd.count + " peluqueras (marcaste " + pd.groomers.length + ")."; return; }
+    if (pd.status === "done") {
+      if (pd.groomers.length !== pd.count) { err.textContent = "Para terminar el turno, elegí quién" + (pd.count > 1 ? "es lo atendieron" : " lo atendió") + "."; return; }
+      var t = totales(r);
+      if (!t.precio) { err.textContent = "Falta el precio del servicio."; return; }
+      if (pd.pagos.some(function (x) { return !numero(x.monto); }) && t.total > 0) { err.textContent = "Completá el monto de cada medio de pago, o quitá el que sobra."; return; }
+      if (t.dif !== 0) { err.textContent = t.dif > 0 ? "Falta registrar " + money(t.dif) + " del cobro." : "Los pagos suman " + money(-t.dif) + " de más."; return; }
+    }
+    var prev = r.status;
+    r.groomers = pd.groomers.slice();
+    r.groomer = r.groomers[0] || "";
+    r.status = pd.status;
+    if (pd.status === "done") {
+      r.precio = numero(pd.precio);
+      r.propina = numero(pd.propina);
+      r.trasChofer = pd.trasChofer;
+      r.pagos = totales(r).total ? pd.pagos.map(function (x) { return { medio: x.medio, monto: numero(x.monto) }; }) : [];
+    }
+    var freed = (r.status === "cancel" || r.status === "noshow") && prev !== "cancel" && prev !== "noshow";
+    save(); closePanel(); render();
+    if (freed) { freeUp(r, r.status === "cancel" ? "canceló " + (r.pet || "") : (r.pet || "") + " no vino"); save(); render(); }
+    else showToast(r.status === "done" ? (r.pet || "Turno") + " terminado y cobrado." : "Turno guardado.");
+  }
+
+  function closePanel() { pd = null; $("panel").hidden = true; $("scrim").hidden = true; var id = openId || formRowId; openId = null; formRowId = null; var b = document.querySelector("[data-open=\"" + id + "\"]"); if (b) b.focus(); }
 
   function freeUp(r, reason) {
     state.rows.push({ id: uid(), time: r.time, raw: "" });
@@ -664,10 +791,10 @@ aside { display: grid; gap: 14px; }
       return;
     }
     if (formRowId) {
-      var pd = $("panel").formData;
+      var fd = $("panel").formData;
       if (el.dataset.close != null) { closePanel(); return; }
       if (el.dataset.f) {
-        pd[el.dataset.f] = el.dataset.v;
+        fd[el.dataset.f] = el.dataset.v;
         el.parentNode.querySelectorAll("[data-f]").forEach(function (b) { var on = b === el; b.setAttribute("aria-pressed", on); b.setAttribute("aria-checked", on); });
         if (el.dataset.f === "tras") { $("tras-fields").hidden = el.dataset.v !== "si"; if (el.dataset.v === "si") $("f-dir").focus(); }
         if (el.dataset.f === "sena") { $("sena-fields").hidden = el.dataset.v !== "si"; if (el.dataset.v === "si") $("f-sena").focus(); }
@@ -692,16 +819,30 @@ aside { display: grid; gap: 14px; }
     if (!openId) return;
     var r = state.rows.find(function (x) { return x.id === openId; });
     if (el.dataset.close != null) { closePanel(); return; }
-    if (el.dataset.g != null) { r.groomer = el.dataset.g; save(); render(); openPanel(openId); return; }
-    if (el.dataset.s != null) {
-      var prev = r.status;
-      r.status = el.dataset.s;
-      var freed = (r.status === "cancel" || r.status === "noshow") && prev !== "cancel" && prev !== "noshow";
-      save(); closePanel();
-      if (freed) freeUp(r, r.status === "cancel" ? "canceló " + (r.pet || "") : (r.pet || "") + " no vino");
-      save(); render();
+    if (el.dataset.pc) {
+      pd.count = Number(el.dataset.pc);
+      if (pd.groomers.length > pd.count) pd.groomers = pd.groomers.slice(pd.groomers.length - pd.count);
+      renderPanel(); return;
+    }
+    if (el.dataset.pg) {
+      var gi = pd.groomers.indexOf(el.dataset.pg);
+      if (gi >= 0) pd.groomers.splice(gi, 1);
+      else { pd.groomers.push(el.dataset.pg); if (pd.groomers.length > pd.count) pd.groomers.shift(); }
+      renderPanel(); return;
+    }
+    if (el.dataset.ps != null) {
+      pd.status = el.dataset.ps;
+      if (pd.status === "done") { if (!pd.precio && r.precio) pd.precio = String(r.precio); fillPagoDefault(r); }
+      renderPanel();
+      if (pd.status === "done") { var cp = $("c-precio"); if (cp && !pd.precio) cp.focus(); }
       return;
     }
+    if (el.dataset.addpay != null) {
+      var t = totales(r);
+      pd.pagos.push({ medio: "Transferencia", monto: t.dif > 0 ? String(t.dif) : "" });
+      renderPanel(); return;
+    }
+    if (el.dataset.delpay != null) { pd.pagos.splice(Number(el.dataset.delpay), 1); renderPanel(); return; }
     if (el.dataset.edit != null) {
       openTurnoForm(r.id, { pet: r.pet, breed: r.breed, owner: r.owner, phone: r.phone || "", service: r.service || "", tras: r.traslado != null ? "si" : "no", direccion: r.direccion || "", trasPrecio: r.traslado ? money(r.traslado) : "", sena: r.sena ? "si" : "no", senaMonto: r.sena ? money(r.sena) : "", senaMedio: r.senaMedio || "Transferencia", alert: r.alert || "", nuevo: r.nuevo });
       return;
@@ -714,6 +855,7 @@ aside { display: grid; gap: 14px; }
   document.addEventListener("submit", function (ev) {
     ev.preventDefault();
     if (ev.target.id === "turno-form") { saveTurnoForm(); return; }
+    if (ev.target.id === "cierre-form") { saveCierre(); return; }
     if (ev.target.id === "panel-form") {
       var r = state.rows.find(function (x) { return x.id === openId; });
       var text = $("panel-text").value.trim();
@@ -735,6 +877,21 @@ aside { display: grid; gap: 14px; }
     var el = ev.target;
     if (el.dataset.entry) { var multi = el.value.trim().split(/\s+/).length > 1; $("pv-" + el.dataset.entry).innerHTML = multi ? previewHtml(parse(el.value)) : ""; suggestFor(el); }
     if (el.id === "notes") { state.notes = el.value; save(); }
+    if (pd && openId && el.closest && el.closest("#cierre-form")) {
+      var rr = state.rows.find(function (x) { return x.id === openId; });
+      if (el.dataset.bind) pd[el.dataset.bind] = el.value;
+      if (el.dataset.pmonto != null) pd.pagos[Number(el.dataset.pmonto)].monto = el.value;
+      if (el.dataset.pm != null) pd.pagos[Number(el.dataset.pm)].medio = el.value;
+      if (el.id === "c-chofer") pd.trasChofer = el.checked;
+      if (el.dataset.bind === "precio" && pd.pagos.length === 1) {
+        var only = $("cierre-form").querySelector("[data-pmonto=\"0\"]");
+        var tt = totales(rr);
+        if (only && document.activeElement !== only) { pd.pagos[0].monto = String(tt.total); only.value = tt.total ? money(tt.total) : ""; }
+      }
+      if (el.id === "c-chofer" && pd.pagos.length === 1) { var t2 = totales(rr); pd.pagos[0].monto = String(t2.total); renderPanel(); return; }
+      var res = $("cierre-resumen"); if (res) res.innerHTML = resumenHtml(rr);
+      var e2 = $("cierre-error"); if (e2) e2.textContent = "";
+    }
   });
   document.addEventListener("keydown", function (ev) {
     var el = ev.target;
