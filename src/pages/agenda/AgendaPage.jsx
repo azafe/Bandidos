@@ -1699,8 +1699,11 @@ export default function AgendaPage() {
   return (
     <div className="page-content agenda-page">
       <div className="agenda-header">
-        <h1 className="page-title">Agenda</h1>
-        <p className="page-subtitle">Turnos diarios y control rápido del día.</p>
+        <h1 className="page-title">Agenda clásica</h1>
+        <p className="page-subtitle">
+          Turnos diarios y control rápido del día. La agenda principal ahora es la{" "}
+          <Link to={`/agenda?date=${selectedDate}`}>Planilla del día →</Link>
+        </p>
       </div>
 
       <div className="agenda-mode-bar card">
