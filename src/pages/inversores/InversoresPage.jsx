@@ -6,13 +6,13 @@
 import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useInversores } from "../../hooks/useInversores";
-import { DEAL_TIPOS, ESTADOS, newInvestor, PERFILES, proposalView } from "../../lib/inversores";
+import { DEAL_TIPOS, ESTADOS, newInvestor, PERFILES, PLAZO_MAXIMO, proposalView } from "../../lib/inversores";
 import { ComparacionChart } from "../../components/inversores/InvestorCharts";
 import { NumberField } from "../../components/inversores/fields";
 import { makeFormat, multiple, pct, recuperoText } from "../../components/inversores/format";
 import "../../styles/inversores.css";
 
-const COMPARE_HORIZON = 60;
+const COMPARE_HORIZON = PLAZO_MAXIMO;
 const pesos = makeFormat(null);
 
 export default function InversoresPage() {

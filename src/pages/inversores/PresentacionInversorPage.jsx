@@ -4,6 +4,7 @@
 // corresponde a él: lo que le queda a Bandidos y las notas internas no salen.
 // Se pasa con las flechas del teclado, los botones o tocando los puntos.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useParams } from "react-router-dom";
 import { useInversores } from "../../hooks/useInversores";
 import { dealSummary, proposalView } from "../../lib/inversores";
@@ -15,6 +16,7 @@ import {
   UsoFondosChart,
 } from "../../components/inversores/InvestorCharts";
 import { makeFormat, multiple, oneDecimal, pct, recuperoText } from "../../components/inversores/format";
+import { PrintContext } from "../../components/inversores/printContext";
 import "../../styles/inversores.css";
 
 const fecha = () => new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
@@ -25,6 +27,20 @@ export default function PresentacionInversorPage() {
   const inv = inversores.find((i) => i.id === id);
   const view = useMemo(() => (branch && inv ? proposalView(branch, proyecto, inv) : null), [branch, proyecto, inv]);
   const [index, setIndex] = useState(0);
+  // Al imprimir se muestran todas las diapositivas y los gráficos se dibujan
+  // con ancho fijo. Se activa con el botón y también con Ctrl+P.
+  const [printing, setPrinting] = useState(false);
+
+  useEffect(() => {
+    const before = () => flushSync(() => setPrinting(true));
+    const after = () => setPrinting(false);
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, []);
 
   const slides = useMemo(() => (view ? buildSlides(view, local) : []), [view, local]);
   const total = slides.length;
@@ -57,6 +73,11 @@ export default function PresentacionInversorPage() {
     );
   }
 
+  function imprimir() {
+    flushSync(() => setPrinting(true));
+    window.print();
+  }
+
   function fullscreen() {
     const el = document.documentElement;
     if (document.fullscreenElement) document.exitFullscreen?.();
@@ -66,12 +87,13 @@ export default function PresentacionInversorPage() {
   const current = slides[Math.min(index, total - 1)];
 
   return (
-    <div className="pres">
+    <PrintContext.Provider value={printing}>
+    <div className={`pres${printing ? " pres--print" : ""}`}>
       <header className="pres__bar">
         <Link to={`/inversores/${inv.id}`} className="pres__exit">← Salir</Link>
         <span className="pres__counter" aria-live="polite">{index + 1} / {total} · {current.titulo}</span>
         <div className="pres__bar-actions">
-          <button type="button" className="pres__btn" onClick={() => window.print()}>Imprimir / PDF</button>
+          <button type="button" className="pres__btn" onClick={imprimir}>Imprimir / PDF</button>
           <button type="button" className="pres__btn" onClick={fullscreen}>Pantalla completa</button>
         </div>
       </header>
@@ -96,6 +118,7 @@ export default function PresentacionInversorPage() {
         <button type="button" className="pres__arrow" onClick={() => go(index + 1)} disabled={index === total - 1} aria-label="Siguiente">→</button>
       </nav>
     </div>
+    </PrintContext.Provider>
   );
 }
 
@@ -183,7 +206,7 @@ function buildSlides(view, local) {
               ? `Necesita ${sucursal.equilibrio} servicios por mes (${oneDecimal(sucursal.equilibrioDiario || 0)} por día) para cubrir sus gastos. Esperamos ${Math.round(sucursal.serviciosRegimen)} una vez arrancada.`
               : undefined} />
           <div className="pres__split">
-            <ServiciosChart view={view} fmt={fmt} height={300} />
+            <ServiciosChart view={view} fmt={fmt} height={300} print="split" />
             <div className="pres__bigs pres__bigs--stack">
               <Big label="Ganancia por mes ya arrancada" value={fmt.money(sucursal.gananciaRegimen)} hint="Después de comisiones, insumos e impuestos" />
               {sucursal.capacidad && <Big label="Capacidad" value={`${Math.round(sucursal.capacidad)} servicios/mes`} hint={`Esperamos usar ${pct(sucursal.serviciosRegimen / sucursal.capacidad)}`} />}
@@ -200,7 +223,7 @@ function buildSlides(view, local) {
           <Head kicker="La inversión" title={`Se necesitan ${fmt.money(sucursal.plataNecesaria)}`}
             lead="Incluye lo que se pierde en los primeros meses, mientras la sucursal se llena: no hay que volver a pedir plata." />
           <div className="pres__split">
-            <UsoFondosChart view={view} fmt={fmt} />
+            <UsoFondosChart view={view} fmt={fmt} print="split" />
             <div className="pres__bigs pres__bigs--stack">
               <Big label="Tu aporte" value={fmt.money(sucursal.aporteInversor)} hint={pct(sucursal.aporteInversor / sucursal.plataNecesaria) + " del total"} />
               {sucursal.aporteBandidos > 0 && <Big label="Pone Bandidos" value={fmt.money(sucursal.aporteBandidos)} hint="También arriesgamos lo nuestro" />}

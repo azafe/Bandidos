@@ -8,6 +8,8 @@ import {
   mergeInvestors,
   newInvestor,
   normalizeInvestor,
+  normalizePlazo,
+  PLAZOS,
   parseStore,
   proposalView,
   serializeStore,
@@ -39,7 +41,7 @@ test("normalizar completa datos viejos o rotos", () => {
   const inv = normalizeInvestor({ id: "x", deal: { tipo: "raro", monto: "-5" }, horizonte: 48, moneda: "EUR" });
   assert.equal(inv.deal.tipo, "participacion");
   assert.equal(inv.deal.monto, 0);
-  assert.equal(inv.horizonte, 60);
+  assert.equal(inv.horizonte, 36); // 48 no existe: se lleva al máximo
   assert.equal(inv.moneda, "ARS");
 });
 
@@ -80,7 +82,7 @@ test("la vista de la propuesta arma escenarios, fondos y series", () => {
   };
   const v = proposalView(branch, proyecto, inv);
   assert.equal(v.escenarios.length, 3);
-  assert.equal(v.meses.length, 60);
+  assert.equal(v.meses.length, 36);
   // Equilibrio con IIBB: 4.000.000 / (18.000 − 1.400).
   assert.equal(v.sucursal.equilibrio, 241);
   assert.ok(v.sucursal.plataNecesaria > 30_000_000);
@@ -88,8 +90,9 @@ test("la vista de la propuesta arma escenarios, fondos y series", () => {
   const fondos = v.sucursal.usoFondos.reduce((t, f) => t + f.monto, 0);
   assert.equal(Math.round(fondos), Math.round(v.sucursal.plataNecesaria));
   // El cobrado acumulado del esperado termina en lo que recibe el inversor.
-  assert.ok(Math.abs(v.meses[59].cobrado - v.esperado.inversor.recibido) < 1e-6);
-  assert.ok(v.meses[59].peor < v.meses[59].cobrado && v.meses[59].cobrado < v.meses[59].mejor);
+  const ultimo = v.meses[v.meses.length - 1];
+  assert.ok(Math.abs(ultimo.cobrado - v.esperado.inversor.recibido) < 1e-6);
+  assert.ok(ultimo.peor < ultimo.cobrado && ultimo.cobrado < ultimo.mejor);
 });
 
 test("la propuesta en palabras", () => {
@@ -104,4 +107,37 @@ test("la propuesta en palabras", () => {
     /60% .* hasta recuperarlo y el 30%/
   );
   assert.match(defaultCompromisos("participacion"), /recompra/);
+});
+
+test("plazos de 3 en 3 meses hasta 3 años", () => {
+  assert.deepEqual(PLAZOS, [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]);
+  assert.equal(normalizePlazo(60), 36); // propuestas viejas a 5 años
+  assert.equal(normalizePlazo(7), 6);
+  assert.equal(normalizePlazo(1), 3);
+  assert.equal(normalizePlazo("x"), 36);
+});
+
+test("propuesta corta: la sucursal se mira igual a 3 años y el préstamo se cancela al final", () => {
+  const inv = {
+    ...newInvestor("familiar"),
+    horizonte: 6,
+    deal: { tipo: "prestamo", monto: 10_000_000, tasaAnual: 0.1, cuotas: 30, gracia: 0 },
+  };
+  const corta = proposalView(branch, proyecto, inv);
+  const larga = proposalView(branch, proyecto, { ...inv, horizonte: 36 });
+  assert.equal(corta.meses.length, 6);
+  assert.equal(corta.mesesSucursal.length, 36);
+  assert.equal(corta.sucursal.plataNecesaria, larga.sucursal.plataNecesaria);
+  assert.equal(corta.sucursal.gananciaRegimen, larga.sucursal.gananciaRegimen);
+  // Devuelve el saldo en el mes 6: el inversor recupera todo y gana el 10%.
+  assert.ok(corta.paraBandidos.saldoAlFinal > 0);
+  assert.ok(Math.abs(corta.esperado.inversor.tirAnual - 0.1) < 1e-6);
+  assert.equal(corta.esperado.inversor.payback, 6);
+});
+
+test("la recompra se valúa con la ganancia ya arrancada aunque el plazo sea corto", () => {
+  const inv = { ...newInvestor("privado"), horizonte: 3, valorFinalMeses: 12 };
+  const v = proposalView(branch, proyecto, inv);
+  // 12 meses de 1.976.000 (ganancia ya arrancada con IIBB), no del mes 3.
+  assert.equal(v.esperado.proyecto.valorFinal, 12 * 1_976_000);
 });
