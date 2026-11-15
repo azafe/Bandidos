@@ -39,6 +39,9 @@ import PetshopStockPage from "./pages/petshop/stock/PetshopStockPage";
 import ComunicacionesPage from "./pages/comunicaciones/ComunicacionesPage";
 import BookingSettingsPage from "./pages/booking/BookingSettingsPage";
 import NuevaSucursalPage from "./pages/sucursal/NuevaSucursalPage";
+import InversoresPage from "./pages/inversores/InversoresPage";
+import InversorPage from "./pages/inversores/InversorPage";
+import PresentacionInversorPage from "./pages/inversores/PresentacionInversorPage";
 import PublicBookingPage from "./pages/public/PublicBookingPage";
 import ReservationManagePage from "./pages/public/ReservationManagePage";
 
@@ -88,6 +91,11 @@ function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         {/* Web de reservas: pública, sin login ni menú del panel. */}
         <Route path="/reservar/:slug" element={<PublicBookingPage />} />
+        {/* Modo inversor: a pantalla completa, sin el menú de la app. */}
+        <Route
+          path="/presentacion/inversores/:id"
+          element={<ProtectedRoute><AdminGuard><PresentacionInversorPage /></AdminGuard></ProtectedRoute>}
+        />
         <Route path="/reservar/:slug/turno/:token" element={<ReservationManagePage />} />
         <Route
           path="/*"
@@ -112,6 +120,8 @@ function App() {
                   </Route>
                   <Route path="/reservas-online" element={<AdminGuard><BookingSettingsPage /></AdminGuard>} />
                   <Route path="/nueva-sucursal" element={<AdminGuard><NuevaSucursalPage /></AdminGuard>} />
+                  <Route path="/inversores" element={<AdminGuard><InversoresPage /></AdminGuard>} />
+                  <Route path="/inversores/:id" element={<AdminGuard><InversorPage /></AdminGuard>} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/pets" element={<PetsPage />} />
                   <Route path="/pets/:id" element={<PetDetailPage />} />

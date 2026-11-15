@@ -176,7 +176,9 @@ function equityPayments({ monto, pct, pctHastaRecuperar }, meses, valorFinal) {
 }
 
 // Arma la propuesta completa: el proyecto, lo del inversor y lo del dueño.
-// deal.tipo: "prestamo" | "participacion".
+// deal.tipo: "prestamo" | "participacion" | "mixto".
+// Mixto (préstamo participativo): cuotas a una tasa baja (tasaAnual, cuotas,
+// gracia) más `pct` de la ganancia mensual positiva y de su valor final.
 export function investorPlan(inputs, plan = DEFAULT_PLAN, deal, { factor = 1, horizon } = {}) {
   const proyecto = projectFlows(inputs, plan, { factor, horizon });
   const meses = proyecto.meses.length;
@@ -184,10 +186,19 @@ export function investorPlan(inputs, plan = DEFAULT_PLAN, deal, { factor = 1, ho
 
   let pagos;
   let cuota = null;
-  if (deal?.tipo === "prestamo") {
+  // Lo que se paga sí o sí cada mes (la parte de préstamo), para la cobertura.
+  let fijos = proyecto.meses.map(() => 0);
+  const tipo = deal?.tipo;
+  if (tipo === "prestamo" || tipo === "mixto") {
     const s = loanSchedule(deal, meses);
     cuota = s.cuota;
-    pagos = s.pagos.slice(0, meses);
+    fijos = s.pagos.slice(0, meses).map((p) => p.pago);
+  }
+  if (tipo === "prestamo") {
+    pagos = fijos.map((pago, i) => ({ month: i + 1, pago }));
+  } else if (tipo === "mixto") {
+    const parte = equityPayments({ pct: deal.pct }, proyecto.meses, proyecto.valorFinal);
+    pagos = parte.map((p, i) => ({ month: p.month, pago: p.pago + fijos[i] }));
   } else {
     pagos = equityPayments(deal || {}, proyecto.meses, proyecto.valorFinal);
   }
@@ -195,12 +206,13 @@ export function investorPlan(inputs, plan = DEFAULT_PLAN, deal, { factor = 1, ho
   const inversorFlows = [-monto, ...pagos.map((p) => p.pago)];
   const duenoFlows = proyecto.flows.map((f, t) => f + (t === 0 ? monto : -pagos[t - 1].pago));
 
-  // Cobertura de la deuda (solo préstamo; en participación el pago ya es una
-  // parte de la ganancia): cuántas veces cubre la ganancia del mes lo que hay
+  // Cobertura de la deuda (solo la parte de préstamo; en participación el pago
+  // ya es una parte de la ganancia): cuántas veces cubre la ganancia del mes lo que hay
   // que pagar. Se mira el peor mes y cuántos meses la ganancia no alcanza y
   // el dueño tiene que poner de su bolsillo.
-  const conPago = deal?.tipo === "prestamo"
-    ? proyecto.meses.map((m, i) => ({ ganancia: m.ganancia, pago: pagos[i].pago })).filter((x) => x.pago > 0)
+  const conDeuda = tipo === "prestamo" || tipo === "mixto";
+  const conPago = conDeuda
+    ? proyecto.meses.map((m, i) => ({ ganancia: m.ganancia, pago: fijos[i] })).filter((x) => x.pago > 0)
     : [];
   const coberturas = conPago.map((x) => x.ganancia / x.pago);
 
@@ -216,8 +228,9 @@ export function investorPlan(inputs, plan = DEFAULT_PLAN, deal, { factor = 1, ho
   return {
     proyecto: { ...flowMetrics(proyecto.flows, plan.tasaDescuento), valorFinal: proyecto.valorFinal, flows: proyecto.flows, meses: proyecto.meses },
     inversor: { ...flowMetrics(inversorFlows, deal?.tasaExigida ?? plan.tasaDescuento), flows: inversorFlows, cuota },
+    pagos: pagos.map((p) => p.pago),
     dueno: { ...flowMetrics(duenoFlows, plan.tasaDescuento), flows: duenoFlows, capitalPropio: peor < 0 ? -peor : 0 },
     coberturaMinima: coberturas.length ? Math.min(...coberturas) : null,
-    mesesSinCubrir: deal?.tipo === "prestamo" ? conPago.filter((x) => x.ganancia < x.pago).length : null,
+    mesesSinCubrir: conDeuda ? conPago.filter((x) => x.ganancia < x.pago).length : null,
   };
 }

@@ -105,6 +105,10 @@ export default function Sidebar({ isOpen = true, onNavigate }) {
               <NavLink to="/nueva-sucursal" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Nueva sucursal</NavLink>
             )}
 
+            {isEnabled("dashboard") && user?.role === "admin" && (
+              <NavLink to="/inversores" className={({ isActive }) => makeClassName(isActive)} onClick={handleNavigate}>Inversores</NavLink>
+            )}
+
             {isEnabled("agenda") && (
               <NavLink
                 to="/agenda"

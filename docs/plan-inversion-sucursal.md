@@ -174,11 +174,10 @@ inversor recupera solo ~20% de lo puesto: hay que decírselo.
 1. ~~Cuentas del plan de inversión (`inversion.js`) con tests.~~ Hecho.
 2. **Cargar los números reales:** diagnóstico del local en `/nueva-sucursal`,
    presupuestos de obra y equipos, alquiler del local candidato.
-3. **Pestaña «Para el inversor»** en `/nueva-sucursal`: impuestos, tasa,
-   horizonte, tipo de propuesta y los KPIs de la sección 3, con los tres
-   escenarios.
-4. **One-pager / PDF** para mandar al inversor con el resumen y la tabla de
-   retorno.
+3. ~~Pantalla **Inversores** con una propuesta por inversor y **modo
+   inversor** con gráficos e impresión a PDF.~~ Hecho: ver
+   `docs/inversores-modo-inversor.md`.
+4. Guardar inversores en el backend y link de solo lectura para el inversor.
 5. **Reporte mensual al inversor** desde la app (KPIs operativos + lo que le
    corresponde cobrar).
 

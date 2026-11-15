@@ -116,3 +116,12 @@ test("se puede mirar a más años que los 36 meses de la simulación", () => {
   const plan = investorPlan(base, sinImpuestos, { tipo: "participacion", monto: 3_000_000, pct: 0.3 }, { horizon: 60 });
   assert.equal(plan.inversor.flows.length, 61);
 });
+
+test("mixto: cuota de préstamo más una parte de la ganancia", () => {
+  const prestamo = investorPlan(base, sinImpuestos, { tipo: "prestamo", monto: 2_400_000, tasaAnual: 0, cuotas: 24 });
+  const mixto = investorPlan(base, sinImpuestos, { tipo: "mixto", monto: 2_400_000, tasaAnual: 0, cuotas: 24, pct: 0.1 });
+  assert.equal(prestamo.pagos[0], 100_000);
+  assert.equal(mixto.pagos[0], 100_000 + 60_000); // + 10% de 600.000
+  assert.equal(mixto.pagos[30], 60_000); // préstamo ya pagado
+  assert.equal(mixto.coberturaMinima, 6); // 600.000 / 100.000 de cuota
+});
