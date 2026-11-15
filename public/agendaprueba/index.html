@@ -81,7 +81,7 @@ h1 small { font-weight: 600; color: var(--muted); font-size: 1rem; margin-left: 
 ol.rows { list-style: none; margin: 0; padding: 0; }
 .row { position: relative; display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 14px 8px 10px; border-bottom: 1px solid var(--line); min-height: 56px; }
 .row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--bar, var(--hl, transparent)); }
-.row.has-hl { background: color-mix(in srgb, var(--hl) calc(var(--tint) * 100%), var(--surface)); }
+.row.has-hl { background: var(--bg, color-mix(in srgb, var(--hl) calc(var(--tint) * 100%), var(--surface))); }
 .time { width: 64px; border: 0; background: transparent; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.05rem; padding: 6px 4px; border-radius: 6px; }
 .time:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .line { min-width: 0; text-align: left; background: none; border: 0; padding: 4px 0; display: grid; gap: 4px; }
@@ -465,7 +465,13 @@ aside { display: grid; gap: 14px; }
     var g = gs[0];
     var cls = "row" + (g ? " has-hl" : "") + (r.status === "cancel" || r.status === "noshow" ? " cancel" : "") + (r.status === "done" ? " done" : "");
     var bar = gs.length > 1 ? "linear-gradient(" + gs.map(function (x, i) { return x.color + " " + (i * 100 / gs.length) + "% " + ((i + 1) * 100 / gs.length) + "%"; }).join(", ") + ")" : "";
-    var style = g ? " style=\"--hl:" + g.color + (bar ? ";--bar:" + bar : "") + "\"" : "";
+    // Con varias peluqueras el renglón se pinta con todos sus colores, en franjas que se funden.
+    var tint = function (c) { return "color-mix(in srgb, " + c + " calc(var(--tint) * 100%), var(--surface))"; };
+    var bg = gs.length > 1 ? "linear-gradient(90deg, " + gs.map(function (x, i) {
+      var a = i * 100 / gs.length, b = (i + 1) * 100 / gs.length, fade = 6;
+      return tint(x.color) + " " + (i ? a + fade : a) + "% " + (i < gs.length - 1 ? b - fade : b) + "%";
+    }).join(", ") + ")" : "";
+    var style = g ? " style=\"--hl:" + g.color + (bar ? ";--bar:" + bar : "") + (bg ? ";--bg:" + bg : "") + "\"" : "";
     var main = "<b>" + esc(r.pet || r.raw) + "</b>" + (r.breed ? " · " + esc(r.breed) : "") + (r.owner ? " — " + esc(r.owner) : "");
     var m = [];
     if (r.precio) m.push("<span>" + money(r.precio) + "</span>");
