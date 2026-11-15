@@ -14,6 +14,8 @@ import usePlanillaLocal from "./usePlanillaLocal";
 import TurnoModal from "./TurnoModal";
 import CierreModal from "./CierreModal";
 import PeluqueraModal from "./PeluqueraModal";
+import CierreDia from "./CierreDia";
+import { resumenCierre } from "../../../lib/cierreDia";
 import "../../../styles/planilla.css";
 
 const ESTADO_TAG = { cancelled: "Canceló", no_show: "No vino" };
@@ -155,7 +157,7 @@ export default function PlanillaPage() {
   const activos = turnos.filter((t) => t.status !== "cancelled" && t.status !== "no_show");
   const libres = renglones.filter((r) => r.tipo === "libre");
   const totalTraslados = activos.reduce((a, t) => a + (t.traslado ? montoDe(t.traslado_amount) : 0), 0);
-  const totalTerminados = activos.filter((t) => t.status === "finished").reduce((a, t) => a + montoDe(t.price), 0);
+  const totalTerminados = resumenCierre(turnos, servicios, medios).finishedIncome;
   const cerrar = useCallback(() => { setLinkUsado(clave); setModal(null); }, [clave]);
 
   async function alGuardar(msg, liberado) {
@@ -349,6 +351,9 @@ export default function PlanillaPage() {
           </section>
         </aside>
       </div>
+
+      <CierreDia fecha={fecha} turnos={turnos} servicios={servicios} medios={medios} empleados={empleados}
+        onCopiar={async (texto) => avisar((await copyToClipboard(texto)) ? "Cierre copiado. Pegalo en el grupo." : "No se pudo copiar. Probá de nuevo.")} />
 
       {modalActual?.tipo === "nuevo" && (
         <TurnoModal fecha={fecha} time={modalActual.time} mascota={modalActual.mascota} nuevoNombre={modalActual.nuevoNombre} conTraslado={modalActual.conTraslado}

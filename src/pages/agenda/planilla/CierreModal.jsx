@@ -4,6 +4,7 @@ import { deleteAgendaTurno, updateAgendaTurno } from "../../../services/agendaAp
 import { getTrasladoError } from "../../../lib/traslados";
 import { paymentError } from "../../../lib/servicePayments";
 import { ESTADOS, formatoPlata, hora, montoDe, peluquerasDeTurno, resumenCobro } from "../../../lib/planilla";
+import { normalizarId, pedidoTerminar, precioServicio } from "../../../lib/cierreDia";
 
 // Tocar un turno: cuántas peluqueras, quiénes, estado y, si terminó, el cobro.
 export default function CierreModal({ turno, peluqueras, colores, presentes, servicios, medios, onClose, onSaved, onEditar }) {
@@ -13,8 +14,12 @@ export default function CierreModal({ turno, peluqueras, colores, presentes, ser
   const [elegidas, setElegidas] = useState(iniciales);
   const [estado, setEstado] = useState(turno.status || "reserved");
   const [servicio, setServicio] = useState(turno.service_type_id ? String(turno.service_type_id) : "");
-  const [precio, setPrecio] = useState(() => String(Math.round(montoDe(turno.price || servicioTurno?.default_price || 0)) || ""));
-  const [pagos, setPagos] = useState(() => (turno.payments || []).map((p) => ({ payment_method_id: String(p.payment_method_id), amount: String(Math.round(montoDe(p.amount))) })));
+  const [precio, setPrecio] = useState(() => String(Math.round(precioServicio(turno, servicios)) || ""));
+  const [pagos, setPagos] = useState(() => (turno.payments?.length
+    ? turno.payments.map((p) => ({ payment_method_id: String(p.payment_method_id), amount: String(montoDe(p.amount)) }))
+    : turno.status === "finished" && turno.payment_method_id
+      ? [{ payment_method_id: String(turno.payment_method_id), amount: String(Math.max(0, montoDe(turno.price) - montoDe(turno.deposit_amount))) }]
+      : []));
   const [trasMonto, setTrasMonto] = useState(turno.traslado_amount ? String(Math.round(montoDe(turno.traslado_amount))) : "");
   const [trasSinCargo, setTrasSinCargo] = useState(!!turno.traslado_bonificado);
   const [error, setError] = useState("");
@@ -70,17 +75,19 @@ export default function CierreModal({ turno, peluqueras, colores, presentes, ser
     e.preventDefault();
     const activo = estado !== "cancelled" && estado !== "no_show";
     if (activo && elegidas.length && elegidas.length !== cantidad) { setError(`Elegí ${cantidad} peluqueras (marcaste ${elegidas.length}).`); return; }
-    const [g1, g2, g3] = elegidas.map((id) => Number(id) || id);
+    const [g1, g2, g3] = elegidas.map(normalizarId);
     let payload;
     if (terminado) {
       if (elegidas.length !== cantidad) { setError(cantidad > 1 ? "Para terminar el turno, elegí quiénes lo atendieron." : "Para terminar el turno, elegí quién lo atendió."); return; }
       if (!servicio) { setError("Elegí el servicio."); return; }
       if (!resumen.precio) { setError("Falta el precio del servicio."); return; }
       if (resumen.precio < sena) { setError("El precio no puede ser menor que la seña."); return; }
-      const payments = resumen.saldo > 0 ? pagos.map((p) => ({ payment_method_id: Number(p.payment_method_id) || p.payment_method_id, amount: montoDe(p.amount) })) : [];
-      const errPago = paymentError(payments, resumen.saldo);
-      if (errPago) { setError(errPago); return; }
-      if (resumen.saldo > 0 && !payments.length) { setError("Elegí cómo pagó."); return; }
+      const cobro = resumen.saldo > 0 ? pagos : [];
+      if (resumen.saldo > 0) {
+        if (!cobro.length || cobro.some((p) => !p.payment_method_id)) { setError("Elegí cómo pagó."); return; }
+        const errPago = paymentError(cobro.map((p) => ({ payment_method_id: p.payment_method_id, amount: montoDe(p.amount) })), resumen.saldo);
+        if (errPago) { setError(errPago.replace("descontando la seña", "descontando la seña (el traslado va aparte)")); return; }
+      }
       const traslado = {
         traslado: !!turno.traslado,
         traslado_amount: turno.traslado && !trasSinCargo ? montoDe(trasMonto) : 0,
@@ -88,18 +95,7 @@ export default function CierreModal({ turno, peluqueras, colores, presentes, ser
       };
       const errTras = getTrasladoError(traslado);
       if (errTras) { setError(errTras); return; }
-      payload = {
-        status: "finished",
-        groomer_id: g1,
-        second_groomer_id: g2 ?? null,
-        third_groomer_id: g3 ?? null,
-        service_type_id: Number(servicio) || servicio,
-        price: resumen.precio,
-        payments,
-        payment_method_id: payments.length === 1 ? payments[0].payment_method_id : null,
-        traslado_amount: traslado.traslado_amount,
-        traslado_bonificado: traslado.traslado_bonificado,
-      };
+      payload = pedidoTerminar({ peluqueras: elegidas, servicioId: servicio, precio: resumen.precio, pagos: cobro, sena, depositoMedioId: turno.deposit_payment_method_id, traslado });
     } else if (activo) {
       payload = { status: estado, ...(elegidas.length ? { groomer_id: g1, second_groomer_id: g2 ?? null, third_groomer_id: g3 ?? null } : {}) };
     } else {

@@ -29,6 +29,35 @@ traslados.
 - Los enlaces de otras pantallas siguen funcionando: `?turno=ID` abre el
   turno y `?nuevoTurno=1&petId=ID[&traslado=1]` abre el alta con esa mascota.
 
+## Cierre del día y liquidación
+
+Al final de la planilla, **Cierre del día** muestra:
+- lo cobrado por medio de pago (incluye las señas);
+- lo que hay que pagar a cada peluquera;
+- lo que queda para el local;
+- los turnos que faltan cerrar.
+
+Se puede copiar para WhatsApp.
+
+Para que coincida con la agenda clásica, la Rendición de Caja y la liquidación
+de cada empleado:
+
+- Las cuentas están en `src/lib/cierreDia.js` y las usan **las dos agendas**:
+  el resumen por medio de pago y la liquidación por peluquero. Reparten la
+  comisión de la principal y los centavos igual que `sharedGroomer.js`.
+- Al terminar un turno, la planilla manda **el mismo pedido** que el cierre de
+  la agenda clásica (`pedidoTerminar`):
+  - un solo medio va en `payment_method_id`, con `payments: []`;
+  - dos o más medios van en `payments`;
+  - si la seña cubre todo, queda el medio de la seña, para que el turno no
+    figure «sin método».
+- Los pagos tienen que sumar el precio menos la seña (`paymentError`). El
+  traslado va aparte, en `traslado_amount` / `traslado_bonificado`.
+
+`src/lib/cierreDia.test.js` lo verifica con un día de ejemplo: un turno simple,
+uno compartido con seña y pago combinado, y uno de tres peluqueras con
+centavos.
+
 ## Qué se guarda solo en el dispositivo
 
 La base todavía no tiene dónde guardar quién viene cada día, los horarios de
