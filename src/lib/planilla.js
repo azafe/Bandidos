@@ -170,3 +170,22 @@ export function listaPeluqueras(empleados, elegidas = null) {
   }
   return activos.filter(esPeluquera);
 }
+
+// Horas cada 15 minutos para los renglones (7 a 22).
+export const HORAS_15 = (() => {
+  const out = [];
+  for (let m = 7 * 60; m <= 22 * 60; m += 15) out.push(`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`);
+  return out;
+})();
+
+// Lugares del día: los propios del día o el molde más los agregados.
+export const lugaresDelDia = (dia = {}) => (Array.isArray(dia.slots) ? dia.slots : [...MOLDE, ...(dia.extras || [])]);
+
+// Cambia la hora de un lugar libre (o lo quita si «hasta» es null).
+export function moverLugar(lugares, desde, hasta) {
+  const i = lugares.indexOf(desde);
+  if (i < 0) return lugares;
+  const next = [...lugares];
+  if (hasta) next[i] = hasta; else next.splice(i, 1);
+  return next.sort();
+}

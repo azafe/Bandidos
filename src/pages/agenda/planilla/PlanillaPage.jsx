@@ -7,7 +7,7 @@ import { copyToClipboard } from "../../../services/bookingApi";
 import { todayISO } from "../../../utils/dates";
 import {
   armarRenglones, buscarBandidos, coloresPeluqueras, distanciaDias, fechaCorta, fechaLarga, fondoRenglon,
-  formatoPlata, libresAgrupados, listaPeluqueras, montoDe, peluquerasDeTurno, rangoHorario, sumarDias, textoLibres,
+  formatoPlata, libresAgrupados, listaPeluqueras, lugaresDelDia, moverLugar, HORAS_15, montoDe, peluquerasDeTurno, rangoHorario, sumarDias, textoLibres,
 } from "../../../lib/planilla";
 import usePlanillaLocal from "./usePlanillaLocal";
 import TurnoModal from "./TurnoModal";
@@ -88,11 +88,12 @@ export default function PlanillaPage() {
   const mediosActivos = useMemo(() => medios.filter((m) => m.status !== "inactive" && m.active !== false && m.is_active !== false), [medios]);
   const mascotaPorId = useMemo(() => new Map(mascotas.map((m) => [String(m.id), m])), [mascotas]);
 
-  const dia = local.days[fecha] || {};
+  const dia = useMemo(() => local.days[fecha] || {}, [local.days, fecha]);
   const presentes = Object.fromEntries(peluqueras.map((p) => [String(p.id), dia.present?.[p.id] !== false]));
   const horarioDe = (id) => dia.hours?.[id] || local.defaultHours?.[id] || null;
   const turnos = useMemo(() => items.map((t) => ({ ...t, pet: mascotaPorId.get(String(t.pet_id)) })), [items, mascotaPorId]);
-  const renglones = useMemo(() => armarRenglones(turnos, { extras: dia.extras || [] }), [turnos, dia.extras]);
+  const lugares = useMemo(() => lugaresDelDia(dia), [dia]);
+  const renglones = useMemo(() => armarRenglones(turnos, { molde: lugares }), [turnos, lugares]);
 
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState(null);
@@ -181,7 +182,13 @@ export default function PlanillaPage() {
   function agregarRenglon(tarde) {
     const delBloque = renglones.filter((r) => (tarde ? r.time >= "13:00" : r.time < "13:00"));
     const ultima = delBloque.length ? delBloque[delBloque.length - 1].time : tarde ? "15:00" : "09:00";
-    updateLocal((d) => { d.days[fecha] = d.days[fecha] || {}; d.days[fecha].extras = [...(d.days[fecha].extras || []), ultima]; return d; });
+    updateLocal((d) => { const dd = (d.days[fecha] = d.days[fecha] || {}); dd.slots = [...lugaresDelDia(dd), ultima].sort(); delete dd.extras; return d; });
+  }
+
+  // Tocar la hora de un renglón libre: cambiarla o quitar el renglón (solo ese día).
+  function cambiarHoraLibre(desde, hasta) {
+    updateLocal((d) => { const dd = (d.days[fecha] = d.days[fecha] || {}); dd.slots = moverLugar(lugaresDelDia(dd), desde, hasta || null); delete dd.extras; return d; });
+    avisar(hasta ? `Renglón de las ${desde} pasó a las ${hasta}.` : `Se quitó un renglón de las ${desde}.`);
   }
 
   function guardarPeluquera(p, { viene, horario, habitual, color }) {
@@ -215,7 +222,7 @@ export default function PlanillaPage() {
     const pagos = (t.payments || []).map((p) => medios.find((m) => String(m.id) === String(p.payment_method_id))?.name).filter(Boolean);
     return (
       <li key={r.key} className={`pl-row${fondo ? " has-hl" : ""}${apagado ? " is-off" : ""}${t.status === "finished" ? " is-done" : ""}`} style={fondo ? { "--hl": cs[0], "--bg-row": fondo } : undefined}>
-        <span className="pl-time">{r.time}</span>
+        <button type="button" className="pl-time pl-time-btn" aria-label={`Cambiar la hora de ${t.pet_name} (${r.time})`} onClick={() => abrir({ tipo: "editar", turno: t })}>{r.time}</button>
         <button type="button" className="pl-line" onClick={() => abrir({ tipo: "cierre", turno: t })}>
           <span className="pl-main"><b>{t.pet_name}</b>{t.breed ? ` · ${t.breed}` : ""} <span className="pl-owner">({t.owner_name || "sin dueño"})</span></span>
           <span className="pl-sub">
@@ -249,7 +256,14 @@ export default function PlanillaPage() {
         <ol className="pl-rows">
           {lista.map((r) => (r.tipo === "turno" ? filaTurno(r) : (
             <li key={r.key} className="pl-row">
-              <span className="pl-time">{r.time}</span>
+              <label className="pl-time pl-time-edit">
+                <span className="sr-only">Hora del renglón libre</span>
+                <select value={r.time} onChange={(e) => cambiarHoraLibre(r.time, e.target.value)}>
+                  {!HORAS_15.includes(r.time) && <option value={r.time}>{r.time}</option>}
+                  {HORAS_15.map((h) => <option key={h} value={h}>{h}</option>)}
+                  <option value="">Quitar renglón</option>
+                </select>
+              </label>
               <RenglonLibre
                 key={prefill?.key === r.key ? `${r.key}-${prefill.text}` : r.key}
                 time={r.time}
