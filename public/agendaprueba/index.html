@@ -49,12 +49,44 @@ button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 16px 16px 120px; display: grid; gap: 14px; }
 
-.banner { font-size: .85rem; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
-.banner button { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; color: var(--muted); }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
+.brand strong { display: block; font-family: var(--font-display); font-size: 1.05rem; line-height: 1.1; }
+.brand div span { font-size: .8rem; color: var(--muted); display: block; }
+.banner { margin: 0; font-size: .8rem; color: var(--muted); display: flex; gap: 6px 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 640px; }
+.pill-test { background: var(--warn-bg); color: var(--warn); font-weight: 700; border-radius: 999px; padding: 2px 10px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.day-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day-title { display: grid; min-width: 210px; }
+.day-title span { font-size: .85rem; color: var(--muted); }
+.nav-btn { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); font-size: 1.5rem; line-height: 1; display: grid; place-items: center; }
+.nav-btn:hover, .nav-today:hover, .nav-cal:hover { border-color: var(--accent); color: var(--accent); }
+.nav-today { height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); padding: 0 14px; font-weight: 700; }
+.nav-today[aria-current="date"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.nav-cal { position: relative; height: 44px; display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); padding: 0 12px; font-weight: 700; cursor: pointer; }
+.nav-cal input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; }
+.nav-cal:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.como summary { list-style: none; cursor: pointer; }
+.como summary::-webkit-details-marker { display: none; }
+.como summary h2::after { content: "＋"; color: var(--muted); font-weight: 400; }
+.como[open] summary h2::after { content: "－"; }
+@media (max-width: 600px) {
+  .day-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: 100%; }
+  .day-title { min-width: 0; text-align: center; }
+  .day-title h1 { font-size: 1.3rem; }
+  #prev-day { grid-column: 1; grid-row: 1; } .day-title { grid-column: 2; grid-row: 1; } #next-day { grid-column: 3; grid-row: 1; }
+  .nav-today { grid-column: 1 / 3; grid-row: 2; } .nav-cal { grid-column: 3; grid-row: 2; justify-content: center; padding: 0; }
+  .nav-cal > span:not(.sr-only) { display: none; }
+  .day-nav { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+  .nav-today { grid-column: 1 / 3; }
+  .banner { justify-content: flex-start; }
+}
+.closed-day { padding: 18px; text-align: center; color: var(--muted); }
 
 header.day { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
 .day-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; margin: 0; text-wrap: balance; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; margin: 0; text-wrap: balance; line-height: 1.1; }
 h1 small { font-weight: 600; color: var(--muted); font-size: 1rem; margin-left: 8px; }
 .stats { display: flex; gap: 16px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
 .stats div { display: grid; }
@@ -194,11 +226,20 @@ aside { display: grid; gap: 14px; }
 </head>
 <body>
 <div class="wrap">
-  <div class="banner"><span><strong>Prototipo para probar.</strong> Es la hoja del miércoles 11/11 pasada a la app. Nada de lo que hagas acá cambia la agenda real.<br><span id="base-status" role="status">Buscando los bandidos de la base…</span></span><button type="button" id="reset">Volver al ejemplo</button></div>
+  <div class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">B</span><div><strong>Bandidos</strong><span>Planilla del día</span></div></div>
+    <p class="banner"><span class="pill-test">Versión de prueba</span> <span>Los turnos se guardan en este dispositivo, todavía no en la agenda.</span> <span id="base-status" role="status">Buscando los bandidos de la base…</span></p>
+  </div>
 
   <header class="day">
     <div class="day-top">
-      <h1>Miércoles 11/11 <small>Planilla del día</small></h1>
+      <nav class="day-nav" aria-label="Cambiar de día">
+        <button type="button" class="nav-btn" id="prev-day" aria-label="Día anterior">‹</button>
+        <div class="day-title"><h1 id="day-title"></h1><span id="day-sub"></span></div>
+        <button type="button" class="nav-btn" id="next-day" aria-label="Día siguiente">›</button>
+        <button type="button" class="nav-today" id="today-btn">Hoy</button>
+        <label class="nav-cal"><span class="sr-only">Elegir día en el calendario</span><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Calendario</span><input type="date" id="day-picker"></label>
+      </nav>
       <div class="stats" id="stats"></div>
     </div>
     <div class="staff" id="staff" aria-label="Quién trabaja hoy"></div>
@@ -223,13 +264,15 @@ aside { display: grid; gap: 14px; }
         <label class="help" for="notes">Como el margen de la hoja: lo que quieras.</label>
         <textarea id="notes"></textarea>
       </section>
-      <section class="card" aria-labelledby="h-como">
-        <h2 id="h-como">Cómo se anota</h2>
+      <details class="card como">
+        <summary><h2 id="h-como">Cómo se anota</h2></summary>
         <p class="help">Tocá un renglón <strong>libre</strong> y empezá a escribir el nombre del bandido. Elegilo de la lista (entre paréntesis está el dueño) y completá servicio, traslado y seña.</p>
         <p class="help">Si es nuevo, elegí <strong>+ es un bandido nuevo</strong> y cargá raza y dueño una sola vez.</p>
         <p class="help">Atajo: también se puede escribir todo en una línea, como en el cuaderno: <code>Osito CyB /5000</code></p>
-        <p class="help">Tocá un turno para pintarlo con el color de la peluquera, marcarlo como listo o cancelado.</p>
-      </section>
+        <p class="help">Tocá un turno para elegir las peluqueras, cambiar el estado y registrar el cobro.</p>
+        <p class="help">Con las flechas, «Hoy» o el calendario pasás a otra planilla. Cada día guarda la suya.</p>
+        <button type="button" class="btn ghost" id="reset">Vaciar la planilla de este día</button>
+      </details>
     </aside>
   </div>
 </div>
@@ -242,6 +285,8 @@ aside { display: grid; gap: 14px; }
 (function () {
   "use strict";
   var STORE = "bandidos-planilla-proto-v1";
+  var STORE2 = "bandidos-planilla-v2";
+  var EJEMPLO = "2026-11-11"; // la hoja del cuaderno que se pasó como ejemplo
   var STAFF = [
     { id: "jime", name: "Jime", hours: "9 a 15", color: "var(--hl-jime)", hex: "#ff9fc4" },
     { id: "meli", name: "Meli", hours: "9 a 15", color: "var(--hl-meli)", hex: "#8be08f" },
@@ -384,14 +429,72 @@ aside { display: grid; gap: 14px; }
     return out;
   }
 
-  var state = load();
-  (state.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
-  var realLoaded = false;
-  function load() {
-    try { var raw = localStorage.getItem(STORE); if (raw) { var st = JSON.parse(raw); if (st && st.rows && st.rows.every(function (r) { return r.time; })) return st; } } catch (err) { /* sin almacenamiento */ }
-    return seed();
+  // ── Fechas ───────────────────────────────────────────────────────────
+  var DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+  var MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  function hoyAR() {
+    try {
+      var parts = {};
+      new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Buenos_Aires", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date()).forEach(function (x) { parts[x.type] = x.value; });
+      return parts.year + "-" + parts.month + "-" + parts.day;
+    } catch (err) { return new Date().toISOString().slice(0, 10); }
   }
-  function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (err) { /* sin almacenamiento */ } }
+  function fechaUTC(iso) { var a = iso.split("-").map(Number); return new Date(Date.UTC(a[0], a[1] - 1, a[2])); }
+  function sumarDias(iso, n) { var d = fechaUTC(iso); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function diaSemana(iso) { return fechaUTC(iso).getUTCDay(); }
+  function fechaCorta(iso) { var a = iso.split("-").map(Number); return a[2] + "/" + a[1]; }
+  function fechaLarga(iso) { var a = iso.split("-").map(Number); return cap(DIAS[diaSemana(iso)]) + " " + a[2] + " de " + MESES[a[1] - 1]; }
+
+  // Renglones vacíos de un día nuevo, como las horas que se escriben antes de empezar.
+  var MOLDE = ["09:00", "09:00", "09:00", "10:00", "10:00", "11:00", "11:00", "12:00", "12:30", "15:00", "15:00", "16:00", "16:00", "17:00", "17:00", "18:00", "18:00", "19:00"];
+  function nuevoDia(iso) {
+    if (iso === EJEMPLO) { var ej = seed(); delete ej.wait; return ej; }
+    return {
+      present: { jime: true, meli: true, flor: true, mai: true, cami: true },
+      traslados: true, notes: "",
+      rows: MOLDE.map(function (t) { return { id: uid(), time: t, raw: "" }; })
+    };
+  }
+
+  function loadStore() {
+    var st = null;
+    try { var raw = localStorage.getItem(STORE2); if (raw) st = JSON.parse(raw); } catch (err) { /* sin almacenamiento */ }
+    if (!st || !st.days) {
+      st = { days: {}, wait: seed().wait, extraKnown: [] };
+      try { // planilla de la versión anterior: queda en el día del ejemplo
+        var old = JSON.parse(localStorage.getItem(STORE) || "null");
+        if (old && old.rows && old.rows.every(function (r) { return r.time; })) {
+          st.days[EJEMPLO] = { rows: old.rows, notes: old.notes || "", present: old.present || {}, traslados: old.traslados !== false };
+          st.wait = old.wait || st.wait; st.extraKnown = old.extraKnown || [];
+        }
+      } catch (err) { /* nada para migrar */ }
+    }
+    return st;
+  }
+  var store = loadStore();
+  var current = hoyAR();
+  try { var h = (location.hash || "").replace("#", ""); if (/^\d{4}-\d{2}-\d{2}$/.test(h)) current = h; } catch (err) { /* sin hash */ }
+  function dayState(iso) {
+    var d = store.days[iso] ? JSON.parse(JSON.stringify(store.days[iso])) : nuevoDia(iso);
+    d.wait = store.wait; d.extraKnown = store.extraKnown || [];
+    return d;
+  }
+  var state = dayState(current);
+  (store.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
+  var realLoaded = false;
+  function save() {
+    store.wait = state.wait; store.extraKnown = state.extraKnown || [];
+    store.days[current] = { rows: state.rows, notes: state.notes, present: state.present, traslados: state.traslados };
+    try { localStorage.setItem(STORE2, JSON.stringify(store)); } catch (err) { /* sin almacenamiento */ }
+  }
+  function irA(iso) {
+    if (!iso || iso === current) return;
+    current = iso;
+    state = dayState(iso);
+    try { history.replaceState(null, "", "#" + iso); } catch (err) { /* sin historial */ }
+    var t = $("toast"); if (t) t.hidden = true;
+    render();
+  }
 
   var $ = function (id) { return document.getElementById(id); };
   var staffById = function (id) { return STAFF.find(function (s) { return s.id === id; }); };
@@ -401,7 +504,20 @@ aside { display: grid; gap: 14px; }
   var active = function (r) { return r.raw && r.status !== "cancel" && r.status !== "noshow"; };
   function sorted(rows) { return rows.map(function (r, i) { return [r, i]; }).sort(function (a, b) { return a[0].time < b[0].time ? -1 : a[0].time > b[0].time ? 1 : a[1] - b[1]; }).map(function (x) { return x[0]; }); }
 
+  function libresAgrupados(free) {
+    var orden = [], cuenta = {};
+    free.forEach(function (r) { if (!cuenta[r.time]) { cuenta[r.time] = 0; orden.push(r.time); } cuenta[r.time] += 1; });
+    return orden.map(function (t) { return cuenta[t] > 1 ? t + " (" + cuenta[t] + ")" : t; }).join(" · ");
+  }
+
   function render() {
+    var hoy = hoyAR();
+    $("day-title").textContent = fechaLarga(current);
+    var dif = Math.round((fechaUTC(current) - fechaUTC(hoy)) / 86400000);
+    $("day-sub").textContent = dif === 0 ? "Hoy" : dif === 1 ? "Mañana" : dif === -1 ? "Ayer" : dif > 0 ? "En " + dif + " días" : "Hace " + (-dif) + " días";
+    $("today-btn").setAttribute("aria-current", dif === 0 ? "date" : "false");
+    $("day-picker").value = current;
+    document.title = "Planilla " + fechaCorta(current) + " · Bandidos";
     var rows = sorted(state.rows);
     var act = rows.filter(active);
     var free = rows.filter(isFree);
@@ -429,7 +545,7 @@ aside { display: grid; gap: 14px; }
     }).join("");
 
     $("libres-count").textContent = free.length + (free.length === 1 ? " lugar" : " lugares");
-    $("libres-list").textContent = free.length ? free.map(function (r) { return r.time; }).join(" · ") : "No queda lugar hoy.";
+    $("libres-list").textContent = free.length ? libresAgrupados(free) : "No queda lugar este día.";
     $("espera-count").textContent = state.wait.length ? state.wait.length + "" : "";
     $("wait").innerHTML = state.wait.length ? state.wait.map(function (w) {
       return "<li><div><strong>" + esc(w.text) + "</strong><small>" + esc(w.note || "") + "</small></div><span><button type=\"button\" data-wait-use=\"" + w.id + "\">Agendar</button> <button type=\"button\" data-wait-del=\"" + w.id + "\" aria-label=\"Sacar de la espera\">✕</button></span></li>";
@@ -811,10 +927,20 @@ aside { display: grid; gap: 14px; }
     }
     if (el.dataset.waitUse) { useWait(el.dataset.waitUse); return; }
     if (el.dataset.waitDel) { state.wait = state.wait.filter(function (x) { return x.id !== el.dataset.waitDel; }); save(); render(); return; }
-    if (el.id === "reset") { state = seed(); save(); render(); showToast("Volvió la hoja de ejemplo."); return; }
+    if (el.id === "reset") {
+      var copia = JSON.parse(JSON.stringify(store.days[current] || null));
+      delete store.days[current];
+      try { localStorage.setItem(STORE2, JSON.stringify(store)); } catch (err) { /* sin almacenamiento */ }
+      state = dayState(current); render();
+      showToast("Planilla del " + fechaCorta(current) + " vaciada.", copia ? "Deshacer" : null, function () { store.days[current] = copia; state = dayState(current); save(); render(); });
+      return;
+    }
+    if (el.id === "prev-day") { irA(sumarDias(current, -1)); return; }
+    if (el.id === "next-day") { irA(sumarDias(current, 1)); return; }
+    if (el.id === "today-btn") { irA(hoyAR()); return; }
     if (el.id === "copy-libres") {
       var libres = sorted(state.rows).filter(isFree).map(function (r) { return r.time; });
-      var text = "*Horarios libres · miércoles 11/11*\n" + (libres.length ? libres.join(" · ") : "Sin lugar");
+      var text = "*Horarios libres · " + DIAS[diaSemana(current)] + " " + fechaCorta(current) + "*\n" + (libres.length ? libresAgrupados(sorted(state.rows).filter(isFree)) : "Sin lugar");
       var msg = $("copy-msg");
       try {
         navigator.clipboard.writeText(text).then(function () { msg.textContent = "Copiado. Pegalo en el grupo."; }, function () { msg.textContent = text; });
@@ -878,6 +1004,15 @@ aside { display: grid; gap: 14px; }
     }
   });
 
+  $("day-picker").addEventListener("change", function (ev) { if (ev.target.value) irA(ev.target.value); });
+  $("day-picker").addEventListener("click", function (ev) { try { ev.target.showPicker(); } catch (err) { /* el navegador abre su calendario */ } });
+  window.addEventListener("hashchange", function () { var h = location.hash.replace("#", ""); if (/^\d{4}-\d{2}-\d{2}$/.test(h)) irA(h); });
+  document.addEventListener("keydown", function (ev) {
+    var tag = (ev.target.tagName || "").toLowerCase();
+    if (openId || formRowId || tag === "input" || tag === "textarea" || tag === "select") return;
+    if (ev.key === "ArrowLeft") irA(sumarDias(current, -1));
+    if (ev.key === "ArrowRight") irA(sumarDias(current, 1));
+  });
   document.addEventListener("input", function (ev) {
     var el = ev.target;
     if (el.dataset.entry) { var multi = el.value.trim().split(/\s+/).length > 1; $("pv-" + el.dataset.entry).innerHTML = multi ? previewHtml(parse(el.value)) : ""; suggestFor(el); }
@@ -952,7 +1087,7 @@ aside { display: grid; gap: 14px; }
             phone: x.owner_phone || "", addr: String(x.address || "").trim(), note: String(x.behavior || "").trim(), real: true
           });
         });
-        (state.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
+        (store.extraKnown || []).forEach(function (k) { KNOWN.push(k); });
         realLoaded = true;
         setBaseStatus("Usando <strong>" + list.length + " bandidos reales</strong> de la base. Solo se consultan: los turnos de esta prueba no se guardan en la agenda.");
       })
