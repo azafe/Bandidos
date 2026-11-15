@@ -216,3 +216,16 @@ button.pl-link { cursor: pointer; }
 }
 .pl-panel { padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
 .pl-panel input[type="time"] { min-height: 46px; }
+
+/* Hora tocable: en los libres se cambia ahí mismo; en un turno abre su edición. */
+.pl-time-btn { background: none; border: 0; padding: 6px 4px 6px 6px; text-align: left; border-radius: 8px; text-decoration: underline dotted color-mix(in srgb, var(--pl-ink) 35%, transparent); text-underline-offset: 4px; }
+.pl-time-edit { position: relative; padding: 0; }
+.pl-time-edit select { appearance: none; -webkit-appearance: none; width: 100%; border: 1px solid transparent; background: none; font: inherit; font-weight: 700; font-size: 1.05rem; color: var(--pl-ink); padding: 6px 4px 6px 6px; border-radius: 8px; cursor: pointer; text-decoration: underline dotted color-mix(in srgb, var(--pl-ink) 35%, transparent); text-underline-offset: 4px; }
+.pl-time-edit select:hover, .pl-time-btn:hover { background: color-mix(in srgb, var(--pl-accent) 10%, transparent); }
+.pl-time-edit select:focus-visible { outline: 3px solid var(--pl-accent); }
+.planilla .pl-time-btn { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; color: var(--pl-ink); }
+.pl-time-edit select { font-variant-numeric: tabular-nums; padding-right: 2px; }
+@media (max-width: 600px) {
+  .pl-row { grid-template-columns: 66px minmax(0, 1fr); gap: 8px; }
+  .pl-time-edit select, .planilla .pl-time-btn { font-size: 1rem; padding-left: 2px; }
+}

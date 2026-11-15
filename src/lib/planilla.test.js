@@ -79,3 +79,17 @@ test("la planilla muestra solo peluqueras activas, o las elegidas a mano", async
   assert.deepEqual(listaPeluqueras(equipo, ["3", 1, 5]).map((e) => e.name), ["Maira", "Tamara"]);
   assert.deepEqual(listaPeluqueras(equipo, []), []);
 });
+
+test("la hora de un renglón libre se cambia o se quita", async () => {
+  const { lugaresDelDia, moverLugar, armarRenglones, HORAS_15 } = await import("./planilla.js");
+  const base = lugaresDelDia({ extras: ["19:00"] });
+  assert.equal(base.filter((t) => t === "19:00").length, 2);
+  const movido = moverLugar(["09:00", "11:00", "11:00", "12:30"], "11:00", "11:30");
+  assert.deepEqual(movido, ["09:00", "11:00", "11:30", "12:30"]);
+  assert.deepEqual(moverLugar(movido, "12:30", null), ["09:00", "11:00", "11:30"]);
+  assert.equal(moverLugar(movido, "08:00", "10:00"), movido);
+  const r = armarRenglones([{ id: 1, time: "11:00", status: "reserved" }], { molde: movido });
+  assert.deepEqual(r.map((x) => x.tipo + x.time), ["libre09:00", "turno11:00", "libre11:30", "libre12:30"]);
+  assert.equal(HORAS_15[1], "07:15");
+  assert.deepEqual(lugaresDelDia({ slots: ["10:00"], extras: ["19:00"] }), ["10:00"]);
+});
