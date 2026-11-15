@@ -12,6 +12,7 @@ import {
   ESTADOS,
   newInvestor,
   PERFILES,
+  PLAZOS,
   proposalView,
 } from "../../lib/inversores";
 import { CobradoChart, EscenariosChart } from "../../components/inversores/InvestorCharts";
@@ -19,10 +20,10 @@ import { NumberField, SelectField } from "../../components/inversores/fields";
 import { makeFormat, monthsText, multiple, pct, recuperoText } from "../../components/inversores/format";
 import "../../styles/inversores.css";
 
-const HORIZONTES = [
-  { id: "36", label: "3 años (36 meses)" },
-  { id: "60", label: "5 años (60 meses)" },
-];
+const HORIZONTES = PLAZOS.map((m) => ({
+  id: String(m),
+  label: m % 12 === 0 ? `${m / 12} ${m === 12 ? "año" : "años"} (${m} meses)` : `${m} meses`,
+}));
 const MONEDAS = [
   { id: "ARS", label: "Pesos de hoy" },
   { id: "USD", label: "Dólares" },
@@ -133,6 +134,13 @@ export default function InversorPage() {
                 <NumberField label="Meses de gracia" integer max={24} value={inv.deal.gracia}
                   hint="Paga solo interés mientras la sucursal arranca." onChange={(v) => setDeal({ gracia: v })} />
               </div>
+            )}
+            {(tipo === "prestamo" || tipo === "mixto") && inv.deal.gracia + inv.deal.cuotas > inv.horizonte && view && (
+              <p className="inv-note">
+                Las cuotas terminan en el mes {inv.deal.gracia + inv.deal.cuotas}, después del plazo de {inv.horizonte} meses:
+                al terminar el plazo Bandidos devuelve el saldo que quede ({fmt.money(view.paraBandidos.saldoAlFinal)}).
+                Para que no pase, bajá las cuotas o la gracia.
+              </p>
             )}
 
             {tipo === "participacion" && (

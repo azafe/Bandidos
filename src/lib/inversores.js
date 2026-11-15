@@ -21,6 +21,17 @@ export const DEAL_TIPOS = [
   { id: "mixto", label: "Préstamo participativo", corto: "Mixto" },
 ];
 
+// Plazos de la propuesta: de 3 en 3 meses, hasta 3 años.
+export const PLAZO_MAXIMO = 36;
+export const PLAZOS = Array.from({ length: PLAZO_MAXIMO / 3 }, (_, i) => (i + 1) * 3);
+
+// Lleva un plazo cualquiera (o uno viejo de 60 meses) al permitido más cercano.
+export function normalizePlazo(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return PLAZO_MAXIMO;
+  return Math.min(PLAZO_MAXIMO, Math.max(3, Math.round(n / 3) * 3));
+}
+
 export const ESTADOS = [
   { id: "borrador", label: "Borrador" },
   { id: "presentada", label: "Presentada" },
@@ -38,7 +49,7 @@ export const PERFILES = [
     hint: "Quiere ganarle claramente a un bono y ser algo socio.",
     deal: { tipo: "participacion", pct: 0.3, pctHastaRecuperar: 0.6 },
     tasaExigida: 0.2,
-    horizonte: 60,
+    horizonte: 36,
     valorFinalMeses: 12,
   },
   {
@@ -54,18 +65,18 @@ export const PERFILES = [
     id: "banco",
     label: "Banco o crédito PyME",
     hint: "Mira que la cuota esté cubierta y pide garantía.",
-    deal: { tipo: "prestamo", tasaAnual: 0.14, cuotas: 36, gracia: 3 },
+    deal: { tipo: "prestamo", tasaAnual: 0.14, cuotas: 33, gracia: 3 },
     tasaExigida: 0.14,
-    horizonte: 60,
+    horizonte: 36,
     valorFinalMeses: 0,
   },
   {
     id: "mixto",
     label: "Socio con renta",
     hint: "Prefiere cobrar algo fijo todos los meses y una parte del resultado.",
-    deal: { tipo: "mixto", tasaAnual: 0.07, cuotas: 36, gracia: 6, pct: 0.12 },
+    deal: { tipo: "mixto", tasaAnual: 0.07, cuotas: 30, gracia: 6, pct: 0.12 },
     tasaExigida: 0.15,
-    horizonte: 60,
+    horizonte: 36,
     valorFinalMeses: 12,
   },
 ];
@@ -151,7 +162,7 @@ export function normalizeInvestor(raw) {
       pctHastaRecuperar: d.pctHastaRecuperar === null ? null : Math.min(1, Math.max(0, num(d.pctHastaRecuperar ?? 0))) || null,
     },
     tasaExigida: Math.max(0, num(r.tasaExigida ?? 0.15)),
-    horizonte: [36, 60].includes(Number(r.horizonte)) ? Number(r.horizonte) : 60,
+    horizonte: normalizePlazo(r.horizonte),
     valorFinalMeses: Math.max(0, num(r.valorFinalMeses)),
     moneda: r.moneda === "USD" ? "USD" : "ARS",
     tipoCambio: Math.max(0, num(r.tipoCambio)),
@@ -222,7 +233,10 @@ export function proposalView(branch, proyecto, investor) {
     return { ...s, ...r, cobradoAcum: cumulative(r.pagos) };
   });
   const esperado = escenarios.find((s) => s.id === "esperado");
-  const base = simulateBranch(branch, { horizon });
+  // La sucursal se mira siempre a 3 años, aunque la propuesta sea más corta:
+  // la plata que necesita y la ganancia ya arrancada no dependen del plazo.
+  const largo = horizon >= PLAZO_MAXIMO ? esperado : investorPlan(branch, plan, deal, { horizon: PLAZO_MAXIMO });
+  const base = simulateBranch(branch, { horizon: PLAZO_MAXIMO });
 
   const ticket = num(branch.ticket);
   const margenNeto = base.margen - ticket * plan.iibbPct;
@@ -230,7 +244,7 @@ export function proposalView(branch, proyecto, investor) {
   const inversion = Math.max(0, num(branch.inversion));
   // Plata necesaria: el peor momento de la caja acumulada (inversión más las
   // pérdidas del arranque).
-  const plataNecesaria = Math.max(inversion, -Math.min(0, ...cumulative(esperado.proyecto.flows)));
+  const plataNecesaria = Math.max(inversion, -Math.min(0, ...cumulative(largo.proyecto.flows)));
   const monto = inv.deal.monto;
   const aporteBandidos = Math.max(0, plataNecesaria - monto);
 
@@ -258,12 +272,14 @@ export function proposalView(branch, proyecto, investor) {
     escenarios,
     esperado,
     meses,
+    // La sucursal mes a mes a 3 años (servicios, ingresos, ganancia).
+    mesesSucursal: largo.proyecto.meses,
     sucursal: {
       equilibrio,
       equilibrioDiario: equilibrio && num(branch.diasMes) > 0 ? equilibrio / num(branch.diasMes) : null,
       serviciosRegimen: base.serviciosRegimen,
       capacidad: base.capacidad,
-      gananciaRegimen: esperado.proyecto.meses[esperado.proyecto.meses.length - 1]?.ganancia ?? 0,
+      gananciaRegimen: largo.proyecto.meses[largo.proyecto.meses.length - 1]?.ganancia ?? 0,
       inversion,
       plataNecesaria,
       aporteInversor: Math.min(monto, plataNecesaria),
@@ -279,6 +295,7 @@ export function proposalView(branch, proyecto, investor) {
       coberturaMinima: esperado.coberturaMinima,
       mesesSinCubrir: esperado.mesesSinCubrir,
       capitalPropioPeor: escenarios[0].dueno.capitalPropio,
+      saldoAlFinal: esperado.saldoAlFinal,
     },
   };
 }

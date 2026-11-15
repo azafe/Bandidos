@@ -18,7 +18,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { cloneElement, useContext } from "react";
 import { INVERSION_PARTES } from "../../lib/sucursal";
+import { PRINT_WIDTH, PrintContext } from "./printContext";
 import { recuperoText } from "./format";
 
 const COLORS = {
@@ -32,6 +34,13 @@ const COLORS = {
 };
 
 const tick = { fontSize: 12, fill: COLORS.tick };
+
+// En pantalla el gráfico ocupa el ancho disponible; impreso, un ancho fijo.
+function ChartBox({ height, print = "full", children }) {
+  const printing = useContext(PrintContext);
+  if (printing) return cloneElement(children, { width: PRINT_WIDTH[print], height });
+  return <ResponsiveContainer width="100%" height={height}>{children}</ResponsiveContainer>;
+}
 
 function ChartTooltip({ active, payload, label, fmt, labelFmt, series }) {
   if (!active || !payload?.length) return null;
@@ -85,7 +94,7 @@ const sampleMonths = (rows) => rows.filter((r, i) => r.month % 3 === 0 || r.mont
 // Lo que el inversor ya cobró contra lo que puso. La comparación con su tasa
 // exigida va en números (TIR): una línea de «lo que tendría en otra cosa»
 // engaña, porque ignora que lo cobrado antes se puede reinvertir.
-export function CobradoChart({ view, fmt, height = 300 }) {
+export function CobradoChart({ view, fmt, height = 300, print = "full" }) {
   const { meses, investor, esperado, horizon, plan } = view;
   const monto = investor.deal.monto;
   const data = [{ month: 0, cobrado: 0 }, ...meses];
@@ -107,7 +116,7 @@ export function CobradoChart({ view, fmt, height = 300 }) {
         </table>
       }
     >
-      <ResponsiveContainer width="100%" height={height}>
+      <ChartBox height={height} print={print}>
         <LineChart data={data} margin={{ top: 24, right: 16, bottom: 0, left: 0 }}>
           <CartesianGrid stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="month" tick={tick} tickLine={false} axisLine={{ stroke: COLORS.axis }} tickFormatter={monthTick} interval="preserveStartEnd" minTickGap={32} />
@@ -116,11 +125,13 @@ export function CobradoChart({ view, fmt, height = 300 }) {
           <ReferenceLine y={monto} stroke={COLORS.referencia} strokeDasharray="5 4"
             label={{ value: `Lo que pusiste: ${fmt.short(monto)}`, position: "insideTopLeft", fontSize: 12, fill: "#14151c" }} />
           {recupero && <ReferenceLine x={recupero} stroke={COLORS.esperado} strokeDasharray="3 3"
-            label={{ value: `Recuperás: mes ${recupero}`, position: "top", fontSize: 12, fill: "#14151c" }} />}
+            label={recupero < horizon
+              ? { value: `Recuperás: mes ${recupero}`, position: recupero > horizon * 0.75 ? "insideTopRight" : "top", fontSize: 12, fill: "#14151c" }
+              : undefined} />}
           <Line dataKey="cobrado" name="Lo que ya cobraste" stroke={COLORS.esperado} strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} isAnimationActive={false}
             label={endLabel("Lo que ya cobraste", COLORS.esperado, last)} />
         </LineChart>
-      </ResponsiveContainer>
+      </ChartBox>
       <p className="inv-chart__note">
         A {horizon} meses cobrás {fmt.money(esperado.inversor.recibido)} por {fmt.money(monto)} puestos.
         {recompra && ` El salto del último mes es la recompra de tu parte (${plan.valorFinalMeses} meses de ganancia).`}
@@ -130,16 +141,26 @@ export function CobradoChart({ view, fmt, height = 300 }) {
 }
 
 // Lo cobrado en los tres escenarios.
-export function EscenariosChart({ view, fmt, height = 300 }) {
+export function EscenariosChart({ view, fmt, height = 300, print = "full" }) {
   const { meses, investor, escenarios, horizon } = view;
   const data = [{ month: 0, peor: 0, cobrado: 0, mejor: 0 }, ...meses];
   const last = data.length - 1;
   const label = (id) => escenarios.find((s) => s.id === id).label;
-  const series = { peor: `${label("pesimista")} (−30%)`, cobrado: label("esperado"), mejor: `${label("optimista")} (+20%)` };
+  // En un préstamo las cuotas no dependen de la sucursal: los tres escenarios
+  // dan lo mismo y se muestra una sola línea.
+  const iguales = escenarios.every((s) => Math.abs(s.inversor.recibido - escenarios[1].inversor.recibido) < 1);
+  const series = iguales
+    ? { cobrado: "Los tres escenarios" }
+    : { peor: `${label("pesimista")} (−30%)`, cobrado: label("esperado"), mejor: `${label("optimista")} (+20%)` };
+  const lineas = iguales
+    ? [["cobrado", COLORS.esperado, "Igual en los tres"]]
+    : [["peor", COLORS.peor, "Si va peor"], ["cobrado", COLORS.esperado, "Esperado"], ["mejor", COLORS.mejor, "Si va mejor"]];
   return (
     <Figure
       title="Lo que cobrás según cómo le vaya a la sucursal"
-      subtitle="«Si va peor» es con 30% menos clientes de lo esperado; «si va mejor», con 20% más."
+      subtitle={iguales
+        ? "Cobrás lo mismo aunque la sucursal tenga 30% menos clientes o 20% más: tus cuotas no dependen de cómo le vaya."
+        : "«Si va peor» es con 30% menos clientes de lo esperado; «si va mejor», con 20% más."}
       table={
         <table className="inv-table">
           <thead><tr><th>Escenario</th><th>Cobrás en total</th><th>Múltiplo</th><th>Recuperás</th><th>Rinde por año (TIR)</th></tr></thead>
@@ -157,12 +178,14 @@ export function EscenariosChart({ view, fmt, height = 300 }) {
         </table>
       }
     >
-      <ul className="inv-legend">
-        {[["peor", COLORS.peor], ["cobrado", COLORS.esperado], ["mejor", COLORS.mejor]].map(([key, color]) => (
-          <li key={key}><span className="inv-legend__line" style={{ background: color }} />{series[key]}</li>
-        ))}
-      </ul>
-      <ResponsiveContainer width="100%" height={height}>
+      {lineas.length > 1 && (
+        <ul className="inv-legend">
+          {lineas.map(([key, color]) => (
+            <li key={key}><span className="inv-legend__line" style={{ background: color }} />{series[key]}</li>
+          ))}
+        </ul>
+      )}
+      <ChartBox height={height} print={print}>
         <LineChart data={data} margin={{ top: 24, right: 16, bottom: 0, left: 0 }}>
           <CartesianGrid stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="month" tick={tick} tickLine={false} axisLine={{ stroke: COLORS.axis }} tickFormatter={monthTick} interval="preserveStartEnd" minTickGap={32} />
@@ -170,25 +193,26 @@ export function EscenariosChart({ view, fmt, height = 300 }) {
           <Tooltip content={<ChartTooltip fmt={fmt.money} labelFmt={monthTick} series={series} />} />
           <ReferenceLine y={investor.deal.monto} stroke={COLORS.referencia} strokeDasharray="5 4"
             label={{ value: "Lo que pusiste", position: "insideTopLeft", fontSize: 12, fill: "#14151c" }} />
-          <Line dataKey="peor" name={series.peor} stroke={COLORS.peor} strokeWidth={2} dot={false} isAnimationActive={false}
-            label={endLabel("Si va peor", COLORS.peor, last)} />
-          <Line dataKey="cobrado" name={series.cobrado} stroke={COLORS.esperado} strokeWidth={2.5} dot={false} isAnimationActive={false}
-            label={endLabel("Esperado", COLORS.esperado, last)} />
-          <Line dataKey="mejor" name={series.mejor} stroke={COLORS.mejor} strokeWidth={2} dot={false} isAnimationActive={false}
-            label={endLabel("Si va mejor", COLORS.mejor, last)} />
+          {lineas.map(([key, color, texto]) => (
+            <Line key={key} dataKey={key} name={series[key]} stroke={color} strokeWidth={key === "cobrado" ? 2.5 : 2} dot={false} isAnimationActive={false}
+              label={endLabel(texto, color, last)} />
+          ))}
         </LineChart>
-      </ResponsiveContainer>
+      </ChartBox>
     </Figure>
   );
 }
 
 // Lo que cobra el inversor cada mes en el escenario esperado.
-export function CobrosMensualesChart({ view, fmt, height = 240 }) {
-  const { meses } = view;
+export function CobrosMensualesChart({ view, fmt, height = 240, print = "full" }) {
+  const { meses, horizon, paraBandidos } = view;
+  const saldo = paraBandidos.saldoAlFinal;
   return (
     <Figure
       title="Lo que cobrás cada mes"
-      subtitle="En el escenario esperado. Los primeros meses son más bajos porque la sucursal está arrancando."
+      subtitle={saldo > 0
+        ? `En el escenario esperado. En el mes ${horizon}, al terminar el plazo, se te devuelve el saldo del préstamo (${fmt.money(saldo)}).`
+        : "En el escenario esperado. Los primeros meses son más bajos porque la sucursal está arrancando."}
       table={
         <table className="inv-table">
           <thead><tr><th>Mes</th><th>Cobrás</th></tr></thead>
@@ -196,7 +220,7 @@ export function CobrosMensualesChart({ view, fmt, height = 240 }) {
         </table>
       }
     >
-      <ResponsiveContainer width="100%" height={height}>
+      <ChartBox height={height} print={print}>
         <BarChart data={meses} margin={{ top: 12, right: 16, bottom: 0, left: 0 }} barCategoryGap={2}>
           <CartesianGrid stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="month" tick={tick} tickLine={false} axisLine={{ stroke: COLORS.axis }} tickFormatter={monthTick} interval="preserveStartEnd" minTickGap={32} />
@@ -204,14 +228,14 @@ export function CobrosMensualesChart({ view, fmt, height = 240 }) {
           <Tooltip cursor={{ fill: "rgba(177,47,209,0.08)" }} content={<ChartTooltip fmt={fmt.money} labelFmt={monthTick} series={{ cobro: "Cobrás" }} />} />
           <Bar dataKey="cobro" name="Cobrás" fill={COLORS.esperado} radius={[4, 4, 0, 0]} isAnimationActive={false} />
         </BarChart>
-      </ResponsiveContainer>
+      </ChartBox>
     </Figure>
   );
 }
 
 // Cómo se llena la sucursal: servicios por mes contra el punto de equilibrio.
-export function ServiciosChart({ view, fmt, height = 260 }) {
-  const { meses, sucursal } = view;
+export function ServiciosChart({ view, fmt, height = 260, print = "full" }) {
+  const { mesesSucursal: meses, sucursal } = view;
   const data = meses.slice(0, Math.min(24, meses.length)).map((m) => ({ month: m.month, servicios: Math.round(m.servicios) }));
   return (
     <Figure
@@ -224,7 +248,7 @@ export function ServiciosChart({ view, fmt, height = 260 }) {
         </table>
       }
     >
-      <ResponsiveContainer width="100%" height={height}>
+      <ChartBox height={height} print={print}>
         <BarChart data={data} margin={{ top: 20, right: 16, bottom: 0, left: 0 }} barCategoryGap={2}>
           <CartesianGrid stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="month" tick={tick} tickLine={false} axisLine={{ stroke: COLORS.axis }} tickFormatter={monthTick} interval="preserveStartEnd" minTickGap={32} />
@@ -236,7 +260,7 @@ export function ServiciosChart({ view, fmt, height = 260 }) {
               label={{ value: `Equilibrio: ${sucursal.equilibrio}`, position: "insideTopLeft", fontSize: 12, fill: "#14151c" }} />
           )}
         </BarChart>
-      </ResponsiveContainer>
+      </ChartBox>
     </Figure>
   );
 }
@@ -248,7 +272,7 @@ const FONDO_LABELS = {
 };
 
 // En qué se usa la plata.
-export function UsoFondosChart({ view, fmt }) {
+export function UsoFondosChart({ view, fmt, print = "full" }) {
   const data = view.sucursal.usoFondos
     .map((f) => ({ ...f, label: FONDO_LABELS[f.id] || f.id }))
     .sort((a, b) => b.monto - a.monto);
@@ -265,7 +289,7 @@ export function UsoFondosChart({ view, fmt }) {
         </table>
       }
     >
-      <ResponsiveContainer width="100%" height={Math.max(120, data.length * 44 + 20)}>
+      <ChartBox height={Math.max(120, data.length * 44 + 20)} print={print}>
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 96, bottom: 4, left: 8 }} barCategoryGap={8}>
           <XAxis type="number" hide />
           <YAxis type="category" dataKey="label" tick={{ ...tick, fill: "#14151c" }} tickLine={false} axisLine={false} width={180} />
@@ -275,13 +299,13 @@ export function UsoFondosChart({ view, fmt }) {
             <LabelList dataKey="monto" position="right" formatter={fmt.short} fontSize={12} fill="#14151c" />
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ChartBox>
     </Figure>
   );
 }
 
 // Comparación entre inversores: lo que le queda a Bandidos con cada propuesta.
-export function ComparacionChart({ rows, fmt, horizon }) {
+export function ComparacionChart({ rows, fmt, horizon, print = "full" }) {
   const data = rows.map((r) => ({ id: r.id, label: r.nombre, queda: r.queda }));
   if (data.length < 2) return null;
   return (
@@ -289,7 +313,7 @@ export function ComparacionChart({ rows, fmt, horizon }) {
       title={`Lo que le queda a Bandidos en ${horizon} meses con cada propuesta`}
       subtitle="Ganancia de la sucursal después de pagarle al inversor y descontando la plata propia que pone Bandidos. Escenario esperado."
     >
-      <ResponsiveContainer width="100%" height={Math.max(120, data.length * 44 + 20)}>
+      <ChartBox height={Math.max(120, data.length * 44 + 20)} print={print}>
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 96, bottom: 4, left: 8 }} barCategoryGap={8}>
           <XAxis type="number" hide />
           <YAxis type="category" dataKey="label" tick={{ ...tick, fill: "#14151c" }} tickLine={false} axisLine={false} width={160} />
@@ -299,7 +323,7 @@ export function ComparacionChart({ rows, fmt, horizon }) {
             <LabelList dataKey="queda" position="right" formatter={fmt.short} fontSize={12} fill="#14151c" />
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ChartBox>
     </Figure>
   );
 }

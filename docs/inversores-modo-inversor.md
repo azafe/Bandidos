@@ -28,7 +28,7 @@ forma de propuesta, en `docs/plan-inversion-sucursal.md`.
   75% de la plata necesaria.
 - Cada tarjeta: cuánto pone, cuánto cobra, múltiplo, TIR, recupero y cuánto
   pone Bandidos. Estado: borrador, presentada, negociando, aceptada, no avanzó.
-- Con dos o más, **comparar**: todas a 60 meses, lo que le queda a Bandidos con
+- Con dos o más, **comparar**: todas a 3 años, lo que le queda a Bandidos con
   cada una y cuánto tendría que poner si la sucursal va 30% peor.
 - **Exportar / Importar**: los inversores se guardan en este navegador (como el
   simulador). El archivo sirve de copia y para pasarlos a otra compu.
@@ -40,8 +40,14 @@ forma de propuesta, en `docs/plan-inversion-sucursal.md`.
 - Tres tipos: **participación** (con opción de cobrar más hasta recuperar),
   **préstamo** (francés, con meses de gracia que pagan solo interés) y
   **préstamo participativo** (cuota baja + parte de la ganancia).
-- Plazo (36 o 60 meses), tasa contra la que compara el inversor y recompra al
-  final en meses de ganancia.
+- Plazo de 3 en 3 meses, de 3 meses a 3 años; tasa contra la que compara el
+  inversor y recompra al final en meses de ganancia (se valúa con la ganancia
+  de la sucursal ya arrancada, aunque el plazo sea corto). Las propuestas
+  viejas a 5 años pasan a 3.
+- Si las cuotas de un préstamo terminan después del plazo, al final del plazo
+  Bandidos devuelve el saldo: el editor lo avisa y el modo inversor lo explica.
+- La sucursal (plata necesaria, ganancia ya arrancada, servicios) se mira
+  siempre a 3 años, aunque la propuesta sea más corta.
 - Vista previa en vivo: lo que ve el inversor y, aparte, **«Solo para
   Bandidos»**: plata propia, lo que le queda, lo que se lleva el inversor,
   cuánto pondría si va peor y avisos (meses en que la ganancia no cubre la
@@ -56,7 +62,13 @@ forma de propuesta, en `docs/plan-inversion-sucursal.md`.
 
 `/presentacion/inversores/:id`: pantalla completa, sin el menú. Flechas del
 teclado, botones o puntos para pasar; «Pantalla completa» e «Imprimir / PDF»
-(una diapositiva por hoja). Nunca muestra lo de Bandidos ni las notas.
+(una diapositiva por hoja A4 apaisada). Nunca muestra lo de Bandidos ni las
+notas.
+
+Al imprimir (con el botón o con Ctrl+P) se muestran todas las diapositivas y
+los gráficos se dibujan con ancho fijo para la hoja (`printContext.js`): las
+diapositivas ocultas medían cero de ancho y salían sin gráficos. En un
+préstamo, los tres escenarios dan igual y se muestra una sola línea.
 
 1. Portada: aporte, cuánto cobra y cuándo recupera.
 2. El modelo ya funciona: números del local actual.
@@ -78,6 +90,9 @@ validados para daltonismo; todos con etiqueta directa y «Ver los números».
 
 - `npm test` (suites `inversion` e `inversores`), ESLint de los archivos nuevos
   y modificados, build/PWA.
+- PDF generado con Chromium (como Ctrl+P y con el botón) para una
+  participación a 3 años y un préstamo a 12 meses: las 8 hojas, con todos los
+  gráficos, sin errores de consola.
 - Chromium a 1366px y 390px con API simulada: crear tres inversores desde la
   interfaz, lista, comparación, editor y las 8 diapositivas, sin errores de
   consola ni scroll lateral.

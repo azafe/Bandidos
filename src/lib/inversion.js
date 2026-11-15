@@ -108,19 +108,18 @@ export function projectFlows(inputs, plan = DEFAULT_PLAN, { factor = 1, horizon 
   const ticket = num(inputs.ticket);
   const iibb = num(plan.iibbPct);
   const gan = num(plan.gananciasPct);
-  const meses = sim.months.map((m) => {
-    const ingresos = m.servicios * ticket;
-    const antesImpuestos = m.ganancia - ingresos * iibb;
+  const despuesDeImpuestos = (servicios, gananciaAntes) => {
+    const ingresos = servicios * ticket;
+    const antesImpuestos = gananciaAntes - ingresos * iibb;
     const impuestoGanancias = antesImpuestos > 0 ? antesImpuestos * gan : 0;
-    return {
-      month: m.month,
-      servicios: m.servicios,
-      ingresos,
-      ganancia: antesImpuestos - impuestoGanancias,
-    };
-  });
-  const ultima = meses.length ? meses[meses.length - 1].ganancia : 0;
-  const valorFinal = Math.max(0, ultima) * num(plan.valorFinalMeses);
+    return { ingresos, ganancia: antesImpuestos - impuestoGanancias };
+  };
+  const meses = sim.months.map((m) => ({ month: m.month, servicios: m.servicios, ...despuesDeImpuestos(m.servicios, m.ganancia) }));
+  // El negocio se valúa con la ganancia ya arrancada, no con la del último
+  // mes: en una propuesta corta el último mes puede estar todavía en el
+  // arranque.
+  const regimen = despuesDeImpuestos(sim.serviciosRegimen, sim.gananciaRegimen).ganancia;
+  const valorFinal = Math.max(0, regimen) * num(plan.valorFinalMeses);
   const flows = [-Math.max(0, num(inputs.inversion)), ...meses.map((m) => m.ganancia)];
   if (flows.length > 1) flows[flows.length - 1] += valorFinal;
   return { sim, meses, valorFinal, flows };
@@ -189,10 +188,15 @@ export function investorPlan(inputs, plan = DEFAULT_PLAN, deal, { factor = 1, ho
   // Lo que se paga sí o sí cada mes (la parte de préstamo), para la cobertura.
   let fijos = proyecto.meses.map(() => 0);
   const tipo = deal?.tipo;
+  // Si las cuotas terminan después del plazo de la propuesta, al final del
+  // plazo se devuelve el saldo que quede: la propuesta termina ahí.
+  let saldoAlFinal = 0;
   if (tipo === "prestamo" || tipo === "mixto") {
     const s = loanSchedule(deal, meses);
     cuota = s.cuota;
     fijos = s.pagos.slice(0, meses).map((p) => p.pago);
+    saldoAlFinal = meses > 0 ? s.pagos[meses - 1].saldo : 0;
+    if (saldoAlFinal > 0) fijos[meses - 1] += saldoAlFinal;
   }
   if (tipo === "prestamo") {
     pagos = fijos.map((pago, i) => ({ month: i + 1, pago }));
@@ -229,6 +233,7 @@ export function investorPlan(inputs, plan = DEFAULT_PLAN, deal, { factor = 1, ho
     proyecto: { ...flowMetrics(proyecto.flows, plan.tasaDescuento), valorFinal: proyecto.valorFinal, flows: proyecto.flows, meses: proyecto.meses },
     inversor: { ...flowMetrics(inversorFlows, deal?.tasaExigida ?? plan.tasaDescuento), flows: inversorFlows, cuota },
     pagos: pagos.map((p) => p.pago),
+    saldoAlFinal,
     dueno: { ...flowMetrics(duenoFlows, plan.tasaDescuento), flows: duenoFlows, capitalPropio: peor < 0 ? -peor : 0 },
     coberturaMinima: coberturas.length ? Math.min(...coberturas) : null,
     mesesSinCubrir: conDeuda ? conPago.filter((x) => x.ganancia < x.pago).length : null,

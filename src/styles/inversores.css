@@ -196,9 +196,28 @@
   .pres__btn:first-child { display: none; }
 }
 
+/* Imprimir / PDF: todas las diapositivas, una por hoja A4 apaisada, con
+   ancho fijo (los gráficos se dibujan a ese ancho, ver printContext.js). */
+.pres--print .pres__slide { display: flex; }
+
+@page { size: A4 landscape; margin: 10mm; }
+
 @media print {
-  .pres { background: #fff; }
+  html:has(.pres), body:has(.pres) { background: #fff; }
+  .pres { background: #fff; min-height: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pres__bar, .pres__nav, .inv-details { display: none !important; }
   .pres__stage { padding: 0; display: block; }
-  .pres__slide { display: flex !important; box-shadow: none; border-radius: 0; break-after: page; page-break-after: always; animation: none; max-width: none; }
+  .pres__slide {
+    display: flex !important;
+    width: 980px; max-width: none; margin: 0 auto;
+    padding: 24px 40px; gap: 16px;
+    box-shadow: none; border-radius: 0; animation: none;
+    break-after: page; page-break-after: always; break-inside: avoid;
+  }
+  .pres__slide:last-child { break-after: auto; page-break-after: auto; }
+  .pres__split { grid-template-columns: 600px minmax(0, 1fr); }
+  .pres__bigs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pres__bigs--grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .pres__bigs--stack { grid-template-columns: minmax(0, 1fr); }
+  .pres__cover { padding: 8px 0; }
 }
