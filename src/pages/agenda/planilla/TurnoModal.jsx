@@ -9,7 +9,9 @@ import { normalizarId } from "../../../lib/cierreDia";
 const MONTOS_TRASLADO = [5000, 8000, 10000, 15000];
 
 // Agendar un turno (o editarlo): bandido, hora, servicio, traslado y seña.
-export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, conTraslado, servicios, medios, onClose, onSaved }) {
+// «servicios» es el catálogo completo (para nombre, precio y duración); «opciones», los que se ofrecen.
+export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, conTraslado, servicios, opciones = servicios, medios, onClose, onSaved }) {
+  const precioDe = (id) => montoDe(servicios.find((s) => String(s.id) === String(id))?.default_price) || 0;
   const editando = !!turno;
   const esNuevo = !editando && !mascota;
   const [f, setF] = useState(() => ({
@@ -27,12 +29,20 @@ export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, c
     senaMonto: Number(turno?.deposit_amount) > 0 ? String(Math.round(Number(turno.deposit_amount))) : "",
     senaMedio: turno?.deposit_payment_method_id ? String(turno.deposit_payment_method_id) : "",
     notas: turno?.notes || "",
+    precio: montoDe(turno?.price) > 0 ? String(montoDe(turno.price)) : turno?.service_type_id ? String(precioDe(turno.service_type_id) || "") : "",
+    precioTocado: montoDe(turno?.price) > 0,
   }));
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const set = (patch) => { setF((prev) => ({ ...prev, ...patch })); setError(""); };
   const aviso = mascota?.behavior || "";
-  const opcionesServicio = useMemo(() => servicios.map((s) => ({ value: String(s.id), label: s.name })), [servicios]);
+  const opcionesServicio = useMemo(() => {
+    const lista = [...opciones];
+    const actual = turno?.service_type_id && servicios.find((s) => String(s.id) === String(turno.service_type_id));
+    if (actual && !lista.some((s) => String(s.id) === String(actual.id))) lista.push(actual);
+    return lista.map((s) => ({ value: String(s.id), label: s.name }));
+  }, [opciones, servicios, turno]);
+  const elegirServicio = (v) => set({ servicio: v, ...(f.precioTocado ? {} : { precio: String(precioDe(v) || "") }) });
   const opcionesMedio = useMemo(() => medios.map((m) => ({ value: String(m.id), label: m.name })), [medios]);
 
   async function guardar(e) {
@@ -46,7 +56,9 @@ export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, c
     if (f.tras === "si" && !f.trasSinCargo && !(montoDe(f.trasMonto) > 0)) faltan.push("el precio del traslado (o Sin cargo)");
     if (f.sena === "si" && !(montoDe(f.senaMonto) > 0)) faltan.push("el monto de la seña");
     if (f.sena === "si" && !f.senaMedio) faltan.push("el medio de la seña");
+    if (f.sena === "si" && montoDe(f.senaMonto) > 0 && !(montoDe(f.precio) > 0)) faltan.push("el precio del servicio (tiene seña)");
     if (faltan.length) { setError(`Falta ${faltan.join(", ")}.`); return; }
+    if (f.sena === "si" && montoDe(f.precio) < montoDe(f.senaMonto)) { setError(`El precio (${formatoPlata(f.precio)}) no puede ser menor que la seña (${formatoPlata(f.senaMonto)}).`); return; }
 
     const servicio = servicios.find((s) => String(s.id) === f.servicio);
     const trasForm = {
@@ -67,6 +79,8 @@ export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, c
       deposit_amount: f.sena === "si" ? montoDe(f.senaMonto) : 0,
       deposit_payment_method_id: f.sena === "si" ? normalizarId(f.senaMedio) : undefined,
       notes: f.notas.trim(),
+      // Como la agenda clásica: el precio del servicio viaja siempre que haya uno.
+      price: montoDe(f.precio) > 0 ? montoDe(f.precio) : undefined,
       ...traslado,
     };
 
@@ -127,8 +141,11 @@ export default function TurnoModal({ fecha, time, mascota, nuevoNombre, turno, c
           <label>Hora<input type="time" step="300" value={f.hora} onChange={(e) => set({ hora: e.target.value.slice(0, 5) })} /></label>
         </div>
         <div className="pl-group"><span className="pl-label">1 · Servicio</span>
-          {opcionesServicio.length ? <Opciones opciones={opcionesServicio} valor={f.servicio} onChange={(v) => set({ servicio: v })} etiqueta="Servicio" />
+          {opcionesServicio.length ? <Opciones opciones={opcionesServicio} valor={f.servicio} onChange={elegirServicio} etiqueta="Servicio" />
             : <p className="pl-help">No hay servicios cargados. Cargalos en Catálogo › Tipos de servicio.</p>}
+        </div>
+        <div className="pl-grid">
+          <label>Precio del servicio<input value={f.precio ? formatoPlata(f.precio) : ""} onChange={(e) => set({ precio: String(montoDe(e.target.value) || ""), precioTocado: true })} inputMode="numeric" placeholder="$ (opcional)" autoComplete="off" /></label>
         </div>
         <div className="pl-group"><span className="pl-label">2 · ¿Va con traslado?</span>
           <Opciones opciones={[{ value: "no", label: "No" }, { value: "si", label: "Sí" }]} valor={f.tras} onChange={(v) => set({ tras: v })} etiqueta="Traslado" />

@@ -93,3 +93,11 @@ test("la hora de un renglón libre se cambia o se quita", async () => {
   assert.equal(HORAS_15[1], "07:15");
   assert.deepEqual(lugaresDelDia({ slots: ["10:00"], extras: ["19:00"] }), ["10:00"]);
 });
+
+test("la planilla ofrece solo los servicios de todos los días", async () => {
+  const { serviciosPlanilla } = await import("./planilla.js");
+  const cat = [{ id: 1, name: "Corte y Baño" }, { id: 2, name: "BAÑO BORDER COLLIE" }, { id: 3, name: "Baño" }, { id: 4, name: "Corte a tijera" }, { id: 5, name: " corte " }];
+  assert.deepEqual(serviciosPlanilla(cat).map((s) => s.id), [1, 3, 5]);
+  assert.deepEqual(serviciosPlanilla(cat, ["4"]).map((s) => s.id), [4]);
+  assert.deepEqual(serviciosPlanilla([{ id: 9, name: "Spa" }]).map((s) => s.id), [9]);
+});

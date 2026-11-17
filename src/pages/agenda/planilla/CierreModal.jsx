@@ -7,7 +7,7 @@ import { ESTADOS, formatoPlata, hora, montoDe, peluquerasDeTurno, resumenCobro }
 import { normalizarId, pedidoTerminar, precioServicio } from "../../../lib/cierreDia";
 
 // Tocar un turno: cuántas peluqueras, quiénes, estado y, si terminó, el cobro.
-export default function CierreModal({ turno, peluqueras, empleados = [], colores, presentes, servicios, medios, onClose, onSaved, onEditar }) {
+export default function CierreModal({ turno, peluqueras, empleados = [], colores, presentes, servicios, opciones = servicios, medios, onClose, onSaved, onEditar }) {
   const iniciales = peluquerasDeTurno(turno);
   // Si el turno ya tiene a alguien que no está en la lista, se muestra igual para no perderlo.
   const opcionesPeluqueras = [...peluqueras, ...iniciales.filter((id) => !peluqueras.some((p) => String(p.id) === id))
@@ -34,7 +34,7 @@ export default function CierreModal({ turno, peluqueras, empleados = [], colores
   const medioPorDefecto = String(medios.find((m) => /efectivo/i.test(m.name))?.id || medios[0]?.id || "");
   const nombreMedio = (id) => medios.find((m) => String(m.id) === String(id))?.name || "";
   const terminado = estado === "finished";
-  const opcionesServicio = useMemo(() => servicios.map((s) => ({ value: String(s.id), label: s.name })), [servicios]);
+  const opcionesServicio = useMemo(() => opciones.map((s) => ({ value: String(s.id), label: s.name })), [opciones]);
 
   function elegirCantidad(n) {
     setCantidad(n);
