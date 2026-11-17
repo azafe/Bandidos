@@ -229,3 +229,13 @@ button.pl-link { cursor: pointer; }
   .pl-row { grid-template-columns: 66px minmax(0, 1fr); gap: 8px; }
   .pl-time-edit select, .planilla .pl-time-btn { font-size: 1rem; padding-left: 2px; }
 }
+
+/* ¿Quién lo agarra? */
+.pl-cell { min-width: 0; display: grid; gap: 6px; }
+.pl-quien { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pl-quien-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: .9rem; background: var(--pl-surface); border: 1px solid var(--pl-line); border-radius: 999px; padding: 4px 10px 4px 6px; }
+.pl-quien-name .pl-dot { width: 14px; height: 14px; border-radius: 50%; }
+.planilla .pl-quien-btn { border: 1px solid var(--pl-line); background: var(--pl-surface); border-radius: 999px; padding: 6px 12px; min-height: 36px; font-size: .88rem; font-weight: 700; color: var(--pl-muted); }
+.planilla .pl-quien-btn.is-empty { border: 1px dashed var(--pl-accent); color: var(--pl-accent); }
+.pl-quien-btn:hover { border-color: var(--pl-accent); color: var(--pl-accent); }
+.pl-quien-opts .pl-quien-opt { min-height: 56px; font-size: 1.05rem; flex: 1 1 140px; justify-content: center; }
