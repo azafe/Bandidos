@@ -15,6 +15,7 @@ import CierreModal from "./CierreModal";
 import PeluqueraModal from "./PeluqueraModal";
 import CierreDia from "./CierreDia";
 import EquipoModal from "./EquipoModal";
+import QuienModal from "./QuienModal";
 import { resumenCierre } from "../../../lib/cierreDia";
 import "../../../styles/planilla.css";
 
@@ -223,12 +224,11 @@ export default function PlanillaPage() {
     return (
       <li key={r.key} className={`pl-row${fondo ? " has-hl" : ""}${apagado ? " is-off" : ""}${t.status === "finished" ? " is-done" : ""}`} style={fondo ? { "--hl": cs[0], "--bg-row": fondo } : undefined}>
         <button type="button" className="pl-time pl-time-btn" aria-label={`Cambiar la hora de ${t.pet_name} (${r.time})`} onClick={() => abrir({ tipo: "editar", turno: t })}>{r.time}</button>
+        <div className="pl-cell">
         <button type="button" className="pl-line" onClick={() => abrir({ tipo: "cierre", turno: t })}>
           <span className="pl-main"><b>{t.pet_name}</b>{t.breed ? ` · ${t.breed}` : ""} <span className="pl-owner">({t.owner_name || "sin dueño"})</span></span>
           <span className="pl-sub">
             {servicio && <span className="pl-tag svc">{servicio}</span>}
-            {nombres.length > 1 && <span className="pl-tag">{nombres.join(" + ")}</span>}
-            {nombres.length === 1 && !fondo && <span className="pl-tag">{nombres[0]}</span>}
             {montoDe(t.deposit_amount) > 0 && <span className="pl-tag ok">Seña {formatoPlata(t.deposit_amount)}</span>}
             {t.traslado && t.traslado_direccion && <span className="pl-tag">Traslado: {t.traslado_direccion}</span>}
             {t.status === "finished" && pagos.length > 0 && <span className="pl-tag ok">Cobrado · {pagos.join(" + ")}</span>}
@@ -238,6 +238,17 @@ export default function PlanillaPage() {
             {t.source === "online" || t.origin === "online" ? <span className="pl-tag">Reserva online</span> : null}
           </span>
         </button>
+        {!apagado && (
+          <div className="pl-quien">
+            {ids.map((id, i) => <span key={id} className="pl-quien-name"><span className="pl-dot" style={{ background: colores[id] || "#ccc" }} />{nombres[i] || "Peluquera"}</span>)}
+            {t.status !== "finished" && (
+              <button type="button" className={`pl-quien-btn${ids.length ? "" : " is-empty"}`} onClick={() => abrir({ tipo: "quien", turno: t })}>
+                {ids.length ? "Cambiar" : "✂ ¿Quién lo agarra?"}
+              </button>
+            )}
+          </div>
+        )}
+        </div>
         <span className="pl-money">
           {montoDe(t.price) > 0 && <span>{formatoPlata(t.price)}</span>}
           {t.traslado && <span className="pl-tras">traslado {t.traslado_bonificado ? "sin cargo" : montoDe(t.traslado_amount) ? formatoPlata(t.traslado_amount) : ""}</span>}
@@ -382,6 +393,9 @@ export default function PlanillaPage() {
       {modalActual?.tipo === "cierre" && (
         <CierreModal turno={modalActual.turno} peluqueras={peluqueras} empleados={empleados} colores={colores} presentes={presentes} servicios={serviciosActivos} medios={mediosActivos}
           onClose={cerrar} onSaved={alGuardar} onEditar={() => abrir({ tipo: "editar", turno: modalActual.turno })} />
+      )}
+      {modalActual?.tipo === "quien" && (
+        <QuienModal turno={modalActual.turno} peluqueras={peluqueras} colores={colores} presentes={presentes} onClose={cerrar} onChange={refetch} />
       )}
       {modalActual?.tipo === "equipo" && (
         <EquipoModal empleados={empleados} elegidas={local.peluqueras ?? null} onClose={cerrar}
