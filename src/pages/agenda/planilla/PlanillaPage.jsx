@@ -7,7 +7,7 @@ import { copyToClipboard } from "../../../services/bookingApi";
 import { todayISO } from "../../../utils/dates";
 import {
   armarRenglones, buscarBandidos, coloresPeluqueras, distanciaDias, fechaCorta, fechaLarga, fondoRenglon,
-  formatoPlata, libresAgrupados, listaPeluqueras, lugaresDelDia, moverLugar, HORAS_15, montoDe, peluquerasDeTurno, rangoHorario, sumarDias, textoLibres,
+  formatoPlata, libresAgrupados, listaPeluqueras, serviciosPlanilla, lugaresDelDia, moverLugar, HORAS_15, montoDe, peluquerasDeTurno, rangoHorario, sumarDias, textoLibres,
 } from "../../../lib/planilla";
 import usePlanillaLocal from "./usePlanillaLocal";
 import TurnoModal from "./TurnoModal";
@@ -16,6 +16,7 @@ import PeluqueraModal from "./PeluqueraModal";
 import CierreDia from "./CierreDia";
 import EquipoModal from "./EquipoModal";
 import QuienModal from "./QuienModal";
+import ServiciosModal from "./ServiciosModal";
 import { resumenCierre } from "../../../lib/cierreDia";
 import "../../../styles/planilla.css";
 
@@ -85,7 +86,7 @@ export default function PlanillaPage() {
 
   const peluqueras = useMemo(() => listaPeluqueras(empleados, local.peluqueras ?? null), [empleados, local.peluqueras]);
   const colores = useMemo(() => coloresPeluqueras(peluqueras, local.colors), [peluqueras, local.colors]);
-  const serviciosActivos = useMemo(() => servicios.filter((s) => s.status !== "inactive" && s.active !== false && !s.archived_at), [servicios]);
+  const serviciosOpciones = useMemo(() => serviciosPlanilla(servicios, local.servicios ?? null), [servicios, local.servicios]);
   const mediosActivos = useMemo(() => medios.filter((m) => m.status !== "inactive" && m.active !== false && m.is_active !== false), [medios]);
   const mascotaPorId = useMemo(() => new Map(mascotas.map((m) => [String(m.id), m])), [mascotas]);
 
@@ -333,6 +334,7 @@ export default function PlanillaPage() {
           })}
           {!peluqueras.length && empleados.length > 0 && <span className="pl-help">No hay peluqueras con rol Groomer en Equipo.</span>}
           <button type="button" className="pl-link" onClick={() => abrir({ tipo: "equipo" })}>Elegir peluqueras</button>
+          <button type="button" className="pl-link" onClick={() => abrir({ tipo: "servicios" })}>Elegir servicios</button>
           <Link className="pl-link" to="/agenda/clasica" title="La agenda anterior, con semana, mes, bloqueos y cierre del día">Agenda clásica →</Link>
         </div>
       </header>
@@ -384,18 +386,22 @@ export default function PlanillaPage() {
 
       {modalActual?.tipo === "nuevo" && (
         <TurnoModal fecha={fecha} time={modalActual.time} mascota={modalActual.mascota} nuevoNombre={modalActual.nuevoNombre} conTraslado={modalActual.conTraslado}
-          servicios={serviciosActivos} medios={mediosActivos} onClose={cerrar}
+          servicios={servicios} opciones={serviciosOpciones} medios={mediosActivos} onClose={cerrar}
           onSaved={(msg, mascotaNueva) => { if (mascotaNueva) refrescarMascotas?.(); alGuardar(msg); }} />
       )}
       {modalActual?.tipo === "editar" && (
-        <TurnoModal fecha={fecha} turno={modalActual.turno} mascota={modalActual.turno.pet} servicios={serviciosActivos} medios={mediosActivos} onClose={cerrar} onSaved={(msg) => alGuardar(msg)} />
+        <TurnoModal fecha={fecha} turno={modalActual.turno} mascota={modalActual.turno.pet} servicios={servicios} opciones={serviciosOpciones} medios={mediosActivos} onClose={cerrar} onSaved={(msg) => alGuardar(msg)} />
       )}
       {modalActual?.tipo === "cierre" && (
-        <CierreModal turno={modalActual.turno} peluqueras={peluqueras} empleados={empleados} colores={colores} presentes={presentes} servicios={serviciosActivos} medios={mediosActivos}
+        <CierreModal turno={modalActual.turno} peluqueras={peluqueras} empleados={empleados} colores={colores} presentes={presentes} servicios={servicios} opciones={serviciosOpciones} medios={mediosActivos}
           onClose={cerrar} onSaved={alGuardar} onEditar={() => abrir({ tipo: "editar", turno: modalActual.turno })} />
       )}
       {modalActual?.tipo === "quien" && (
         <QuienModal turno={modalActual.turno} peluqueras={peluqueras} colores={colores} presentes={presentes} onClose={cerrar} onChange={refetch} />
+      )}
+      {modalActual?.tipo === "servicios" && (
+        <ServiciosModal servicios={servicios} elegidos={local.servicios ?? null} onClose={cerrar}
+          onSave={(ids) => { updateLocal((d) => { if (ids) d.servicios = ids; else delete d.servicios; return d; }); cerrar(); avisar(ids ? "Servicios de la planilla guardados." : "Se usan Corte y baño, Baño y Corte."); }} />
       )}
       {modalActual?.tipo === "equipo" && (
         <EquipoModal empleados={empleados} elegidas={local.peluqueras ?? null} onClose={cerrar}

@@ -189,3 +189,17 @@ export function moverLugar(lugares, desde, hasta) {
   if (hasta) next[i] = hasta; else next.splice(i, 1);
   return next.sort();
 }
+
+// Servicios que se ofrecen en la planilla. El catálogo guarda todos (los
+// usados en turnos viejos no se pueden borrar); acá se muestran solo los de
+// todos los días, o los elegidos en este dispositivo.
+const SERVICIOS_DE_SIEMPRE = new Set(["corte y bano", "bano", "corte"]);
+const normalizar = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+export function serviciosPlanilla(servicios, elegidos = null) {
+  if (Array.isArray(elegidos)) {
+    const ids = new Set(elegidos.map(String));
+    return servicios.filter((s) => ids.has(String(s.id)));
+  }
+  const deSiempre = servicios.filter((s) => SERVICIOS_DE_SIEMPRE.has(normalizar(s.name)));
+  return deSiempre.length ? deSiempre : servicios;
+}
